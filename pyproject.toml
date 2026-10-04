@@ -1,0 +1,56 @@
+[project]
+name = "enterprise-ai-application-workspace"
+version = "0.1.0"
+description = "Workspace root (uv workspace). Not a distributable package."
+requires-python = ">=3.12"
+dependencies = ["appspec", "workspace-api"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "httpx>=0.27",
+  "jsonschema>=4.23",
+  "ruff>=0.8",
+  "mypy>=1.13",
+  "pip-audit>=2.7",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/application-spec", "services/api"]
+
+[tool.uv.sources]
+appspec = { workspace = true }
+workspace-api = { workspace = true }
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["services/api/alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "C4", "SIM", "RUF", "PT", "TID", "ASYNC"]
+ignore = ["S101"]  # asserts are fine in tests and narrowing
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S105", "S106", "S608"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = ["packages/application-spec/src", "services/api/src"]
+explicit_package_bases = true
+exclude = ["alembic/versions/"]
+
+[[tool.mypy.overrides]]
+module = ["alembic.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers --import-mode=importlib"
+testpaths = ["packages/application-spec/tests", "services/api/tests"]
+markers = ["db: requires a PostgreSQL database (DATABASE_URL)"]
