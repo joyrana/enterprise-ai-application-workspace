@@ -1,0 +1,17 @@
+[project]
+name = "skill-sdk"
+version = "0.1.0"
+description = "Skill contracts, registry and typed specification commands for the workspace."
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.9,<3", "appspec", "model-gateway"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/skill_sdk"]
+
+[tool.uv.sources]
+appspec = { workspace = true }
+model-gateway = { workspace = true }

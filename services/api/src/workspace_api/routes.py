@@ -6,21 +6,29 @@ import uuid
 from collections.abc import Iterator
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, Path, Query, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, Path, Query, Request, Response, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from appspec import ApplicationSpec, json_schema
+from skill_sdk import SkillRegistry
 
-from . import service
+from . import runs, service
+from .ai import ModelRuntime
 from .auth import CurrentPrincipal
 from .errors import Problem
 from .schemas import (
+    AiStatus,
+    ApplyRunRequest,
+    ApplyRunResult,
     AuditPage,
+    DiscoveryRunCreate,
     Health,
     ProjectCreate,
     ProjectOut,
     ProjectPage,
+    RunOut,
+    RunPage,
     SpecRevisionOut,
     SpecRevisionPage,
     SpecUpdate,
@@ -201,3 +209,114 @@ def list_audit(
 @api.get("/schemas/application-spec", tags=["schemas"], summary="JSON Schema of the current specification version")
 def application_spec_schema() -> dict[str, Any]:
     return json_schema()
+
+
+# --------------------------------------------------------------------------- AI
+
+
+def _runtime(request: Request) -> ModelRuntime | None:
+    runtime = request.app.state.model_runtime
+    return runtime if isinstance(runtime, ModelRuntime) else None
+
+
+def _registry(request: Request) -> SkillRegistry:
+    registry = request.app.state.skill_registry
+    assert isinstance(registry, SkillRegistry)
+    return registry
+
+
+RunId = Annotated[uuid.UUID, Path(description="Run identifier.")]
+
+
+@api.get("/ai/status", response_model=AiStatus, tags=["ai"], summary="Which model (if any) is configured")
+def ai_status(request: Request, principal: CurrentPrincipal) -> AiStatus:
+    runtime = _runtime(request)
+    if runtime is None:
+        return AiStatus(configured=False, model=None, profile=None, remote=None, structured_mode=None)
+    return AiStatus(
+        configured=True,
+        model=runtime.label,
+        profile=runtime.profile,
+        remote=runtime.capabilities.remote,
+        structured_mode=runtime.capabilities.structured_mode.value,
+    )
+
+
+@api.post(
+    "/projects/{project_id}/discovery-runs",
+    response_model=RunOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["ai"],
+    summary="Start business discovery on a description; poll the run for proposals",
+    responses={
+        200: {"model": RunOut, "description": "Replay of an earlier request with the same Idempotency-Key."},
+        403: _PROBLEM,
+        409: _PROBLEM,
+        429: _PROBLEM,
+        503: _PROBLEM,
+    },
+)
+def start_discovery(
+    project_id: ProjectId,
+    body: DiscoveryRunCreate,
+    request: Request,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    response: Response,
+    background: BackgroundTasks,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> RunOut:
+    runtime = _runtime(request)
+    registry = _registry(request)
+    run, created = runs.create_discovery_run(session, principal, project_id, body, idempotency_key, runtime, registry)
+    response.headers["Location"] = f"/api/v1/projects/{project_id}/discovery-runs/{run.id}"
+    if created and runtime is not None:
+        background.add_task(runs.execute_run, request.app.state.db, run.id, runtime, registry)
+    else:
+        response.status_code = status.HTTP_200_OK
+    return run
+
+
+@api.get(
+    "/projects/{project_id}/discovery-runs",
+    response_model=RunPage,
+    tags=["ai"],
+    summary="Recent discovery runs, newest first (resume after a page refresh)",
+)
+def list_discovery_runs(
+    project_id: ProjectId, request: Request, principal: CurrentPrincipal, session: DbSession
+) -> RunPage:
+    return runs.list_runs(session, principal, project_id, _registry(request))
+
+
+@api.get(
+    "/projects/{project_id}/discovery-runs/{run_id}",
+    response_model=RunOut,
+    tags=["ai"],
+    summary="Get a discovery run and its proposals",
+)
+def get_discovery_run(
+    project_id: ProjectId, run_id: RunId, request: Request, principal: CurrentPrincipal, session: DbSession
+) -> RunOut:
+    return runs.get_run(session, principal, project_id, run_id, _registry(request))
+
+
+@api.post(
+    "/projects/{project_id}/discovery-runs/{run_id}/apply",
+    response_model=ApplyRunResult,
+    tags=["ai"],
+    summary="Apply per-proposal decisions (accept, confirm, reject) as one new revision",
+    responses={409: _PROBLEM, 412: _PROBLEM, 428: _PROBLEM},
+)
+def apply_discovery_run(
+    project_id: ProjectId,
+    run_id: RunId,
+    body: ApplyRunRequest,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    response: Response,
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
+) -> ApplyRunResult:
+    result = runs.apply_run(session, principal, project_id, run_id, if_match, body)
+    response.headers["ETag"] = service.etag(result.revision.revision)
+    return result

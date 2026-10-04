@@ -1,6 +1,6 @@
 # ADR-0007: Model providers — Qwen via Hugging Face, gpt-oss via Ollama
 
-- Status: Accepted (design); implementation scheduled for Milestone 2
+- Status: Accepted; implemented in `packages/model-gateway` (Milestone 2a)
 - Date: 2026-10-04
 - Deciders: project owner (model choice), engineering (integration design)
 
@@ -86,6 +86,21 @@ MODEL_ID=gpt-oss:20b
   - CI job runs only when the `HF_TOKEN` repository secret is present and never for
     pull requests from forks.
   - `ollama` smoke tests run on a developer machine with Ollama installed.
+
+## Implementation notes (Milestone 2a)
+
+- `ModelSettings.from_env` builds the provider; unset `MODEL_PROFILE` means "not configured"
+  and AI endpoints return 503 `model-not-configured`.
+- Default `MODEL_STRUCTURED_MODE` is `prompt_and_validate` for every profile until evals
+  show a provider/model honours `json_schema` reliably.
+- Reasoning traces are stripped before parsing: Qwen `<think>…</think>` blocks and gpt-oss
+  harmony channel markers (only the `final` channel is used).
+- Transport retries: 429/5xx/timeouts/connection errors, exponential backoff with jitter,
+  `Retry-After` honoured (capped at 30 s), never past the call deadline. 4xx are not retried.
+- Prices are optional (`MODEL_PRICE_INPUT_PER_MTOK`, `MODEL_PRICE_OUTPUT_PER_MTOK`); cost is
+  reported only when configured, never estimated.
+- `ALLOW_REMOTE_MODELS_FOR_CONFIDENTIAL=true` is the explicit operator override for the
+  data-classification gate.
 
 ## Consequences
 

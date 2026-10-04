@@ -1,22 +1,24 @@
 # Threat model (Milestone 1 scope)
 
-Date: 2026-10-04. Revisit at every milestone; Milestones 2 (model calls) and 4 (untrusted
-code execution) add major new trust boundaries.
+Date: 2026-10-04, updated for Milestone 2a (model calls). Milestone 4 (untrusted code
+execution) adds the next major trust boundary.
 
 ## Assets
 
 - Project specifications (may contain confidential business processes and data models).
 - Revision history and audit trail (integrity matters for accountability).
 - Tenant isolation.
-- Database credentials. Later: model-provider tokens (`HF_TOKEN`), generated source code.
+- Database credentials and model-provider tokens (`HF_TOKEN` / `MODEL_API_KEY`). Later: generated source code.
 
 ## Trust boundaries
 
 1. Browser ↔ API (untrusted client input; identity asserted by headers in dev mode).
 2. API ↔ PostgreSQL (credentials via environment).
 3. CI ↔ repository (workflow permissions, third-party actions).
-4. *Future:* API ↔ model providers (prompts leave the network on the HF router); API ↔ build
-   runner (untrusted generated code).
+4. API ↔ model provider. With the Hugging Face router, prompts leave the network and reach
+   third-party inference providers; with Ollama or self-hosted models they do not.
+5. Model output → workspace (untrusted text that must never act as instructions or state).
+6. *Future:* API ↔ build runner (untrusted generated code).
 
 ## Threats and mitigations
 
@@ -35,7 +37,13 @@ code execution) add major new trust boundaries.
 | Secret leakage in the repo | `.env` git-ignored, placeholders only in `.env.example`, gitleaks scans full history in CI | — |
 | Supply-chain attacks | Lockfiles, `npm ci` / `uv sync --locked`, pip-audit, npm audit, dependency review, SHA-pinned actions, checksum-verified gitleaks download | Compromised upstream release within allowed ranges before advisories exist |
 | CI privilege abuse | `contents: read` by default; only `regenerate.yml` writes, only on non-main branches via `push` (not available to forks); no secrets used | — |
-| Prompt injection, excessive model spend, untrusted code execution | Not applicable yet (no model calls, no code execution) | Addressed in Milestones 2 and 4 (see ADR-0007 for the provider design and data-classification gate) |
+| Prompt injection via descriptions | User text is delimited as data (closing delimiter neutralised); the prompt forbids following embedded instructions; the model answers a narrow schema, deterministic code builds commands; skills cannot set status, provenance or `confirmed_by`; every proposal needs a human decision; confirmed facts are never overwritten (ADR-0008) | The model can still produce misleading *proposals*; review is the control. Adversarial eval scenario included |
+| Malformed or hostile model output | Strict extraction (first complete JSON object), Pydantic validation, one repair attempt, list caps, classified `schema_failure` | — |
+| Sensitive data sent to third parties | Data-classification gate refuses remote models for `confidential`/`restricted` projects unless an operator opts in; UI labels remote providers; audit records model and description length, not the text | Projects with *unknown* classification may use a remote model |
+| Model credential leakage | Tokens read from the environment only, sent only as the `Authorization` header, redacted from `repr`; provider error bodies are never echoed to clients or logs | — |
+| Excessive model spend / denial of service | Per-run budgets (calls, tokens, deadline) from the skill manifest; bounded retries with backoff; max 3 active runs per tenant; 8 000-character description limit | No per-tenant daily quota yet |
+| Duplicate or replayed AI actions | Idempotent run creation; atomic `queued → running` claim; decisions applicable once per run; `If-Match` on apply | — |
+| Untrusted code execution | Not applicable yet (no code generation) | Milestone 4 |
 
 ## Not claimed
 

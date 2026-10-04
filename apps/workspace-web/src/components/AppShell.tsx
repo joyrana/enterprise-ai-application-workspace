@@ -61,12 +61,18 @@ const useStyles = makeStyles({
   main: { gridArea: "main", padding: tokens.spacingHorizontalXXL, minWidth: 0 },
 });
 
+/** The page a path belongs to: tabs within one project (`/projects/:id/:tab`) share a page. */
+export function pageKey(pathname: string): string {
+  return pathname.split("/").slice(0, 3).join("/");
+}
+
 /**
- * After client-side navigation, move focus to the main region so keyboard and
+ * After navigating to a different page, move focus to the main region so keyboard and
  * screen-reader users land on the new page (and any closed modal releases focus).
+ * Switching tabs within a page keeps focus on the tab list.
  */
 function useFocusMainOnNavigation() {
-  const { pathname } = useLocation();
+  const page = pageKey(useLocation().pathname);
   const mainRef = useRef<HTMLElement>(null);
   const first = useRef(true);
   useEffect(() => {
@@ -75,7 +81,7 @@ function useFocusMainOnNavigation() {
       return;
     }
     mainRef.current?.focus({ preventScroll: true });
-  }, [pathname]);
+  }, [page]);
   return mainRef;
 }
 

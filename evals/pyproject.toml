@@ -1,0 +1,19 @@
+[project]
+name = "workspace-evals"
+version = "0.1.0"
+description = "Evaluation datasets and runners for workspace skills."
+requires-python = ">=3.12"
+dependencies = ["appspec", "model-gateway", "skill-sdk", "workspace-skills"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/workspace_evals"]
+
+[tool.uv.sources]
+appspec = { workspace = true }
+model-gateway = { workspace = true }
+skill-sdk = { workspace = true }
+workspace-skills = { workspace = true }

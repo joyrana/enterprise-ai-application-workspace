@@ -5,6 +5,9 @@ description = "Backend API for the Enterprise AI Application Workspace (projects
 requires-python = ">=3.12"
 dependencies = [
   "appspec",
+  "model-gateway",
+  "skill-sdk",
+  "workspace-skills",
   "fastapi>=0.115,<1",
   "uvicorn[standard]>=0.32",
   "sqlalchemy>=2.0.36,<2.1",
@@ -24,3 +27,6 @@ packages = ["src/workspace_api"]
 
 [tool.uv.sources]
 appspec = { workspace = true }
+model-gateway = { workspace = true }
+skill-sdk = { workspace = true }
+workspace-skills = { workspace = true }

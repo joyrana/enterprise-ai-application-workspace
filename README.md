@@ -5,9 +5,10 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 1 (foundation).** Projects, the canonical application specification,
-> immutable revision history, audit trail and the workspace UI exist. AI discovery, design-
-> system adapters and code generation are **not implemented yet**; see the roadmap below.
+> **Status: Milestone 2a (AI discovery).** Projects, the canonical specification, revision
+> history, audit trail and the workspace UI exist, plus AI-assisted business discovery with
+> human review. Skill routing, orchestration, design-system adapters and code generation are
+> **not implemented yet**; see the roadmap below.
 > Development authentication only: do not expose this build to untrusted users.
 
 ## What works today
@@ -22,6 +23,13 @@ security policies.
 - **Workspace web** (`apps/workspace-web`): React + Fluent UI v9 shell, projects list and
   creation, requirement-status overview, spec editor with validation and conflict handling,
   revision history and audit views.
+- **AI discovery** (`packages/model-gateway`, `packages/skill-sdk`, `skills/`): describe an
+  application in plain language; Qwen (Hugging Face or self-hosted) or gpt-oss (Ollama)
+  proposes objective, domain, personas, requirements, assumptions and open questions; you
+  accept, confirm or reject each proposal, and accepted ones become one new revision with
+  model provenance. Confirmed facts are never overwritten by later runs.
+- **Evaluation** (`evals/`): a versioned discovery dataset with deterministic checks and a
+  runner that reports completion, pass rate, repairs, latency and tokens for a real model.
 - **CI**: lint, format, strict typing, unit and PostgreSQL integration tests, contract drift
   checks, production build, dependency audit, secret scan.
 
@@ -76,6 +84,10 @@ uv run python -m workspace_api.export --out contracts
 apps/workspace-web/          React + Fluent UI v9 workspace
 services/api/                FastAPI service, Alembic migrations, tests
 packages/application-spec/   Canonical spec library (no web/DB dependencies)
+packages/model-gateway/      Model providers (HF router, self-hosted, Ollama), validation, budgets
+packages/skill-sdk/          Skill manifests, registry, typed spec commands
+skills/                      Built-in skills (business-discovery)
+evals/                       Evaluation datasets and runners
 contracts/                   Generated OpenAPI + JSON Schema (drift-checked in CI)
 docs/                        Assessment, architecture, ADRs, threat model
 .github/workflows/           CI and lockfile regeneration
@@ -83,18 +95,34 @@ docs/                        Assessment, architecture, ADRs, threat model
 
 ## AI models
 
-The planned base model is **Qwen** (open weights, via Hugging Face Inference Providers or
-self-hosted), with **gpt-oss on Ollama** as a fully local option. Both go through one
-OpenAI-compatible adapter, model output is always validated, and there is no silent fallback
-between models. See [ADR-0007](docs/adr/0007-model-providers.md). This lands in Milestone 2.
+Discovery works with **Qwen** (Hugging Face Inference Providers or self-hosted weights) and
+**gpt-oss on Ollama** through one OpenAI-compatible adapter. Model output is always
+validated, there is no silent fallback between models, and confidential projects are kept
+off remote providers. See [ADR-0007](docs/adr/0007-model-providers.md) and
+[ADR-0008](docs/adr/0008-proposals-decisions-and-runs.md).
+
+Local quick start with gpt-oss:
+
+```bash
+ollama pull gpt-oss:20b
+export MODEL_PROFILE=ollama MODEL_ID=gpt-oss:20b
+uv run uvicorn workspace_api.main:app --reload --port 8000   # then open a project → Discovery
+```
+
+Evaluate the configured model on the discovery dataset (writes JSON and Markdown reports):
+
+```bash
+uv run python -m workspace_evals.discovery --repeats 3 --out reports/evals
+```
 
 ## Roadmap
 
 | Milestone | Scope | Status |
 |---|---|---|
 | 0 | Repository assessment, plan, ADRs | Done ([assessment](docs/assessment/milestone-0.md)) |
-| 1 | Foundation: spec, persistence, API, workspace shell, CI | In review |
-| 2 | Model providers, skill registry, intent routing, discovery skills, orchestration, evals | Next |
+| 1 | Foundation: spec, persistence, API, workspace shell, CI | Done |
+| 2a | Model gateway (Qwen / gpt-oss), skill SDK, business discovery with human review, discovery evals | In review |
+| 2b | More discovery skills, intent routing with labeled evals, orchestration with checkpointing | Next |
 | 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Planned |
 | 4 | React generation, isolated builds, preview, diff review | Planned |
 | 5 | Incremental changes, edit preservation, resilience | Planned |

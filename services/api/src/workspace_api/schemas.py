@@ -13,6 +13,7 @@ from typing import Annotated, Any
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from appspec import ApplicationSpec, SpecSummary, ValidationIssue
+from skill_sdk import CommandResult, Decision, SpecCommand
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 Description = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=5000)]
@@ -96,3 +97,83 @@ class AuditPage(ApiModel):
 
 class Health(ApiModel):
     status: str
+
+
+# --------------------------------------------------------------------------- AI runs
+
+Description8k = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=8000)]
+
+
+class AiStatus(ApiModel):
+    configured: bool
+    model: str | None = Field(description="profile:model identifier, e.g. 'ollama:gpt-oss:20b'.")
+    profile: str | None
+    remote: bool | None = Field(description="Whether prompts leave the organization's network.")
+    structured_mode: str | None
+
+
+class DiscoveryRunCreate(ApiModel):
+    description: Description8k
+
+
+class RunError(ApiModel):
+    kind: str
+    message: str
+
+
+class ModelUsage(ApiModel):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+
+class RunModelInfo(ApiModel):
+    model_id: str
+    profile: str
+    prompt_version: str | None
+    usage: ModelUsage
+    repaired: bool
+    calls: int
+    latency_ms: float
+    estimated_cost_usd: float | None
+
+
+class RunOut(ApiModel):
+    id: uuid.UUID
+    skill_id: str
+    skill_version: str
+    status: str = Field(description="queued | running | succeeded | failed")
+    description: str
+    base_revision: int
+    summary: str | None
+    not_applicable_reason: str | None
+    proposals: list[SpecCommand]
+    model: RunModelInfo | None
+    error: RunError | None
+    applied_revision: int | None
+    decisions: dict[str, str] | None
+    created_by: str
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+
+
+class RunPage(ApiModel):
+    items: list[RunOut]
+
+
+class ProposalDecision(ApiModel):
+    proposal_id: str = Field(min_length=1, max_length=64)
+    decision: Decision
+
+
+class ApplyRunRequest(ApiModel):
+    decisions: list[ProposalDecision] = Field(min_length=1, max_length=200)
+    change_summary: ChangeSummary | None = None
+
+
+class ApplyRunResult(ApiModel):
+    run: RunOut
+    results: list[CommandResult]
+    revision: SpecRevisionOut
+    revision_created: bool
