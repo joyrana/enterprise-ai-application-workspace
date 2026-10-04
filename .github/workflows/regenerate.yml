@@ -1,0 +1,68 @@
+name: Regenerate lockfiles and contracts
+
+# Opt-in maintenance job for feature branches. Push a commit whose message contains
+# "[regen]" and this workflow resolves dependencies, regenerates the committed
+# contracts (OpenAPI, JSON Schema, TypeScript API types) and commits the result back
+# to the same branch for review. It also applies the locked formatters. It never runs on main, on tags, or for forks
+# (forks cannot trigger `push` events in this repository).
+#
+# Used to bootstrap the first lockfiles, and afterwards whenever dependency ranges change.
+
+on:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regen-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    if: contains(github.event.head_commit.message, '[regen]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # commit regenerated files back to this feature branch only
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - name: Resolve Python dependencies
+        run: |
+          uv lock
+          uv sync --locked
+      - name: Export contracts
+        run: uv run python -m workspace_api.export --out contracts
+      - name: Resolve web dependencies and generate API types
+        working-directory: apps/workspace-web
+        run: |
+          npm install --no-audit --no-fund
+          npm run gen:api
+      - name: Apply locked formatters
+        run: |
+          uv run ruff format .
+          (cd apps/workspace-web && npm run format)
+      - name: Commit changes
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git add uv.lock contracts apps/workspace-web/package-lock.json apps/workspace-web/src/api/schema.d.ts
+          git add -u # formatter changes to tracked files only
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "chore: regenerate lockfiles, contracts and formatting"
+          git push origin "HEAD:refs/heads/${REF_NAME}"

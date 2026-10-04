@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: nothing in this workflow writes to the repository or uses secrets.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python (lint, types, tests, contracts, audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+      REQUIRE_DB: "1" # database tests fail instead of skipping when Postgres is missing
+      APP_ENV: test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install (locked)
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "uv sync" uv sync --locked
+      - name: Format
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "ruff format" uv run ruff format --check .
+      - name: Lint
+        run: uv run ruff check --output-format github .
+      - name: Type check
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy packages/application-spec/src services/api/src
+      - name: Tests (unit + integration against PostgreSQL)
+        run: >-
+          $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "pytest"
+          uv run pytest --tb=short
+          --cov=appspec --cov=workspace_api --cov-report=term-missing
+          --junitxml=reports/pytest.xml
+      - name: Generated contracts are up to date
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "contracts" uv run python -m workspace_api.export --check --out contracts
+      - name: Dependency vulnerability audit
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "pip-audit" uv run pip-audit --skip-editable --progress-spinner off
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: python-test-report
+          path: reports/
+          retention-days: 14
+
+  web:
+    name: Workspace web (contracts, lint, types, tests, build, audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/workspace-web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/workspace-web/package-lock.json
+      - name: Install (locked)
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "npm ci" npm ci
+      - name: Generated API types match the OpenAPI contract
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "API types" npm run check:api
+      - name: Format
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "prettier" npm run format:check
+      - name: Lint (including accessibility rules)
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "eslint" npm run lint
+      - name: Type check
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "tsc" npm run typecheck
+      - name: Tests
+        env:
+          DEBUG_PRINT_LIMIT: "1500" # keep DOM dumps short so failure annotations show the summary
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "vitest" npm test
+      - name: Production build
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "build" npm run build
+      - name: Dependency vulnerability audit (runtime dependencies)
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "npm audit" npm audit --omit=dev --audit-level=high
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks (checksum verified)
+        run: |
+          set -euo pipefail
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSLO "${base}/${archive}"
+          curl -fsSLO "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " ${archive}\$" "gitleaks_${GITLEAKS_VERSION}_checksums.txt" | sha256sum --check --strict
+          tar -xzf "${archive}" gitleaks
+      - name: Scan full history
+        run: ./gitleaks git --redact --no-banner --exit-code 1 .
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high

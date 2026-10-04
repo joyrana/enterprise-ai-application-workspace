@@ -1,0 +1,2359 @@
+{
+  "$defs": {
+    "AcceptanceCriterion": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "given": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "Given",
+          "type": "string"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "requirement_id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        },
+        "then": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "Then",
+          "type": "string"
+        },
+        "when": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "When",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "requirement_id",
+        "given",
+        "when",
+        "then"
+      ],
+      "title": "AcceptanceCriterion",
+      "type": "object"
+    },
+    "AccessibilityRequirements": {
+      "additionalProperties": false,
+      "properties": {
+        "notes": {
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "standard": {
+          "$ref": "#/$defs/Tracked_Literal_1_AA__2_AA__2_AAA___"
+        }
+      },
+      "title": "AccessibilityRequirements",
+      "type": "object"
+    },
+    "ArtifactDependency": {
+      "additionalProperties": false,
+      "properties": {
+        "from_id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "From Id",
+          "type": "string"
+        },
+        "kind": {
+          "default": "derives-from",
+          "enum": [
+            "derives-from",
+            "implements",
+            "constrains",
+            "tests"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "to_id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "To Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_id",
+        "to_id"
+      ],
+      "title": "ArtifactDependency",
+      "type": "object"
+    },
+    "Assumption": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "related_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Related Ids",
+          "type": "array"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "statement": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "statement"
+      ],
+      "title": "Assumption",
+      "type": "object"
+    },
+    "AuthorizationRule": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "enum": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "approve",
+              "execute",
+              "export"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Actions",
+          "type": "array"
+        },
+        "condition": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Condition"
+        },
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "resource": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Resource",
+          "type": "string"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "role_id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Role Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "role_id",
+        "resource",
+        "actions"
+      ],
+      "title": "AuthorizationRule",
+      "type": "object"
+    },
+    "BusinessRule": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "requirement_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Requirement Ids",
+          "type": "array"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "statement": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "statement"
+      ],
+      "title": "BusinessRule",
+      "type": "object"
+    },
+    "Classification": {
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ],
+      "title": "Classification",
+      "type": "string"
+    },
+    "ComponentSpec": {
+      "additionalProperties": false,
+      "description": "Semantic component intent; mapped to design-system components later.",
+      "properties": {
+        "entity_id": {
+          "anyOf": [
+            {
+              "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entity Id"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "form",
+            "table",
+            "card",
+            "metric",
+            "chart",
+            "dialog",
+            "tabs",
+            "list",
+            "toolbar",
+            "notification",
+            "text",
+            "other"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "ComponentSpec",
+      "type": "object"
+    },
+    "DataEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/EntityField"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "relationships": {
+          "items": {
+            "$ref": "#/$defs/Relationship"
+          },
+          "title": "Relationships",
+          "type": "array"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "name"
+      ],
+      "title": "DataEntity",
+      "type": "object"
+    },
+    "Decision": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rationale"
+        },
+        "related_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Related Ids",
+          "type": "array"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        },
+        "summary": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "summary"
+      ],
+      "title": "Decision",
+      "type": "object"
+    },
+    "DesignConstraint": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "statement": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "statement"
+      ],
+      "title": "DesignConstraint",
+      "type": "object"
+    },
+    "DesignSystemSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Tracked_Annotated_str__StringConstraints__FieldInfo_annotation_NoneType__required_True__description__Stable__human-readable_identifier__lowercase_kebab-case_____"
+        },
+        "version": {
+          "$ref": "#/$defs/appspec__common__Tracked_Annotated_str__StringConstraints____2"
+        }
+      },
+      "title": "DesignSystemSelection",
+      "type": "object"
+    },
+    "EntityField": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "enum_values": {
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Enum Values",
+          "type": "array"
+        },
+        "name": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "reference_entity_id": {
+          "anyOf": [
+            {
+              "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Entity Id"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "$ref": "#/$defs/FieldType"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "title": "EntityField",
+      "type": "object"
+    },
+    "FactStatus": {
+      "enum": [
+        "unknown",
+        "proposed",
+        "confirmed"
+      ],
+      "title": "FactStatus",
+      "type": "string"
+    },
+    "FieldType": {
+      "enum": [
+        "string",
+        "text",
+        "integer",
+        "decimal",
+        "money",
+        "boolean",
+        "date",
+        "datetime",
+        "enum",
+        "file",
+        "reference"
+      ],
+      "title": "FieldType",
+      "type": "string"
+    },
+    "FormField": {
+      "additionalProperties": false,
+      "properties": {
+        "help_text": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Help Text"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "name": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "type": {
+          "$ref": "#/$defs/FieldType"
+        },
+        "validation": {
+          "items": {
+            "$ref": "#/$defs/ValidationRule"
+          },
+          "title": "Validation",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "label",
+        "type"
+      ],
+      "title": "FormField",
+      "type": "object"
+    },
+    "Framework": {
+      "enum": [
+        "react",
+        "angular"
+      ],
+      "title": "Framework",
+      "type": "string"
+    },
+    "FrameworkConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "framework": {
+          "$ref": "#/$defs/Tracked_Framework_"
+        },
+        "language": {
+          "const": "typescript",
+          "default": "typescript",
+          "title": "Language",
+          "type": "string"
+        }
+      },
+      "title": "FrameworkConfig",
+      "type": "object"
+    },
+    "FunctionalRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "persona_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Persona Ids",
+          "type": "array"
+        },
+        "priority": {
+          "$ref": "#/$defs/Priority",
+          "default": "should"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        },
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "title"
+      ],
+      "title": "FunctionalRequirement",
+      "type": "object"
+    },
+    "IntegrationContract": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "direction": {
+          "enum": [
+            "inbound",
+            "outbound",
+            "bidirectional"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "entity_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Entity Ids",
+          "type": "array"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "rest",
+            "graphql",
+            "file",
+            "event",
+            "database",
+            "other"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "name",
+        "kind",
+        "direction"
+      ],
+      "title": "IntegrationContract",
+      "type": "object"
+    },
+    "ItemStatus": {
+      "enum": [
+        "proposed",
+        "confirmed"
+      ],
+      "title": "ItemStatus",
+      "type": "string"
+    },
+    "JourneyStep": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "screen_id": {
+          "anyOf": [
+            {
+              "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Screen Id"
+        }
+      },
+      "required": [
+        "description"
+      ],
+      "title": "JourneyStep",
+      "type": "object"
+    },
+    "NavigationItem": {
+      "additionalProperties": false,
+      "properties": {
+        "children": {
+          "items": {
+            "$ref": "#/$defs/NavigationItem"
+          },
+          "title": "Children",
+          "type": "array"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "screen_id": {
+          "anyOf": [
+            {
+              "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Screen Id"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "NavigationItem",
+      "type": "object"
+    },
+    "NfrCategory": {
+      "enum": [
+        "performance",
+        "availability",
+        "security",
+        "privacy",
+        "compliance",
+        "accessibility",
+        "usability",
+        "scalability",
+        "observability",
+        "maintainability",
+        "other"
+      ],
+      "title": "NfrCategory",
+      "type": "string"
+    },
+    "NonFunctionalRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/NfrCategory"
+        },
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "measure": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How compliance is measured, e.g. 'p95 < 300 ms'.",
+          "title": "Measure"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "statement": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "category",
+        "statement"
+      ],
+      "title": "NonFunctionalRequirement",
+      "type": "object"
+    },
+    "OpenQuestion": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking": {
+          "default": false,
+          "title": "Blocking",
+          "type": "boolean"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "question": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "related_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Related Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "question"
+      ],
+      "title": "OpenQuestion",
+      "type": "object"
+    },
+    "Persona": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "goals": {
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Goals",
+          "type": "array"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "role_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Role Ids",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "name"
+      ],
+      "title": "Persona",
+      "type": "object"
+    },
+    "Priority": {
+      "enum": [
+        "must",
+        "should",
+        "could",
+        "wont"
+      ],
+      "title": "Priority",
+      "type": "string"
+    },
+    "ProjectMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ProjectMetadata",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "Where a value came from. Model-sourced values record the producing skill and model.",
+      "properties": {
+        "actor": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "User or service identity that supplied the value.",
+          "title": "Actor"
+        },
+        "model_id": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Id"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        },
+        "prompt_version": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt Version"
+        },
+        "skill_id": {
+          "anyOf": [
+            {
+              "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Id"
+        },
+        "skill_version": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Version"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "Relationship": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "kind": {
+          "enum": [
+            "one-to-one",
+            "one-to-many",
+            "many-to-one",
+            "many-to-many"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "target_entity_id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Target Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_entity_id",
+        "kind"
+      ],
+      "title": "Relationship",
+      "type": "object"
+    },
+    "ResponsiveRule": {
+      "additionalProperties": false,
+      "properties": {
+        "behavior": {
+          "maxLength": 5000,
+          "minLength": 1,
+          "title": "Behavior",
+          "type": "string"
+        },
+        "breakpoint": {
+          "enum": [
+            "mobile",
+            "tablet",
+            "desktop",
+            "wide"
+          ],
+          "title": "Breakpoint",
+          "type": "string"
+        },
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "breakpoint",
+        "behavior"
+      ],
+      "title": "ResponsiveRule",
+      "type": "object"
+    },
+    "RevisionMeta": {
+      "additionalProperties": false,
+      "description": "Server-stamped revision bookkeeping. Client-supplied values are overwritten.",
+      "properties": {
+        "created_in": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created In"
+        },
+        "updated_in": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated In"
+        }
+      },
+      "title": "RevisionMeta",
+      "type": "object"
+    },
+    "RiskLevel": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "Role": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "name"
+      ],
+      "title": "Role",
+      "type": "object"
+    },
+    "Screen": {
+      "additionalProperties": false,
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/$defs/ComponentSpec"
+          },
+          "title": "Components",
+          "type": "array"
+        },
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/FormField"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "persona_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Persona Ids",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Purpose"
+        },
+        "requirement_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Requirement Ids",
+          "type": "array"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "states": {
+          "items": {
+            "$ref": "#/$defs/UiState"
+          },
+          "title": "States",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "name"
+      ],
+      "title": "Screen",
+      "type": "object"
+    },
+    "SecurityProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "$ref": "#/$defs/Tracked_Classification_"
+        },
+        "risk_level": {
+          "$ref": "#/$defs/Tracked_RiskLevel_"
+        }
+      },
+      "title": "SecurityProfile",
+      "type": "object"
+    },
+    "Source": {
+      "enum": [
+        "user",
+        "model",
+        "derived",
+        "system"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "Tracked_Annotated_str__StringConstraints__FieldInfo_annotation_NoneType__required_True__description__Stable__human-readable_identifier__lowercase_kebab-case_____": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/FactStatus",
+          "default": "unknown"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "Tracked[Annotated[str, StringConstraints, FieldInfo(annotation=NoneType, required=True, description='Stable, human-readable identifier (lowercase kebab-case, max 64 chars).')]]",
+      "type": "object"
+    },
+    "Tracked_Classification_": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/FactStatus",
+          "default": "unknown"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Classification"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Tracked[Classification]",
+      "type": "object"
+    },
+    "Tracked_Framework_": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/FactStatus",
+          "default": "unknown"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Framework"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Tracked[Framework]",
+      "type": "object"
+    },
+    "Tracked_Literal_1_AA__2_AA__2_AAA___": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/FactStatus",
+          "default": "unknown"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "enum": [
+                "WCAG 2.1 AA",
+                "WCAG 2.2 AA",
+                "WCAG 2.2 AAA"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "Tracked[Literal['WCAG 2.1 AA', 'WCAG 2.2 AA', 'WCAG 2.2 AAA']]",
+      "type": "object"
+    },
+    "Tracked_RiskLevel_": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/FactStatus",
+          "default": "unknown"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RiskLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "Tracked[RiskLevel]",
+      "type": "object"
+    },
+    "UiState": {
+      "enum": [
+        "loading",
+        "empty",
+        "error",
+        "success",
+        "disabled"
+      ],
+      "title": "UiState",
+      "type": "string"
+    },
+    "UserJourney": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "id": {
+          "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+          "pattern": "^[a-z][a-z0-9-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "persona_ids": {
+          "items": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Persona Ids",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/ItemStatus",
+          "default": "proposed"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/JourneyStep"
+          },
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "provenance",
+        "name"
+      ],
+      "title": "UserJourney",
+      "type": "object"
+    },
+    "ValidationRule": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "required",
+            "min",
+            "max",
+            "min-length",
+            "max-length",
+            "pattern",
+            "custom"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "ValidationRule",
+      "type": "object"
+    },
+    "appspec__common__Tracked_Annotated_str__StringConstraints____1": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/FactStatus",
+          "default": "unknown"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 5000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "Tracked[Annotated[str, StringConstraints]]",
+      "type": "object"
+    },
+    "appspec__common__Tracked_Annotated_str__StringConstraints____2": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmed_by": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmed By"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Provenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision": {
+          "$ref": "#/$defs/RevisionMeta"
+        },
+        "status": {
+          "$ref": "#/$defs/FactStatus",
+          "default": "unknown"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "Tracked[Annotated[str, StringConstraints]]",
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/joyrana/enterprise-ai-application-workspace/schemas/application-spec/1.0.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acceptance_criteria": {
+      "items": {
+        "$ref": "#/$defs/AcceptanceCriterion"
+      },
+      "title": "Acceptance Criteria",
+      "type": "array"
+    },
+    "accessibility": {
+      "$ref": "#/$defs/AccessibilityRequirements"
+    },
+    "artifact_dependencies": {
+      "items": {
+        "$ref": "#/$defs/ArtifactDependency"
+      },
+      "title": "Artifact Dependencies",
+      "type": "array"
+    },
+    "assumptions": {
+      "items": {
+        "$ref": "#/$defs/Assumption"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "authorization": {
+      "items": {
+        "$ref": "#/$defs/AuthorizationRule"
+      },
+      "title": "Authorization",
+      "type": "array"
+    },
+    "business_rules": {
+      "items": {
+        "$ref": "#/$defs/BusinessRule"
+      },
+      "title": "Business Rules",
+      "type": "array"
+    },
+    "decisions": {
+      "items": {
+        "$ref": "#/$defs/Decision"
+      },
+      "title": "Decisions",
+      "type": "array"
+    },
+    "design_system": {
+      "$ref": "#/$defs/DesignSystemSelection"
+    },
+    "domain": {
+      "$ref": "#/$defs/appspec__common__Tracked_Annotated_str__StringConstraints____2"
+    },
+    "entities": {
+      "items": {
+        "$ref": "#/$defs/DataEntity"
+      },
+      "title": "Entities",
+      "type": "array"
+    },
+    "framework": {
+      "$ref": "#/$defs/FrameworkConfig"
+    },
+    "functional_requirements": {
+      "items": {
+        "$ref": "#/$defs/FunctionalRequirement"
+      },
+      "title": "Functional Requirements",
+      "type": "array"
+    },
+    "integrations": {
+      "items": {
+        "$ref": "#/$defs/IntegrationContract"
+      },
+      "title": "Integrations",
+      "type": "array"
+    },
+    "journeys": {
+      "items": {
+        "$ref": "#/$defs/UserJourney"
+      },
+      "title": "Journeys",
+      "type": "array"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ProjectMetadata"
+    },
+    "navigation": {
+      "items": {
+        "$ref": "#/$defs/NavigationItem"
+      },
+      "title": "Navigation",
+      "type": "array"
+    },
+    "nonfunctional_requirements": {
+      "items": {
+        "$ref": "#/$defs/NonFunctionalRequirement"
+      },
+      "title": "Nonfunctional Requirements",
+      "type": "array"
+    },
+    "objective": {
+      "$ref": "#/$defs/appspec__common__Tracked_Annotated_str__StringConstraints____1"
+    },
+    "open_questions": {
+      "items": {
+        "$ref": "#/$defs/OpenQuestion"
+      },
+      "title": "Open Questions",
+      "type": "array"
+    },
+    "org_constraints": {
+      "items": {
+        "$ref": "#/$defs/DesignConstraint"
+      },
+      "title": "Org Constraints",
+      "type": "array"
+    },
+    "personas": {
+      "items": {
+        "$ref": "#/$defs/Persona"
+      },
+      "title": "Personas",
+      "type": "array"
+    },
+    "responsive": {
+      "items": {
+        "$ref": "#/$defs/ResponsiveRule"
+      },
+      "title": "Responsive",
+      "type": "array"
+    },
+    "roles": {
+      "items": {
+        "$ref": "#/$defs/Role"
+      },
+      "title": "Roles",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "screens": {
+      "items": {
+        "$ref": "#/$defs/Screen"
+      },
+      "title": "Screens",
+      "type": "array"
+    },
+    "security": {
+      "$ref": "#/$defs/SecurityProfile"
+    }
+  },
+  "required": [
+    "metadata"
+  ],
+  "title": "ApplicationSpec",
+  "type": "object"
+}

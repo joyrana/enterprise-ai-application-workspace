@@ -1,0 +1,13 @@
+[project]
+name = "appspec"
+version = "0.1.0"
+description = "Canonical, versioned application specification for the Enterprise AI Application Workspace."
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.9,<3"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/appspec"]

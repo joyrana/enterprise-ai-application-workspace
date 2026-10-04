@@ -1,0 +1,136 @@
+{
+  "schema_version": "1.0.0",
+  "metadata": {
+    "name": "Finance Operations Adjustments",
+    "description": "Configure adjustments, validate source files, simulate calculations, and route risky transactions for approval.",
+    "tags": ["finance", "operations"]
+  },
+  "objective": {
+    "value": "Reduce manual effort and error rates when finance operations configure adjustments and approve risky transactions.",
+    "status": "confirmed",
+    "provenance": {"source": "user", "actor": "demo-user"},
+    "confirmed_by": "demo-user"
+  },
+  "domain": {
+    "value": "Finance operations",
+    "status": "proposed",
+    "provenance": {
+      "source": "model",
+      "skill_id": "business-discovery",
+      "skill_version": "0.1.0",
+      "model_id": "example-model",
+      "prompt_version": "business-discovery@1"
+    }
+  },
+  "personas": [
+    {
+      "id": "ops-analyst",
+      "name": "Operations analyst",
+      "goals": ["Configure adjustments", "Validate source files"],
+      "role_ids": ["analyst"],
+      "status": "confirmed",
+      "provenance": {"source": "user", "actor": "demo-user"},
+      "confirmed_by": "demo-user"
+    },
+    {
+      "id": "approver",
+      "name": "Finance approver",
+      "goals": ["Review risky transactions"],
+      "role_ids": ["approver-role"],
+      "status": "proposed",
+      "provenance": {
+        "source": "model",
+        "skill_id": "persona-discovery",
+        "skill_version": "0.1.0",
+        "model_id": "example-model"
+      }
+    }
+  ],
+  "roles": [
+    {"id": "analyst", "name": "Analyst", "status": "confirmed", "provenance": {"source": "user", "actor": "demo-user"}, "confirmed_by": "demo-user"},
+    {"id": "approver-role", "name": "Approver", "status": "proposed", "provenance": {"source": "derived", "note": "Derived from the approver persona."}}
+  ],
+  "functional_requirements": [
+    {
+      "id": "configure-adjustments",
+      "title": "Configure adjustment rules",
+      "priority": "must",
+      "persona_ids": ["ops-analyst"],
+      "status": "confirmed",
+      "provenance": {"source": "user", "actor": "demo-user"},
+      "confirmed_by": "demo-user"
+    },
+    {
+      "id": "validate-source-files",
+      "title": "Validate uploaded source files",
+      "priority": "must",
+      "persona_ids": ["ops-analyst"],
+      "status": "proposed",
+      "provenance": {"source": "user", "actor": "demo-user"}
+    },
+    {
+      "id": "route-risky-transactions",
+      "title": "Route risky transactions for approval",
+      "priority": "must",
+      "persona_ids": ["ops-analyst", "approver"],
+      "status": "proposed",
+      "provenance": {"source": "user", "actor": "demo-user"}
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "ac-adjustment-saved",
+      "requirement_id": "configure-adjustments",
+      "given": "an analyst with edit rights",
+      "when": "they save a valid adjustment rule",
+      "then": "the rule is versioned and visible in the rule list",
+      "status": "proposed",
+      "provenance": {"source": "model", "skill_id": "acceptance-criteria", "skill_version": "0.1.0", "model_id": "example-model"}
+    }
+  ],
+  "entities": [
+    {
+      "id": "adjustment",
+      "name": "Adjustment",
+      "fields": [
+        {"name": "amount", "type": "money", "required": true},
+        {"name": "kind", "type": "enum", "required": true, "enum_values": ["accrual", "reclass", "write-off"]},
+        {"name": "transaction", "type": "reference", "reference_entity_id": "transaction"}
+      ],
+      "relationships": [{"target_entity_id": "transaction", "kind": "many-to-one"}],
+      "status": "proposed",
+      "provenance": {"source": "user", "actor": "demo-user"}
+    },
+    {
+      "id": "transaction",
+      "name": "Transaction",
+      "fields": [{"name": "risk-score", "type": "decimal"}],
+      "status": "proposed",
+      "provenance": {"source": "user", "actor": "demo-user"}
+    }
+  ],
+  "screens": [
+    {
+      "id": "adjustment-rules",
+      "name": "Adjustment rules",
+      "persona_ids": ["ops-analyst"],
+      "requirement_ids": ["configure-adjustments"],
+      "components": [{"id": "rules-table", "kind": "table", "entity_id": "adjustment"}],
+      "states": ["loading", "empty", "error", "success"],
+      "status": "proposed",
+      "provenance": {"source": "user", "actor": "demo-user"}
+    }
+  ],
+  "navigation": [{"id": "nav-rules", "label": "Adjustment rules", "screen_id": "adjustment-rules"}],
+  "framework": {
+    "framework": {"value": "react", "status": "confirmed", "provenance": {"source": "user", "actor": "demo-user"}, "confirmed_by": "demo-user"},
+    "language": "typescript"
+  },
+  "security": {
+    "classification": {"value": "confidential", "status": "proposed", "provenance": {"source": "user", "actor": "demo-user"}}
+  },
+  "open_questions": [
+    {"id": "q-risk-threshold", "question": "What risk score makes a transaction require approval?", "blocking": true, "related_ids": ["route-risky-transactions"]},
+    {"id": "q-file-formats", "question": "Which source-file formats must be supported?", "related_ids": ["validate-source-files"]}
+  ]
+}

@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+reports/
+*.egg-info/
+build/
+dist/
+
+# Node
+node_modules/
+apps/workspace-web/dist/
+apps/workspace-web/src/api/schema.check.d.ts
+
+# Environment and secrets: never commit real values
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store

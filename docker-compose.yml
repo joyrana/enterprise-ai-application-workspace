@@ -1,0 +1,20 @@
+# Local development database only. Not a production deployment.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: workspace
+      POSTGRES_PASSWORD: change-me # local-only placeholder; matches .env.example
+      POSTGRES_DB: workspace
+    ports:
+      - "127.0.0.1:5432:5432" # bound to localhost only
+    volumes:
+      - workspace-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workspace -d workspace"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  workspace-pg:
