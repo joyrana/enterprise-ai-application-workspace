@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which model (if any) is configured */
+        get: operations["ai_status_api_v1_ai_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects": {
         parameters: {
             query?: never;
@@ -50,6 +67,58 @@ export interface paths {
         get: operations["list_audit_api_v1_projects__project_id__audit_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/discovery-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent discovery runs, newest first (resume after a page refresh) */
+        get: operations["list_discovery_runs_api_v1_projects__project_id__discovery_runs_get"];
+        put?: never;
+        /** Start business discovery on a description; poll the run for proposals */
+        post: operations["start_discovery_api_v1_projects__project_id__discovery_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/discovery-runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a discovery run and its proposals */
+        get: operations["get_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/discovery-runs/{run_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply per-proposal decisions (accept, confirm, reject) as one new revision */
+        post: operations["apply_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__apply_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -211,6 +280,76 @@ export interface components {
             notes?: string[];
             standard?: components["schemas"]["Tracked_Literal_1_AA__2_AA__2_AAA___"];
         };
+        /** AddItem */
+        AddItem: {
+            /**
+             * Collection
+             * @enum {string}
+             */
+            collection: "personas" | "roles" | "functional_requirements" | "nonfunctional_requirements" | "acceptance_criteria" | "business_rules" | "entities" | "screens" | "assumptions";
+            /** Item */
+            item: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            op: "add_item";
+            /**
+             * Proposal Id
+             * @description Stable, human-readable identifier (lowercase kebab-case, max 64 chars).
+             */
+            proposal_id: string;
+            /** Rationale */
+            rationale?: string | null;
+        };
+        /** AddOpenQuestion */
+        AddOpenQuestion: {
+            /**
+             * Blocking
+             * @default false
+             */
+            blocking: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            op: "add_open_question";
+            /**
+             * Proposal Id
+             * @description Stable, human-readable identifier (lowercase kebab-case, max 64 chars).
+             */
+            proposal_id: string;
+            /** Question */
+            question: string;
+            /**
+             * Question Id
+             * @description Stable, human-readable identifier (lowercase kebab-case, max 64 chars).
+             */
+            question_id: string;
+            /** Related Ids */
+            related_ids?: string[];
+        };
+        /** AiStatus */
+        AiStatus: {
+            /** Configured */
+            configured: boolean;
+            /**
+             * Model
+             * @description profile:model identifier, e.g. 'ollama:gpt-oss:20b'.
+             */
+            model: string | null;
+            /** Profile */
+            profile: string | null;
+            /**
+             * Remote
+             * @description Whether prompts leave the organization's network.
+             */
+            remote: boolean | null;
+            /** Structured Mode */
+            structured_mode: string | null;
+        };
         /** ApplicationSpec */
         "ApplicationSpec-Input": {
             /** Acceptance Criteria */
@@ -225,7 +364,7 @@ export interface components {
             /** Business Rules */
             business_rules?: components["schemas"]["BusinessRule"][];
             /** Decisions */
-            decisions?: components["schemas"]["Decision"][];
+            decisions?: components["schemas"]["appspec__model__Decision"][];
             design_system?: components["schemas"]["DesignSystemSelection"];
             domain?: components["schemas"]["appspec__common__Tracked_Annotated_str__StringConstraints____2"];
             /** Entities */
@@ -277,7 +416,7 @@ export interface components {
             /** Business Rules */
             business_rules?: components["schemas"]["BusinessRule"][];
             /** Decisions */
-            decisions?: components["schemas"]["Decision"][];
+            decisions?: components["schemas"]["Decision-Output"][];
             design_system?: components["schemas"]["DesignSystemSelection"];
             domain?: components["schemas"]["appspec__common__Tracked_Annotated_str__StringConstraints____2"];
             /** Entities */
@@ -314,6 +453,22 @@ export interface components {
             /** Screens */
             screens?: components["schemas"]["Screen"][];
             security?: components["schemas"]["SecurityProfile"];
+        };
+        /** ApplyRunRequest */
+        ApplyRunRequest: {
+            /** Change Summary */
+            change_summary?: string | null;
+            /** Decisions */
+            decisions: components["schemas"]["ProposalDecision"][];
+        };
+        /** ApplyRunResult */
+        ApplyRunResult: {
+            /** Results */
+            results: components["schemas"]["CommandResult"][];
+            revision: components["schemas"]["SpecRevisionOut"];
+            /** Revision Created */
+            revision_created: boolean;
+            run: components["schemas"]["RunOut"];
         };
         /** ArtifactDependency */
         ArtifactDependency: {
@@ -436,6 +591,14 @@ export interface components {
             /** Proposed */
             proposed: number;
         };
+        /** CommandResult */
+        CommandResult: {
+            /** Detail */
+            detail?: string | null;
+            outcome: components["schemas"]["Outcome"];
+            /** Proposal Id */
+            proposal_id: string;
+        };
         /**
          * ComponentSpec
          * @description Semantic component intent; mapped to design-system components later.
@@ -479,7 +642,7 @@ export interface components {
             status: components["schemas"]["ItemStatus"];
         };
         /** Decision */
-        Decision: {
+        "Decision-Output": {
             /** Confirmed By */
             confirmed_by?: string | null;
             /**
@@ -518,6 +681,11 @@ export interface components {
         DesignSystemSelection: {
             id?: components["schemas"]["Tracked_Annotated_str__StringConstraints__FieldInfo_annotation_NoneType__required_True__description__Stable__human-readable_identifier__lowercase_kebab-case_____"];
             version?: components["schemas"]["appspec__common__Tracked_Annotated_str__StringConstraints____2"];
+        };
+        /** DiscoveryRunCreate */
+        DiscoveryRunCreate: {
+            /** Description */
+            description: string;
         };
         /** EntityField */
         EntityField: {
@@ -670,6 +838,15 @@ export interface components {
             /** Screen Id */
             screen_id?: string | null;
         };
+        /** ModelUsage */
+        ModelUsage: {
+            /** Completion Tokens */
+            completion_tokens: number;
+            /** Prompt Tokens */
+            prompt_tokens: number;
+            /** Total Tokens */
+            total_tokens: number;
+        };
         /** NavigationItem */
         "NavigationItem-Input": {
             /** Children */
@@ -742,6 +919,11 @@ export interface components {
             /** Related Ids */
             related_ids?: string[];
         };
+        /**
+         * Outcome
+         * @enum {string}
+         */
+        Outcome: "applied" | "rejected_by_user" | "skipped_confirmed_fact" | "skipped_duplicate" | "skipped_id_conflict" | "invalid" | "would_break_references";
         /** Persona */
         Persona: {
             /** Confirmed By */
@@ -843,6 +1025,12 @@ export interface components {
              */
             next_cursor: string | null;
         };
+        /** ProposalDecision */
+        ProposalDecision: {
+            decision: components["schemas"]["skill_sdk__commands__Decision"];
+            /** Proposal Id */
+            proposal_id: string;
+        };
         /**
          * Provenance
          * @description Where a value came from. Model-sourced values record the producing skill and model.
@@ -934,6 +1122,82 @@ export interface components {
             /** @default proposed */
             status: components["schemas"]["ItemStatus"];
         };
+        /** RunError */
+        RunError: {
+            /** Kind */
+            kind: string;
+            /** Message */
+            message: string;
+        };
+        /** RunModelInfo */
+        RunModelInfo: {
+            /** Calls */
+            calls: number;
+            /** Estimated Cost Usd */
+            estimated_cost_usd: number | null;
+            /** Latency Ms */
+            latency_ms: number;
+            /** Model Id */
+            model_id: string;
+            /** Profile */
+            profile: string;
+            /** Prompt Version */
+            prompt_version: string | null;
+            /** Repaired */
+            repaired: boolean;
+            usage: components["schemas"]["ModelUsage"];
+        };
+        /** RunOut */
+        RunOut: {
+            /** Applied Revision */
+            applied_revision: number | null;
+            /** Base Revision */
+            base_revision: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string;
+            /** Decisions */
+            decisions: {
+                [key: string]: string;
+            } | null;
+            /** Description */
+            description: string;
+            error: components["schemas"]["RunError"] | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            model: components["schemas"]["RunModelInfo"] | null;
+            /** Not Applicable Reason */
+            not_applicable_reason: string | null;
+            /** Proposals */
+            proposals: (components["schemas"]["SetFact"] | components["schemas"]["AddItem"] | components["schemas"]["AddOpenQuestion"])[];
+            /** Skill Id */
+            skill_id: string;
+            /** Skill Version */
+            skill_version: string;
+            /** Started At */
+            started_at: string | null;
+            /**
+             * Status
+             * @description queued | running | succeeded | failed
+             */
+            status: string;
+            /** Summary */
+            summary: string | null;
+        };
+        /** RunPage */
+        RunPage: {
+            /** Items */
+            items: components["schemas"]["RunOut"][];
+        };
         /** Screen */
         Screen: {
             /** Components */
@@ -966,6 +1230,28 @@ export interface components {
         SecurityProfile: {
             classification?: components["schemas"]["Tracked_Classification_"];
             risk_level?: components["schemas"]["Tracked_RiskLevel_"];
+        };
+        /** SetFact */
+        SetFact: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            op: "set_fact";
+            /**
+             * Path
+             * @enum {string}
+             */
+            path: "/objective" | "/domain" | "/security/classification" | "/security/risk_level" | "/accessibility/standard";
+            /**
+             * Proposal Id
+             * @description Stable, human-readable identifier (lowercase kebab-case, max 64 chars).
+             */
+            proposal_id: string;
+            /** Rationale */
+            rationale?: string | null;
+            /** Value */
+            value: string;
         };
         /**
          * Severity
@@ -1182,6 +1468,31 @@ export interface components {
             /** Value */
             value?: string | null;
         };
+        /** Decision */
+        appspec__model__Decision: {
+            /** Confirmed By */
+            confirmed_by?: string | null;
+            /**
+             * Id
+             * @description Stable, human-readable identifier (lowercase kebab-case, max 64 chars).
+             */
+            id: string;
+            provenance: components["schemas"]["Provenance"];
+            /** Rationale */
+            rationale?: string | null;
+            /** Related Ids */
+            related_ids?: string[];
+            revision?: components["schemas"]["RevisionMeta"];
+            /** @default proposed */
+            status: components["schemas"]["ItemStatus"];
+            /** Summary */
+            summary: string;
+        };
+        /**
+         * Decision
+         * @enum {string}
+         */
+        skill_sdk__commands__Decision: "accept" | "confirm" | "reject";
     };
     responses: never;
     parameters: never;
@@ -1191,6 +1502,81 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ai_status_api_v1_ai_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiStatus"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
     list_projects_api_v1_projects_get: {
         parameters: {
             query?: {
@@ -1521,6 +1907,411 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    list_discovery_runs_api_v1_projects__project_id__discovery_runs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunPage"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    start_discovery_api_v1_projects__project_id__discovery_runs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscoveryRunCreate"];
+            };
+        };
+        responses: {
+            /** @description Replay of an earlier request with the same Idempotency-Key. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    get_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+                /** @description Run identifier. */
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    apply_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+                /** @description Run identifier. */
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyRunResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };
