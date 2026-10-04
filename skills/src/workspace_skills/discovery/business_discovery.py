@@ -26,9 +26,9 @@ from skill_sdk import (
     SkillManifest,
     SkillOutput,
 )
-from workspace_skills.common import model_info, read_message, require_provider, summarize
+from workspace_skills.common import model_info, read_message, require_provider, summarize, wrap_user_text
 
-PROMPT_VERSION = "business-discovery@1"
+PROMPT_VERSION = "business-discovery@2"  # @2: security note after flagged requests
 
 
 class _Answer(BaseModel):
@@ -96,11 +96,9 @@ def _known_facts(spec: ApplicationSpec) -> list[str]:
 def build_messages(spec: ApplicationSpec, description: str) -> list[Message]:
     system = resources.files(__package__).joinpath("prompts/business_discovery_v1.md").read_text(encoding="utf-8")
     known = "\n".join(_known_facts(spec))
-    # Neutralise attempts to close the data delimiter from inside the description.
-    safe = description.replace("</user_description>", "</ user_description>")
     user = (
         f"Already known (do not ask about these):\n{known}\n\n"
-        f"<user_description>\n{safe}\n</user_description>\n\n"
+        f"{wrap_user_text(description, tag='user_description')}\n\n"
         "Propose the structured understanding now."
     )
     return [Message(role="system", content=system), Message(role="user", content=user)]

@@ -29,6 +29,8 @@ from .schemas import (
     RunCreate,
     RunOut,
     RunPage,
+    SafetyScan,
+    SafetyScanRequest,
     SkillList,
     SpecRevisionOut,
     SpecRevisionPage,
@@ -241,6 +243,16 @@ def ai_status(request: Request, principal: CurrentPrincipal) -> AiStatus:
         remote=runtime.capabilities.remote,
         structured_mode=runtime.capabilities.structured_mode.value,
     )
+
+
+@api.post(
+    "/safety/scan",
+    response_model=SafetyScan,
+    tags=["ai"],
+    summary="Screen request text for prompt-injection signals before starting a run (deterministic, no model)",
+)
+def scan_text(body: SafetyScanRequest, principal: CurrentPrincipal) -> SafetyScan:
+    return runs.scan(body.text)
 
 
 @api.get(

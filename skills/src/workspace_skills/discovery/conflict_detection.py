@@ -34,7 +34,7 @@ from workspace_skills.common import (
     wrap_user_text,
 )
 
-PROMPT_VERSION = "conflict-detection@1"
+PROMPT_VERSION = "conflict-detection@2"  # @2: security note after flagged requests
 MAX_CONFLICTS = 8
 DUPLICATE_THRESHOLD = 0.8
 _WORD = re.compile(r"[a-z0-9]+")

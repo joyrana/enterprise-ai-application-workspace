@@ -59,6 +59,10 @@ jobs:
         env:
           SUMMARY_PATTERN: "^routing\\["
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "routing eval" uv run python -m workspace_evals.routing --method lexical --out reports/evals
+      - name: Injection detector eval (deterministic; floors enforced)
+        env:
+          SUMMARY_PATTERN: "^injection\\["
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "injection eval" uv run python -m workspace_evals.injection --out reports/evals
       - name: Generated contracts are up to date
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "contracts" uv run python -m workspace_api.export --check --out contracts
       - name: Dependency vulnerability audit

@@ -15,6 +15,7 @@ import {
   Subtitle2,
   Textarea,
   makeStyles,
+  mergeClasses,
   tokens,
 } from "@fluentui/react-components";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -25,6 +26,7 @@ import {
   type ApplyRunResult,
   type DecisionValue,
   type Run,
+  type SafetyScan,
   type SkillInfo,
   type SpecRevision,
 } from "../../api/client";
@@ -49,6 +51,67 @@ const PRECONDITION_LABELS: Record<string, string> = {
   "/objective": "a business objective",
   "/personas": "personas",
 };
+
+const SIGNAL_LABELS: Record<string, string> = {
+  instruction_override: "tries to override the AI's rules",
+  role_reassignment: "tries to give the AI a different role",
+  prompt_exfiltration: "asks the AI to reveal its instructions",
+  template_markup: "contains chat-template or delimiter markup",
+  workflow_tampering: "tries to confirm or approve proposals automatically",
+  output_directive: "tells the AI what to output",
+};
+
+/** Screen the request as the person types (debounced). The server owns the detector. */
+function useInjectionScan(text: string, delayMs: number): SafetyScan | null {
+  const [scan, setScan] = useState<SafetyScan | null>(null);
+  useEffect(() => {
+    const trimmed = text.trim();
+    if (!trimmed || trimmed.length > MAX_CHARS) {
+      setScan(null);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      api.scanText(trimmed, controller.signal).then(
+        (result) => setScan(result),
+        () => undefined, // screening is advisory; the run records its own scan
+      );
+    }, delayMs);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [text, delayMs]);
+  return scan;
+}
+
+function InjectionWarning({ scan, phase }: { scan: SafetyScan; phase: "draft" | "run" }) {
+  const styles = useStyles();
+  const findings = [...new Set(scan.signals.map((s) => SIGNAL_LABELS[s.kind] ?? s.kind))];
+  const excerpts = [...new Set(scan.signals.map((s) => s.excerpt))];
+  return (
+    <MessageBar intent="warning" layout="multiline">
+      <MessageBarBody>
+        <MessageBarTitle>
+          {phase === "draft"
+            ? "This text looks like it contains instructions to the AI"
+            : "This request contained text that looks like instructions to the AI"}
+        </MessageBarTitle>
+        It {findings.join("; ")}. The model is told to treat it as data, but small models sometimes follow it anyway.{" "}
+        {phase === "draft"
+          ? "You can still run it; proposals that repeat this text will be marked."
+          : "Proposals that repeat this text are marked and start as Reject."}
+        <ul className={styles.list} aria-label="Flagged text">
+          {excerpts.map((excerpt) => (
+            <li key={excerpt}>
+              <q>{excerpt}</q>
+            </li>
+          ))}
+        </ul>
+      </MessageBarBody>
+    </MessageBar>
+  );
+}
 
 function routingLabel(run: Run, skills: SkillInfo[]): string | null {
   const routing = run.routing;
@@ -82,6 +145,7 @@ const useStyles = makeStyles({
     border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
     "@media (max-width: 720px)": { gridTemplateColumns: "1fr" },
   },
+  flagged: { border: `${tokens.strokeWidthThick} solid ${tokens.colorPaletteRedBorder2}` },
   label: { color: tokens.colorNeutralForeground3 },
   detail: { color: tokens.colorNeutralForeground2 },
   list: { margin: 0, paddingLeft: tokens.spacingHorizontalL },
@@ -93,6 +157,8 @@ interface Props {
   onApplied: (next: { revision: SpecRevision; etag: string }) => void;
   /** Poll interval while a run is in progress. */
   pollMs?: number;
+  /** Debounce before screening the typed request. */
+  scanDelayMs?: number;
 }
 
 function newKey(): string {
@@ -103,7 +169,7 @@ function isActive(run: Run | null): boolean {
   return run !== null && (run.status === "queued" || run.status === "running");
 }
 
-export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Props) {
+export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDelayMs = 400 }: Props) {
   const styles = useStyles();
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [run, setRun] = useState<Run | null>(null);
@@ -114,6 +180,7 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Prop
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<unknown>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(newKey);
+  const draftScan = useInjectionScan(message, scanDelayMs);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -246,6 +313,7 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Prop
           placeholder="For example: finance operations need to configure adjustments, validate source files, simulate calculations and send risky transactions for approval."
         />
       </Field>
+      {draftScan && draftScan.risk !== "none" && <InjectionWarning scan={draftScan} phase="draft" />}
       <div className={styles.row}>
         <Button appearance="primary" onClick={start} disabled={busy || !trimmed || tooLong}>
           {starting ? "Starting…" : "Run"}
@@ -291,7 +359,13 @@ function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }:
   // (Initialising state from the proposals broke when a run started queued and its proposals
   // arrived later: the UI showed "Accept" but sent "reject". Found by the E2E suite.)
   const [decisions, setDecisions] = useState<Record<string, DecisionValue>>({});
-  const decisionFor = (id: string): DecisionValue => decisions[id] ?? "accept";
+  // Proposals that repeat text from a flagged part of the request start as "reject".
+  const flagged = useMemo(
+    () => new Map((run.safety?.flagged_proposals ?? []).map((f) => [f.proposal_id, f.phrase])),
+    [run.safety],
+  );
+  const decisionFor = (id: string): DecisionValue => decisions[id] ?? (flagged.has(id) ? "reject" : "accept");
+  const warning = run.safety && run.safety.risk !== "none" ? <InjectionWarning scan={run.safety} phase="run" /> : null;
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState<unknown>(null);
   const [results, setResults] = useState<ApplyRunResult["results"] | null>(null);
@@ -304,7 +378,12 @@ function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }:
     : null;
 
   if (run.status === "queued" || run.status === "running") {
-    return <Spinner label={run.status === "queued" ? "Waiting to start…" : "The model is drafting proposals…"} />;
+    return (
+      <>
+        {warning}
+        <Spinner label={run.status === "queued" ? "Waiting to start…" : "The model is drafting proposals…"} />
+      </>
+    );
   }
 
   if (run.status === "failed") {
@@ -406,6 +485,7 @@ function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }:
         )}
         {meta && <Caption1>{meta}</Caption1>}
       </div>
+      {warning}
       <Body1>
         <strong>Accept</strong> adds a proposal as <em>proposed</em>. <strong>Confirm</strong> records it as confirmed
         by you. Confirmed facts are never overwritten by later AI runs.
@@ -425,6 +505,7 @@ function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }:
             <ProposalRow
               key={v.id}
               view={v}
+              flaggedPhrase={flagged.get(v.id)}
               value={decisionFor(v.id)}
               onChange={(value) => setDecisions((prev) => ({ ...prev, [v.id]: value }))}
             />
@@ -455,16 +536,18 @@ function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }:
 
 function ProposalRow({
   view,
+  flaggedPhrase,
   value,
   onChange,
 }: {
   view: ProposalView;
+  flaggedPhrase?: string;
   value: DecisionValue;
   onChange: (value: DecisionValue) => void;
 }) {
   const styles = useStyles();
   return (
-    <div className={styles.proposal}>
+    <div className={mergeClasses(styles.proposal, flaggedPhrase !== undefined && styles.flagged)}>
       <div>
         <Caption1 className={styles.label}>{view.label}</Caption1>
         <Body1 as="p" style={{ margin: 0 }}>
@@ -476,6 +559,13 @@ function ProposalRow({
           ))}
         </Body1>
         {view.detail && <Caption1 className={styles.detail}>{view.detail}</Caption1>}
+        {flaggedPhrase !== undefined && (
+          <div>
+            <Badge appearance="tint" color="danger" size="small">
+              Repeats flagged text: “{flaggedPhrase}”
+            </Badge>
+          </div>
+        )}
       </div>
       <RadioGroup
         layout="horizontal"

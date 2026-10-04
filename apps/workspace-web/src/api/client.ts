@@ -32,6 +32,8 @@ export type Proposal = Run["proposals"][number];
 export type ApplyRunRequest = Json<NonNullable<ApplyPath["post"]["requestBody"]>>;
 export type ApplyRunResult = Json<ApplyPath["post"]["responses"][200]>;
 export type DecisionValue = ApplyRunRequest["decisions"][number]["decision"];
+export type SafetyScan = Json<paths["/api/v1/safety/scan"]["post"]["responses"][200]>;
+export type RunSafety = NonNullable<Run["safety"]>;
 
 export interface ProblemDetails {
   type: string;
@@ -218,6 +220,10 @@ export const api = {
 
   async getRun(projectId: string, runId: string, signal?: AbortSignal): Promise<Run> {
     return (await request<Run>(`/api/v1/projects/${enc(projectId)}/runs/${enc(runId)}`, { signal })).data;
+  },
+
+  async scanText(text: string, signal?: AbortSignal): Promise<SafetyScan> {
+    return (await request<SafetyScan>("/api/v1/safety/scan", { method: "POST", body: { text }, signal })).data;
   },
 
   async listSkills(projectId: string, signal?: AbortSignal): Promise<SkillList> {
