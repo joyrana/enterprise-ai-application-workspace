@@ -1,6 +1,58 @@
 # Implementation status
 
-Last updated: 2026-10-04 · Milestone 2d part 1 (PR #5)
+Last updated: 2026-10-04 · Milestone 2d part 2 (PR #6)
+
+## Milestone 2d (part 2) — Checkpointed, resumable workflows
+
+Decision record: [ADR-0012](adr/0012-workflow-orchestration.md). LangGraph was evaluated
+(`langgraph` 1.2.11, `langgraph-checkpoint-postgres` 3.1.2, checked from upstream manifests) and
+not adopted yet. The ADR lists the conditions that would change that.
+
+### What was built
+
+- `skill_sdk.workflow`: typed workflow definitions and pure transitions. Built in: the
+  **requirements pipeline** (discovery → acceptance criteria → conflict check).
+- `workflows` table (migration 0005). The checkpoint is written in the same transaction as each
+  event: step run finished, proposals applied, resume, cancel. Each step runs as an ordinary AI
+  run, so injection screening, routing records, budgets and review apply unchanged.
+- Gates: a step with proposals waits for the person. Applying (even reject-all) starts the next
+  step against the new revision. Steps whose inputs are missing are skipped, with a reason.
+- Recovery: stale step runs are reconciled on read. Resume retries a failed step at most twice
+  in total, or restarts a stalled one. Cancel stops further steps. All of this is audited.
+- UI: pipeline switch, step progress with Retry and Cancel, following the newest step run.
+  Runs without proposals now show "Nothing to review".
+
+### CI evidence (tiers 1–3)
+
+Run [37224183571](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37224183571)
+at commit `eb78cf4`:
+
+| Check | Result |
+|---|---|
+| pytest. New: 8 transition unit tests and 10 workflow API tests against PostgreSQL 16 (gates, reject-all skips, bounded retry refused at the limit, simulated mid-step crash then reconcile and resume, cancel, idempotency, tenancy); migrations 0001→0005 | **297 passed** |
+| Vitest (new: pipeline start and step progress, retry of a failed step) | **36 passed** |
+| Playwright + axe (new: full pipeline: review step 1 → criteria start on r2 → review → conflict check needs no review → completed, spec at r3 with 2 criteria) | **5 passed** |
+| Injection detector, lexical routing baseline | Unchanged (100% / 89% / 0 FP; 63%) |
+| Lint, strict typing, contracts, audits, secret scan | Pass. Dependency review still needs "Dependency graph" enabled |
+
+No tier-4 run for this part: orchestration is deterministic code, and the model calls inside
+steps are the same skills already measured in part 1.
+
+### Known limitations (2d part 2)
+
+- Sequential steps only: no parallel branches, timers or waits for external events (by design;
+  needing them is the trigger to revisit ADR-0012).
+- The crash test simulates an interruption by editing the database; it does not kill a real
+  worker process. Execution still uses in-process background tasks, not a separate worker.
+- A step run that is already executing when a workflow is cancelled still finishes.
+- One built-in workflow; workflows are defined in code, not by users.
+
+### Still open from Milestone 2d
+
+More tier-4 baselines: gpt-oss locally (too large for a CI runner), Qwen via the HF router
+(needs an `HF_TOKEN` secret), 3 repeats for variance; router schema failures (2/30).
+
+---
 
 ## Milestone 2d (part 1) — Prompt-injection hardening
 
