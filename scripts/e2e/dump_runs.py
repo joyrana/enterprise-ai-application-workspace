@@ -10,8 +10,8 @@ HEADERS = {"X-Dev-Tenant": "demo", "X-Dev-User": "demo-user"}
 
 
 def get(path: str) -> dict:  # type: ignore[type-arg]
-    request = urllib.request.Request(BASE + path, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310 - fixed local URL
+    request = urllib.request.Request(BASE + path, headers=HEADERS)  # noqa: S310 - fixed local URL
+    with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310
         return json.loads(response.read())  # type: ignore[no-any-return]
 
 

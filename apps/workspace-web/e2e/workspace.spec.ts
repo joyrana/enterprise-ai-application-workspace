@@ -22,6 +22,28 @@ async function expectNoSeriousA11yViolations(page: Page, where: string): Promise
   expect(serious, `accessibility violations on ${where}`).toEqual([]);
 }
 
+const DEV_HEADERS = { "X-Dev-Tenant": "demo", "X-Dev-User": "demo-user" };
+
+interface RunRecord {
+  status: string;
+  skill_id: string | null;
+  routing: { method: string; chosen: string | null; candidates: string[] } | null;
+  error: { kind: string; message: string } | null;
+  not_applicable_reason: string | null;
+  proposals: unknown[];
+}
+
+/** The project's most recent AI run, read through the API (also gives precise failure messages). */
+async function latestRun(page: Page): Promise<RunRecord> {
+  const projectId = new URL(page.url()).pathname.split("/")[2];
+  const response = await page.request.get(`/api/v1/projects/${projectId}/runs`, { headers: DEV_HEADERS });
+  expect(response.ok()).toBe(true);
+  const body = (await response.json()) as { items: RunRecord[] };
+  const run = body.items[0];
+  if (!run) throw new Error("no runs found");
+  return run;
+}
+
 test("create a project, discover requirements, add acceptance criteria, review history", async ({ page }) => {
   const name = `E2E finance ops ${Date.now()}`;
 
@@ -59,12 +81,26 @@ test("create a project, discover requirements, add acceptance criteria, review h
   await page.getByRole("button", { name: "Apply decisions" }).click();
   await expect(page.getByText("Applied to revision r2")).toBeVisible();
   await expect(page.getByLabel("Revision 2")).toBeVisible();
+  const spec = await page.request.get(`/api/v1/projects/${new URL(page.url()).pathname.split("/")[2]}/spec`, {
+    headers: DEV_HEADERS,
+  });
+  const requirements = ((await spec.json()) as { spec: { functional_requirements: { title: string }[] } }).spec
+    .functional_requirements;
+  expect(
+    requirements.map((r) => r.title),
+    "requirements applied in r2",
+  ).toEqual(["Configure adjustment rules", "Approve risky transactions"]);
 
   // Second run: several skills now apply, so the model routes the request.
   await page
     .getByRole("textbox", { name: /What do you need/ })
     .fill("Write acceptance criteria so QA can test the requirements.");
   await page.getByRole("button", { name: "Run" }).click();
+  await expect.poll(async () => (await latestRun(page)).status, { timeout: 45_000 }).toMatch(/succeeded|failed/);
+  const second = await latestRun(page);
+  expect(second.routing?.chosen, JSON.stringify(second)).toBe("acceptance-criteria");
+  expect(second.routing?.method, JSON.stringify(second)).toBe("model");
+  expect(second.proposals.length, JSON.stringify(second)).toBe(2);
   await expect(page.getByText("Skill: Acceptance criteria (chosen by the model, 90% confident)")).toBeVisible({
     timeout: 45_000,
   });
