@@ -17,6 +17,22 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+// jsdom has no ResizeObserver; Fluent components (e.g. MessageBar reflow) require one.
+class ResizeObserverStub {
+  observe(): void {
+    // no-op
+  }
+  unobserve(): void {
+    // no-op
+  }
+  disconnect(): void {
+    // no-op
+  }
+}
+if (!("ResizeObserver" in window)) {
+  Object.defineProperty(window, "ResizeObserver", { writable: true, value: ResizeObserverStub });
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
