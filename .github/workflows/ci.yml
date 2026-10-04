@@ -169,11 +169,13 @@ jobs:
         env:
           SUMMARY_PATTERN: "[0-9]+ (passed|failed)"
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "playwright" npm run e2e
-      - name: API log on failure
+      - name: API log and recent runs on failure
         if: failure()
         run: |
-          body=$(tail -n 60 api.log | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+          body=$(grep -v '"http.request"' api.log | tail -n 60 | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
           echo "::error title=api.log tail::${body}"
+          runs=$(python3 scripts/e2e/dump_runs.py | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+          echo "::error title=recent AI runs::${runs}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
