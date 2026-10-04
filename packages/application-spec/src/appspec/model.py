@@ -346,9 +346,7 @@ class ApplicationSpec(StrictModel):
         for collection in ID_COLLECTIONS:
             for item in getattr(self, collection):
                 if item.id in seen:
-                    raise ValueError(
-                        f"duplicate id '{item.id}' in '{collection}' (already used in '{seen[item.id]}')"
-                    )
+                    raise ValueError(f"duplicate id '{item.id}' in '{collection}' (already used in '{seen[item.id]}')")
                 seen[item.id] = collection
         nav_ids: set[str] = set()
         stack = list(self.navigation)

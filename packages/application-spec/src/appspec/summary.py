@@ -75,7 +75,9 @@ def summarize(spec: ApplicationSpec) -> SpecSummary:
     for name, label in _COLLECTIONS:
         items = getattr(spec, name)
         confirmed = sum(1 for item in items if item.status is ItemStatus.CONFIRMED)
-        collections.append(CollectionSummary(name=name, label=label, proposed=len(items) - confirmed, confirmed=confirmed))
+        collections.append(
+            CollectionSummary(name=name, label=label, proposed=len(items) - confirmed, confirmed=confirmed)
+        )
     return SpecSummary(
         facts=facts,
         collections=collections,

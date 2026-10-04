@@ -3,7 +3,7 @@ name: Regenerate lockfiles and contracts
 # Opt-in maintenance job for feature branches. Push a commit whose message contains
 # "[regen]" and this workflow resolves dependencies, regenerates the committed
 # contracts (OpenAPI, JSON Schema, TypeScript API types) and commits the result back
-# to the same branch for review. It never runs on main, on tags, or for forks
+# to the same branch for review. It also applies the locked formatters. It never runs on main, on tags, or for forks
 # (forks cannot trigger `push` events in this repository).
 #
 # Used to bootstrap the first lockfiles, and afterwards whenever dependency ranges change.
@@ -47,17 +47,22 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm run gen:api
+      - name: Apply locked formatters
+        run: |
+          uv run ruff format .
+          (cd apps/workspace-web && npm run format)
       - name: Commit changes
         env:
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           git add uv.lock contracts apps/workspace-web/package-lock.json apps/workspace-web/src/api/schema.d.ts
+          git add -u # formatter changes to tracked files only
           if git diff --cached --quiet; then
             echo "Nothing to commit."
             exit 0
           fi
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -m "chore: regenerate lockfiles and contracts"
+              commit -m "chore: regenerate lockfiles, contracts and formatting"
           git push origin "HEAD:refs/heads/${REF_NAME}"

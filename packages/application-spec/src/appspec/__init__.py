@@ -46,7 +46,9 @@ def json_schema() -> dict[str, Any]:
     """JSON Schema (draft 2020-12) for the current spec version, for non-Python consumers."""
     schema = ApplicationSpec.model_json_schema(mode="validation")
     schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
-    schema["$id"] = f"https://github.com/joyrana/enterprise-ai-application-workspace/schemas/application-spec/{SCHEMA_VERSION}"
+    schema["$id"] = (
+        f"https://github.com/joyrana/enterprise-ai-application-workspace/schemas/application-spec/{SCHEMA_VERSION}"
+    )
     schema["title"] = "ApplicationSpec"
     return schema
 

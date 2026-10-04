@@ -16,11 +16,9 @@ instead of being filled with invented business facts.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated, Generic, Self, TypeVar
+from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
-
-T = TypeVar("T")
 
 Identifier = Annotated[
     str,
@@ -97,7 +95,7 @@ def _check_status(status: str, has_value: bool, provenance: Provenance | None, c
         raise ValueError("a proposed fact cannot have confirmed_by set")
 
 
-class Tracked(StrictModel, Generic[T]):
+class Tracked[T](StrictModel):
     """A single scalar fact with explicit status and provenance."""
 
     value: T | None = None

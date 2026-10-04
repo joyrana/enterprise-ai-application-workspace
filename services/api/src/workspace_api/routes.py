@@ -6,10 +6,11 @@ import uuid
 from collections.abc import Iterator
 from typing import Annotated, Any
 
-from appspec import ApplicationSpec, json_schema
 from fastapi import APIRouter, Depends, Header, Path, Query, Request, Response, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+from appspec import ApplicationSpec, json_schema
 
 from . import service
 from .auth import CurrentPrincipal
@@ -76,8 +77,10 @@ def readyz(session: DbSession, response: Response) -> Health:
     status_code=status.HTTP_201_CREATED,
     tags=["projects"],
     summary="Create a project with an initial, empty specification (revision 1)",
-    responses={200: {"model": ProjectOut, "description": "Replay of an earlier request with the same Idempotency-Key."},
-               409: _PROBLEM},
+    responses={
+        200: {"model": ProjectOut, "description": "Replay of an earlier request with the same Idempotency-Key."},
+        409: _PROBLEM,
+    },
 )
 def create_project(
     body: ProjectCreate,
@@ -94,7 +97,9 @@ def create_project(
 
 
 @api.get("/projects", response_model=ProjectPage, tags=["projects"], summary="List projects, newest first")
-def list_projects(principal: CurrentPrincipal, session: DbSession, limit: Limit = 20, cursor: Cursor = None) -> ProjectPage:
+def list_projects(
+    principal: CurrentPrincipal, session: DbSession, limit: Limit = 20, cursor: Cursor = None
+) -> ProjectPage:
     return service.list_projects(session, principal, limit, cursor)
 
 
@@ -112,7 +117,9 @@ def get_project(project_id: ProjectId, principal: CurrentPrincipal, session: DbS
     tags=["specification"],
     summary="Get the current specification; the ETag identifies its revision",
 )
-def get_spec(project_id: ProjectId, principal: CurrentPrincipal, session: DbSession, response: Response) -> SpecRevisionOut:
+def get_spec(
+    project_id: ProjectId, principal: CurrentPrincipal, session: DbSession, response: Response
+) -> SpecRevisionOut:
     out = service.get_spec(session, principal, project_id)
     response.headers["ETag"] = service.etag(out.revision)
     return out

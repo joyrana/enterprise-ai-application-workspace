@@ -10,8 +10,9 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any
 
-from appspec import ApplicationSpec, SpecSummary, ValidationIssue
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+from appspec import ApplicationSpec, SpecSummary, ValidationIssue
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 Description = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=5000)]

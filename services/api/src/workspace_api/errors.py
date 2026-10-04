@@ -41,9 +41,7 @@ class AppError(Exception):
     code = "bad-request"
     title = "Bad request"
 
-    def __init__(
-        self, detail: str | None = None, *, errors: list[FieldError] | None = None, **extensions: Any
-    ) -> None:
+    def __init__(self, detail: str | None = None, *, errors: list[FieldError] | None = None, **extensions: Any) -> None:
         super().__init__(detail or self.title)
         self.detail = detail
         self.errors = errors or []
@@ -86,7 +84,9 @@ def _request_id(request: Request) -> str | None:
 def problem_response(request: Request, problem: Problem, headers: dict[str, str] | None = None) -> JSONResponse:
     problem.request_id = _request_id(request)
     return JSONResponse(
-        problem.model_dump(mode="json", exclude_none=True), status_code=problem.status, media_type=PROBLEM_JSON,
+        problem.model_dump(mode="json", exclude_none=True),
+        status_code=problem.status,
+        media_type=PROBLEM_JSON,
         headers=headers,
     )
 

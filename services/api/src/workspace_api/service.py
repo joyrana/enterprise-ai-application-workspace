@@ -16,6 +16,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import select, tuple_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 from appspec import (
     ApplicationSpec,
     Severity,
@@ -27,9 +31,6 @@ from appspec import (
     summarize,
     validate_spec,
 )
-from sqlalchemy import select, tuple_
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 from .auth import Principal
 from .db import AuditEvent, Project, SpecRevision
@@ -72,10 +73,10 @@ def etag(revision: int) -> str:
 
 def parse_if_match(value: str | None) -> int:
     if value is None:
-        raise PreconditionRequired("Send If-Match with the ETag of the revision you edited, e.g. If-Match: \"r3\".")
+        raise PreconditionRequired('Send If-Match with the ETag of the revision you edited, e.g. If-Match: "r3".')
     match = _ETAG.fullmatch(value.strip())
     if match is None:
-        raise RevisionConflict("If-Match must be a single revision ETag such as \"r3\".")
+        raise RevisionConflict('If-Match must be a single revision ETag such as "r3".')
     return int(match.group(1))
 
 
@@ -129,7 +130,11 @@ def _revision_out(row: SpecRevision) -> SpecRevisionOut:
 def _audit(session: Session, principal: Principal, project_id: uuid.UUID | None, action: str, **details: Any) -> None:
     session.add(
         AuditEvent(
-            tenant_id=principal.tenant_id, project_id=project_id, actor=principal.user_id, action=action, details=details
+            tenant_id=principal.tenant_id,
+            project_id=project_id,
+            actor=principal.user_id,
+            action=action,
+            details=details,
         )
     )
 
@@ -263,7 +268,9 @@ def get_spec(
     return _revision_out(_revision_row(session, project, revision or project.current_revision))
 
 
-def validate_candidate(session: Session, principal: Principal, project_id: uuid.UUID, spec: ApplicationSpec) -> SpecValidationResult:
+def validate_candidate(
+    session: Session, principal: Principal, project_id: uuid.UUID, spec: ApplicationSpec
+) -> SpecValidationResult:
     _project(session, principal, project_id)
     issues = validate_spec(spec)
     return SpecValidationResult(

@@ -35,6 +35,9 @@ extend-exclude = ["services/api/alembic/versions"]
 select = ["E", "F", "W", "I", "B", "UP", "S", "C4", "SIM", "RUF", "PT", "TID", "ASYNC"]
 ignore = ["S101"]  # asserts are fine in tests and narrowing
 
+[tool.ruff.lint.isort]
+known-first-party = ["appspec", "workspace_api"]
+
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S105", "S106", "S608"]
 

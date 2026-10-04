@@ -30,7 +30,7 @@ def test_migrations_upgrade_downgrade_and_match_models(
     cfg = make_alembic_config(empty_database_url)
 
     command.upgrade(cfg, "head")
-    assert TABLES <= _tables(empty_database_url)
+    assert _tables(empty_database_url) >= TABLES
 
     # The ORM models and the migration history must describe the same schema.
     engine = create_engine(empty_database_url)
@@ -45,4 +45,4 @@ def test_migrations_upgrade_downgrade_and_match_models(
     assert not TABLES & _tables(empty_database_url)
 
     command.upgrade(cfg, "head")
-    assert TABLES <= _tables(empty_database_url)
+    assert _tables(empty_database_url) >= TABLES

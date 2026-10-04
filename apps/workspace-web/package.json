@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint . --max-warnings=0",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "test": "vitest run",
     "gen:api": "openapi-typescript ../../contracts/openapi.json -o src/api/schema.d.ts",
     "check:api": "openapi-typescript ../../contracts/openapi.json -o src/api/schema.check.d.ts && node scripts/compare.mjs src/api/schema.d.ts src/api/schema.check.d.ts"
