@@ -7,7 +7,33 @@ import { project, specRevision } from "../../test/fixtures";
 import { renderAt, renderWithProviders } from "../../test/render";
 import { DiscoveryTab } from "./DiscoveryTab";
 
-const BASE = `/api/v1/projects/${project.id}/discovery-runs`;
+const BASE = `/api/v1/projects/${project.id}/runs`;
+const SKILLS_PATH = `/api/v1/projects/${project.id}/skills`;
+const SKILLS = {
+  items: [
+    {
+      id: "acceptance-criteria",
+      name: "Acceptance criteria",
+      description: "Proposes Given/When/Then criteria.",
+      category: "discovery",
+      version: "0.1.0",
+      applicable: false,
+      unmet_preconditions: ["/functional_requirements"],
+      message_required: false,
+    },
+    {
+      id: "business-discovery",
+      name: "Business discovery",
+      description: "Turns a description into proposals.",
+      category: "discovery",
+      version: "0.1.0",
+      applicable: true,
+      unmet_preconditions: [],
+      message_required: true,
+    },
+  ],
+};
+const skillsRoute = { method: "GET", path: SKILLS_PATH, body: SKILLS };
 const RUN_ID = "22222222-2222-4222-8222-222222222222";
 const CONFIGURED = {
   configured: true,
@@ -23,7 +49,16 @@ function run(overrides: Partial<Run> = {}): Run {
     skill_id: "business-discovery",
     skill_version: "0.1.0",
     status: "succeeded",
-    description: "Finance ops app",
+    message: "Finance ops app",
+    routing: {
+      method: "single-candidate",
+      candidates: ["business-discovery"],
+      chosen: "business-discovery",
+      confidence: null,
+      rationale: "Only one skill applies.",
+      model_id: null,
+      total_tokens: 0,
+    },
     base_revision: 1,
     summary: "3 proposal(s): 1 fact(s), 1 item(s), 1 open question(s).",
     not_applicable_reason: null,
@@ -86,16 +121,18 @@ describe("DiscoveryTab", () => {
         path: "/api/v1/ai/status",
         body: { configured: false, model: null, profile: null, remote: null, structured_mode: null },
       },
+      skillsRoute,
       { method: "GET", path: BASE, body: { items: [] } },
     ]);
     renderAt(`/projects/${project.id}/discovery`);
     expect(await screen.findByText("No AI model is configured")).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: /Describe the application/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /What do you need/ })).not.toBeInTheDocument();
   });
 
   it("starts a run, polls until it finishes, and shows grouped proposals", async () => {
     const { calls } = mockFetch([
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
       { method: "GET", path: BASE, body: { items: [] } },
       {
         method: "POST",
@@ -113,10 +150,10 @@ describe("DiscoveryTab", () => {
     const user = userEvent.setup();
     renderTab();
     expect(await screen.findByText("Local model")).toBeInTheDocument();
-    const start = screen.getByRole("button", { name: "Propose requirements" });
+    const start = screen.getByRole("button", { name: "Run" });
     expect(start).toBeDisabled();
 
-    await user.type(screen.getByRole("textbox", { name: /Describe the application/ }), "Finance ops app");
+    await user.type(screen.getByRole("textbox", { name: /What do you need/ }), "Finance ops app");
     await user.click(start);
 
     expect(await screen.findByRole("heading", { name: /3 proposal/ })).toBeInTheDocument();
@@ -126,13 +163,14 @@ describe("DiscoveryTab", () => {
     expect(screen.getByText(/1200 tokens/)).toBeInTheDocument();
 
     const post = calls.find((c) => c.method === "POST");
-    expect(post?.body).toEqual({ description: "Finance ops app" });
+    expect(post?.body).toEqual({ message: "Finance ops app" });
     expect(post?.headers["Idempotency-Key"]).toMatch(/^discovery-/);
   });
 
   it("resumes an in-progress run after a refresh", async () => {
     mockFetch([
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
       { method: "GET", path: BASE, body: { items: [run({ status: "running", proposals: [], summary: null })] } },
       { method: "GET", path: `${BASE}/${RUN_ID}`, body: run() },
     ]);
@@ -145,6 +183,7 @@ describe("DiscoveryTab", () => {
     const applied = run({ applied_revision: 2, decisions: { "p-objective": "confirm" } });
     const { calls } = mockFetch([
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
       { method: "GET", path: BASE, body: { items: [run()] } },
       {
         method: "POST",
@@ -188,6 +227,7 @@ describe("DiscoveryTab", () => {
   it("explains a revision conflict when applying", async () => {
     mockFetch([
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
       { method: "GET", path: BASE, body: { items: [run()] } },
       {
         method: "POST",
@@ -206,6 +246,7 @@ describe("DiscoveryTab", () => {
   it("shows a failed run and lets the user reuse the description", async () => {
     mockFetch([
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
       {
         method: "GET",
         path: BASE,
@@ -224,8 +265,8 @@ describe("DiscoveryTab", () => {
     const user = userEvent.setup();
     renderTab();
     expect(await screen.findByText("The model did not respond in time.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Use this description again" }));
-    expect(screen.getByRole("textbox", { name: /Describe the application/ })).toHaveValue("Finance ops app");
+    await user.click(screen.getByRole("button", { name: "Use this request again" }));
+    expect(screen.getByRole("textbox", { name: /What do you need/ })).toHaveValue("Finance ops app");
   });
 
   it("warns when prompts go to a remote provider", async () => {
@@ -235,6 +276,7 @@ describe("DiscoveryTab", () => {
         path: "/api/v1/ai/status",
         body: { ...CONFIGURED, model: "hf-router:Qwen/Qwen3-8B", remote: true },
       },
+      skillsRoute,
       { method: "GET", path: BASE, body: { items: [] } },
     ]);
     renderTab();
@@ -244,6 +286,7 @@ describe("DiscoveryTab", () => {
   it("shows the reason when the text is not an application request", async () => {
     mockFetch([
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
       {
         method: "GET",
         path: BASE,
@@ -252,5 +295,96 @@ describe("DiscoveryTab", () => {
     ]);
     renderTab();
     expect(await screen.findByText("That is a weather question.")).toBeInTheDocument();
+  });
+  it("offers applicable skills and sends an explicit choice", async () => {
+    const { calls } = mockFetch([
+      { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
+      { method: "GET", path: BASE, body: { items: [] } },
+      { method: "POST", path: BASE, status: 202, body: run({ status: "queued", proposals: [], summary: null }) },
+    ]);
+    const user = userEvent.setup();
+    renderTab();
+    const select = await screen.findByRole("combobox", { name: "Skill" });
+    expect(
+      screen.getByRole("option", { name: /Acceptance criteria \(needs functional requirements\)/ }),
+    ).toBeDisabled();
+    await user.selectOptions(select, "business-discovery");
+    await user.type(screen.getByRole("textbox", { name: /What do you need/ }), "HR onboarding");
+    await user.click(screen.getByRole("button", { name: "Run" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "POST")).toBe(true));
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({
+      message: "HR onboarding",
+      skill_id: "business-discovery",
+    });
+  });
+
+  it("explains a model routing decision and shows acceptance criteria", async () => {
+    const routed = run({
+      skill_id: "acceptance-criteria",
+      summary: "1 proposal(s): 0 fact(s), 1 item(s), 0 open question(s).",
+      routing: {
+        method: "model",
+        candidates: ["acceptance-criteria", "business-discovery"],
+        chosen: "acceptance-criteria",
+        confidence: 0.86,
+        rationale: "The request asks how to test requirements.",
+        model_id: "gpt-oss:20b",
+        total_tokens: 120,
+      },
+      proposals: [
+        {
+          op: "add_item",
+          proposal_id: "p-ac-1",
+          collection: "acceptance_criteria",
+          item: {
+            id: "ac-1",
+            requirement_id: "validate-files",
+            given: "a file",
+            when: "it is uploaded",
+            then: "it is validated",
+          },
+          rationale: null,
+        },
+      ],
+    } as unknown as Partial<Run>);
+    mockFetch([
+      { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
+      { method: "GET", path: BASE, body: { items: [routed] } },
+    ]);
+    renderTab();
+    expect(
+      await screen.findByText("Skill: Acceptance criteria (chosen by the model, 86% confident)"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Why: The request asks how to test requirements.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Acceptance criteria" })).toBeInTheDocument();
+    expect(screen.getByText("Given a file, when it is uploaded, then it is validated")).toBeInTheDocument();
+    expect(screen.getByText("For requirement validate-files")).toBeInTheDocument();
+  });
+
+  it("explains when the model decides no skill fits", async () => {
+    const none = run({
+      skill_id: null,
+      proposals: [],
+      summary: "No skill fits this request.",
+      not_applicable_reason: "That is a weather question.",
+      routing: {
+        method: "model",
+        candidates: ["acceptance-criteria", "business-discovery"],
+        chosen: null,
+        confidence: 0.9,
+        rationale: "That is a weather question.",
+        model_id: "gpt-oss:20b",
+        total_tokens: 90,
+      },
+    } as unknown as Partial<Run>);
+    mockFetch([
+      { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
+      { method: "GET", path: BASE, body: { items: [none] } },
+    ]);
+    renderTab();
+    expect(await screen.findByText("No skill fits this request (decided by the model)")).toBeInTheDocument();
   });
 });

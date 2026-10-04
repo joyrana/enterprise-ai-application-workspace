@@ -58,4 +58,8 @@ class SkillRegistry:
 
     def applicable(self, spec: ApplicationSpec) -> list[SkillManifest]:
         """Latest version of every skill whose preconditions the spec satisfies (no model involved)."""
-        return [m for m in self.manifests() if all(_known(spec, path) for path in m.preconditions)]
+        return [m for m in self.manifests() if not unmet_preconditions(m, spec)]
+
+
+def unmet_preconditions(manifest: SkillManifest, spec: ApplicationSpec) -> list[str]:
+    return [path for path in manifest.preconditions if not _known(spec, path)]

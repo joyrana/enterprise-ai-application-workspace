@@ -1,14 +1,14 @@
-"""AI runs: start a skill against a project, execute it in the background, apply decisions.
+"""AI runs: route a request to a skill, execute it in the background, apply decisions.
 
-Lifecycle: ``queued`` → ``running`` → ``succeeded`` | ``failed``. A succeeded run
-holds proposals; applying the person's decisions creates at most one new spec
-revision and can happen only once per run.
+Lifecycle: ``queued`` → ``running`` → ``succeeded`` | ``failed``. Execution first
+routes the request (ADR-0009): an explicit skill is used as-is; otherwise the
+precondition filter runs, and the model chooses only when several skills apply.
+A succeeded run holds proposals; applying the person's decisions creates at most
+one new spec revision and can happen only once per run.
 
 Execution happens after the HTTP response (FastAPI background task) in its own
 database session. State is durable: if the process stops mid-run, the run is
-marked ``failed`` with kind ``interrupted`` once it is older than its deadline,
-and the person can start a new run. Distributed workers and checkpointed
-resumption arrive with the orchestration milestone.
+marked ``failed`` with kind ``interrupted`` once it is older than its deadline.
 """
 
 from __future__ import annotations
@@ -27,7 +27,17 @@ from sqlalchemy.orm import Session
 
 from appspec import ApplicationSpec, Provenance, Source
 from model_gateway import Budget, ModelError, check_data_policy
-from skill_sdk import Decision, Outcome, SkillContext, SkillRegistry, SpecCommand, apply_commands
+from skill_sdk import (
+    Decision,
+    Outcome,
+    RoutingError,
+    SkillContext,
+    SkillRegistry,
+    SkillRouter,
+    SpecCommand,
+    apply_commands,
+    unmet_preconditions,
+)
 
 from . import service
 from .ai import ModelRuntime
@@ -41,24 +51,28 @@ from .errors import (
     NotFound,
     RunAlreadyApplied,
     RunNotApplicable,
+    SkillNotApplicable,
     SpecInvalid,
     TooManyRuns,
 )
 from .schemas import (
     ApplyRunRequest,
     ApplyRunResult,
-    DiscoveryRunCreate,
     ModelUsage,
+    RunCreate,
     RunError,
     RunModelInfo,
     RunOut,
     RunPage,
+    RunRouting,
+    SkillInfo,
+    SkillList,
 )
 
 log = logging.getLogger("workspace_api.runs")
 
-DISCOVERY_SKILL = "business-discovery"
 MAX_ACTIVE_RUNS_PER_TENANT = 3
+ROUTING_DEADLINE_S = 60.0
 _STALE_GRACE = timedelta(seconds=60)
 _IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 _COMMANDS = TypeAdapter(list[SpecCommand])
@@ -94,6 +108,25 @@ def _model_info(raw: dict[str, Any] | None) -> RunModelInfo | None:
     )
 
 
+def _routing_out(raw: dict[str, Any] | None) -> RunRouting | None:
+    if not raw:
+        return None
+    model = raw.get("model") or {}
+    return RunRouting(
+        method=str(raw.get("method", "")),
+        candidates=list(raw.get("candidates", [])),
+        chosen=raw.get("skill_id"),
+        confidence=raw.get("confidence"),
+        rationale=str(raw.get("rationale", "")),
+        model_id=model.get("model_id"),
+        total_tokens=int((model.get("usage") or {}).get("total_tokens", 0)),
+    )
+
+
+def _message(run: WorkflowRun) -> str:
+    return str(run.input.get("message") or run.input.get("description") or "")
+
+
 def _run_out(run: WorkflowRun) -> RunOut:
     result = run.result or {}
     return RunOut(
@@ -101,7 +134,8 @@ def _run_out(run: WorkflowRun) -> RunOut:
         skill_id=run.skill_id,
         skill_version=run.skill_version,
         status=run.status,
-        description=str(run.input.get("description", "")),
+        message=_message(run),
+        routing=_routing_out(run.routing),
         base_revision=run.base_revision,
         summary=result.get("summary"),
         not_applicable_reason=result.get("not_applicable_reason"),
@@ -131,12 +165,23 @@ def _run(
     return run
 
 
-def _expire_if_stale(session: Session, run: WorkflowRun, deadline_s: float) -> None:
+def _deadline_s(run: WorkflowRun, registry: SkillRegistry) -> float:
+    skill_timeout = 0.0
+    if run.skill_id:
+        try:
+            skill_timeout = registry.get(run.skill_id, run.skill_version).manifest.timeout_s
+        except Exception:  # an old run of a skill version no longer registered
+            skill_timeout = 0.0
+    longest = max((m.timeout_s for m in registry.manifests()), default=180.0)
+    return ROUTING_DEADLINE_S + (skill_timeout or longest)
+
+
+def _expire_if_stale(session: Session, run: WorkflowRun, registry: SkillRegistry) -> None:
     """Mark runs that can no longer finish (process stopped) as interrupted."""
     if run.status not in ("queued", "running"):
         return
     reference = run.started_at or run.created_at
-    if datetime.now(UTC) - reference <= timedelta(seconds=deadline_s) + _STALE_GRACE:
+    if datetime.now(UTC) - reference <= timedelta(seconds=_deadline_s(run, registry)) + _STALE_GRACE:
         return
     session.execute(
         update(WorkflowRun)
@@ -151,14 +196,38 @@ def _expire_if_stale(session: Session, run: WorkflowRun, deadline_s: float) -> N
     session.refresh(run)
 
 
+# --------------------------------------------------------------------------- skills
+
+
+def list_skills(session: Session, principal: Principal, project_id: uuid.UUID, registry: SkillRegistry) -> SkillList:
+    project = service.find_project(session, principal, project_id)
+    spec = service.current_spec(session, project)
+    items = []
+    for m in registry.manifests():
+        missing = unmet_preconditions(m, spec)
+        items.append(
+            SkillInfo(
+                id=m.id,
+                name=m.name,
+                description=m.description,
+                category=m.category.value,
+                version=m.version,
+                applicable=not missing,
+                unmet_preconditions=missing,
+                message_required="message" in m.required_inputs,
+            )
+        )
+    return SkillList(items=items)
+
+
 # --------------------------------------------------------------------------- create
 
 
-def create_discovery_run(
+def create_run(
     session: Session,
     principal: Principal,
     project_id: uuid.UUID,
-    body: DiscoveryRunCreate,
+    body: RunCreate,
     idempotency_key: str | None,
     runtime: ModelRuntime | None,
     registry: SkillRegistry,
@@ -180,11 +249,18 @@ def create_discovery_run(
                 raise IdempotencyConflict("This Idempotency-Key was already used with a different request.")
             return _run_out(existing), False
 
+    spec = service.current_spec(session, project)
+    skill_version = None
+    if body.skill_id is not None:
+        try:
+            skill_version = SkillRouter(registry).check_explicit(body.skill_id, spec).version
+        except RoutingError as exc:
+            raise SkillNotApplicable(str(exc)) from exc
+
     if runtime is None:
         raise ModelNotConfigured(
             "Set MODEL_PROFILE and MODEL_ID (see .env.example and docs/adr/0007-model-providers.md)."
         )
-    spec = service.current_spec(session, project)
     try:
         check_data_policy(
             runtime.capabilities, _classification(spec), allow_remote=runtime.allow_remote_for_confidential
@@ -200,15 +276,14 @@ def create_discovery_run(
     if (active or 0) >= MAX_ACTIVE_RUNS_PER_TENANT:
         raise TooManyRuns(f"At most {MAX_ACTIVE_RUNS_PER_TENANT} AI runs may be active at once. Try again shortly.")
 
-    skill = registry.get(DISCOVERY_SKILL)
     run = WorkflowRun(
         id=uuid.uuid4(),
         tenant_id=principal.tenant_id,
         project_id=project.id,
-        skill_id=skill.manifest.id,
-        skill_version=skill.manifest.version,
+        skill_id=body.skill_id,
+        skill_version=skill_version,
         status="queued",
-        input={"description": body.description},
+        input={"message": body.message},
         base_revision=project.current_revision,
         created_by=principal.user_id,
         idempotency_key=idempotency_key,
@@ -221,9 +296,9 @@ def create_discovery_run(
         project.id,
         "ai.run.started",
         run_id=str(run.id),
-        skill=f"{skill.manifest.id}@{skill.manifest.version}",
+        skill=f"{body.skill_id}@{skill_version}" if body.skill_id else "auto",
         model=runtime.label,
-        description_chars=len(body.description),
+        message_chars=len(body.message),
     )
     try:
         session.commit()
@@ -237,8 +312,19 @@ def create_discovery_run(
 # --------------------------------------------------------------------------- execute
 
 
+def _failed_model_info(runtime: ModelRuntime, prompt_version: str | None, exc: ModelError) -> dict[str, Any]:
+    return {
+        "model_id": runtime.model_id,
+        "profile": runtime.profile,
+        "prompt_version": prompt_version,
+        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        "repaired": False,
+        "calls": [c.model_dump() for c in exc.calls],
+    }
+
+
 def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry: SkillRegistry) -> None:
-    """Run a queued skill execution to completion. Safe to call more than once (claims atomically)."""
+    """Route and run a queued request to completion. Safe to call more than once (claims atomically)."""
     session = db.new_session()
     try:
         claimed = session.execute(
@@ -255,49 +341,64 @@ def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry
         principal = Principal(tenant_id=run.tenant_id, user_id=run.created_by)
         project = service.find_project(session, principal, run.project_id)
         spec = service.spec_at(session, project, run.base_revision)
-        skill = registry.get(run.skill_id, run.skill_version)
-        manifest = skill.manifest
+        message = _message(run)
 
         status = "failed"
         result: dict[str, Any] | None = None
         model: dict[str, Any] | None = None
         error: dict[str, Any] | None = None
+        prompt_version: str | None = None
         try:
             check_data_policy(
                 runtime.capabilities, _classification(spec), allow_remote=runtime.allow_remote_for_confidential
             )
-            budget = Budget(
-                max_calls=manifest.max_model_calls,
-                max_total_tokens=manifest.max_total_tokens,
-                deadline_s=manifest.timeout_s,
-            )
-            context = SkillContext(
-                spec=spec,
-                provider=runtime.factory(),
-                budget=budget,
+            provider = runtime.factory()
+            decision = SkillRouter(registry).route(
+                message,
+                spec,
+                provider=provider,
+                budget=Budget(max_calls=2, max_total_tokens=8_000, deadline_s=ROUTING_DEADLINE_S),
+                explicit=run.skill_id,
+                call_timeout_s=min(runtime.call_timeout_s, ROUTING_DEADLINE_S),
                 prices=runtime.prices,
-                call_timeout_s=runtime.call_timeout_s,
             )
-            output = skill.run(context, dict(run.input))
-            status = "succeeded"
-            result = {
-                "summary": output.summary,
-                "not_applicable_reason": output.not_applicable_reason,
-                "proposals": [p.model_dump(mode="json") for p in output.proposals],
-            }
-            model = output.model
+            run.routing = decision.model_dump(mode="json")
+            if decision.skill_id is None:
+                status = "succeeded"
+                result = {
+                    "summary": "No skill fits this request.",
+                    "not_applicable_reason": decision.rationale,
+                    "proposals": [],
+                }
+            else:
+                skill = registry.get(decision.skill_id)
+                manifest = skill.manifest
+                prompt_version = manifest.prompt_version
+                run.skill_id, run.skill_version = manifest.id, manifest.version
+                context = SkillContext(
+                    spec=spec,
+                    provider=provider,
+                    budget=Budget(
+                        max_calls=max(1, manifest.max_model_calls),
+                        max_total_tokens=max(1, manifest.max_total_tokens),
+                        deadline_s=manifest.timeout_s,
+                    ),
+                    prices=runtime.prices,
+                    call_timeout_s=runtime.call_timeout_s,
+                )
+                output = skill.run(context, dict(run.input))
+                status = "succeeded"
+                result = {
+                    "summary": output.summary,
+                    "not_applicable_reason": output.not_applicable_reason,
+                    "proposals": [p.model_dump(mode="json") for p in output.proposals],
+                }
+                model = output.model
         except ModelError as exc:
             error = {"kind": exc.kind.value, "message": exc.user_message}
-            model = {
-                "model_id": runtime.model_id,
-                "profile": runtime.profile,
-                "prompt_version": manifest.prompt_version,
-                "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
-                "repaired": False,
-                "calls": [c.model_dump() for c in exc.calls],
-            }
+            model = _failed_model_info(runtime, prompt_version, exc)
             log.warning("ai run failed", extra={"run_id": str(run_id), "kind": exc.kind.value, "detail": exc.detail})
-        except ValueError as exc:
+        except (ValueError, RoutingError) as exc:
             error = {"kind": "invalid_input", "message": str(exc)[:300]}
         except Exception:
             log.exception("ai run crashed", extra={"run_id": str(run_id)})
@@ -314,6 +415,8 @@ def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry
             project.id,
             "ai.run.succeeded" if status == "succeeded" else "ai.run.failed",
             run_id=str(run_id),
+            skill=run.skill_id,
+            routing=(run.routing or {}).get("method"),
             proposals=len(result["proposals"]) if result else 0,
             error_kind=error["kind"] if error else None,
         )
@@ -330,7 +433,7 @@ def get_run(
 ) -> RunOut:
     service.find_project(session, principal, project_id)
     run = _run(session, principal, project_id, run_id)
-    _expire_if_stale(session, run, registry.get(run.skill_id, run.skill_version).manifest.timeout_s)
+    _expire_if_stale(session, run, registry)
     return _run_out(run)
 
 
@@ -345,7 +448,7 @@ def list_runs(session: Session, principal: Principal, project_id: uuid.UUID, reg
         )
     )
     for run in rows:
-        _expire_if_stale(session, run, registry.get(run.skill_id, run.skill_version).manifest.timeout_s)
+        _expire_if_stale(session, run, registry)
     return RunPage(items=[_run_out(r) for r in rows])
 
 
@@ -364,7 +467,7 @@ def apply_run(
     run = _run(session, principal, project_id, run_id, lock=True)
     if run.applied_revision is not None or run.decisions is not None:
         raise RunAlreadyApplied("Start a new run to propose further changes.")
-    if run.status != "succeeded" or not (run.result or {}).get("proposals"):
+    if run.status != "succeeded" or not run.skill_id or not (run.result or {}).get("proposals"):
         raise RunNotApplicable(f"Run status is '{run.status}' and it has no proposals.")
 
     commands = _COMMANDS.validate_python(run.result["proposals"] if run.result else [])

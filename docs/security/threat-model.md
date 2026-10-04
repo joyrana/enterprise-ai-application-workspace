@@ -42,6 +42,7 @@ execution) adds the next major trust boundary.
 | Sensitive data sent to third parties | Data-classification gate refuses remote models for `confidential`/`restricted` projects unless an operator opts in; UI labels remote providers; audit records model and description length, not the text | Projects with *unknown* classification may use a remote model |
 | Model credential leakage | Tokens read from the environment only, sent only as the `Authorization` header, redacted from `repr`; provider error bodies are never echoed to clients or logs | — |
 | Excessive model spend / denial of service | Per-run budgets (calls, tokens, deadline) from the skill manifest; bounded retries with backoff; max 3 active runs per tenant; 8 000-character description limit | No per-tenant daily quota yet |
+| Misrouting to an unintended skill | Precondition filter first; the model may only pick listed candidate ids (schema-enforced) or none; routing decision and rationale stored and shown; every skill only proposes, so a misroute costs a review, not a change | Wrong-skill proposals still need a human to notice |
 | Duplicate or replayed AI actions | Idempotent run creation; atomic `queued → running` claim; decisions applicable once per run; `If-Match` on apply | — |
 | Untrusted code execution | Not applicable yet (no code generation) | Milestone 4 |
 
