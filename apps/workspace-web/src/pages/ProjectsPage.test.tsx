@@ -56,7 +56,7 @@ describe("ProjectsPage", () => {
     // heading is queried with `hidden: true`. Real-browser accessibility of this flow is
     // tracked for the Playwright E2E suite (docs/status.md, known limitations).
     expect(await screen.findByRole("heading", { level: 1, name: "Finance ops", hidden: true })).toBeInTheDocument();
-    expect(document.activeElement).toBe(screen.getByRole("main"));
+    expect(document.activeElement).toBe(screen.getByRole("main", { hidden: true }));
     const post = calls.find((c) => c.method === "POST");
     expect(post?.body).toEqual({ name: "Finance ops", description: null });
     expect(post?.headers["Idempotency-Key"]).toMatch(/^create-[0-9a-f-]{36}$/);
