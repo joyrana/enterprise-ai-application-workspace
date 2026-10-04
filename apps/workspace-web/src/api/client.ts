@@ -21,6 +21,16 @@ export type AuditPage = Json<paths["/api/v1/projects/{project_id}/audit"]["get"]
 export type ApplicationSpec = SpecRevision["spec"];
 export type ApplicationSpecInput = SpecUpdate["spec"];
 
+type RunPath = paths["/api/v1/projects/{project_id}/discovery-runs/{run_id}"];
+type ApplyPath = paths["/api/v1/projects/{project_id}/discovery-runs/{run_id}/apply"];
+export type AiStatus = Json<paths["/api/v1/ai/status"]["get"]["responses"][200]>;
+export type Run = Json<RunPath["get"]["responses"][200]>;
+export type RunPage = Json<paths["/api/v1/projects/{project_id}/discovery-runs"]["get"]["responses"][200]>;
+export type Proposal = Run["proposals"][number];
+export type ApplyRunRequest = Json<NonNullable<ApplyPath["post"]["requestBody"]>>;
+export type ApplyRunResult = Json<ApplyPath["post"]["responses"][200]>;
+export type DecisionValue = ApplyRunRequest["decisions"][number]["decision"];
+
 export interface ProblemDetails {
   type: string;
   title: string;
@@ -194,6 +204,42 @@ export const api = {
   async getRevision(projectId: string, revision: number, signal?: AbortSignal): Promise<SpecRevision> {
     return (await request<SpecRevision>(`/api/v1/projects/${enc(projectId)}/spec/revisions/${revision}`, { signal }))
       .data;
+  },
+
+  async aiStatus(signal?: AbortSignal): Promise<AiStatus> {
+    return (await request<AiStatus>("/api/v1/ai/status", { signal })).data;
+  },
+
+  async listRuns(projectId: string, signal?: AbortSignal): Promise<RunPage> {
+    return (await request<RunPage>(`/api/v1/projects/${enc(projectId)}/discovery-runs`, { signal })).data;
+  },
+
+  async getRun(projectId: string, runId: string, signal?: AbortSignal): Promise<Run> {
+    return (await request<Run>(`/api/v1/projects/${enc(projectId)}/discovery-runs/${enc(runId)}`, { signal })).data;
+  },
+
+  async startDiscovery(projectId: string, description: string, idempotencyKey: string): Promise<Run> {
+    return (
+      await request<Run>(`/api/v1/projects/${enc(projectId)}/discovery-runs`, {
+        method: "POST",
+        body: { description },
+        headers: { "Idempotency-Key": idempotencyKey },
+      })
+    ).data;
+  },
+
+  async applyRun(
+    projectId: string,
+    runId: string,
+    body: ApplyRunRequest,
+    etag: string,
+  ): Promise<{ result: ApplyRunResult; etag: string }> {
+    const res = await request<ApplyRunResult>(`/api/v1/projects/${enc(projectId)}/discovery-runs/${enc(runId)}/apply`, {
+      method: "POST",
+      body,
+      headers: { "If-Match": etag },
+    });
+    return { result: res.data, etag: res.headers.get("ETag") ?? `"r${res.data.revision.revision}"` };
   },
 
   async listAudit(projectId: string, cursor?: string | null, signal?: AbortSignal): Promise<AuditPage> {

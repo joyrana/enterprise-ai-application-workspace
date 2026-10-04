@@ -88,11 +88,14 @@ def make_alembic_config() -> Callable[[str], Config]:
 
 @pytest.fixture
 def app(database_url: str) -> Iterator[FastAPI]:
-    application = create_app(Settings(database_url=database_url, environment=Environment.TEST, max_body_bytes=262_144))
+    application = create_app(
+        Settings(database_url=database_url, environment=Environment.TEST, max_body_bytes=262_144),
+        model_runtime=None,
+    )
     yield application
     engine = application.state.db.engine
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE audit_events, spec_revisions, projects RESTART IDENTITY CASCADE"))
+        conn.execute(text("TRUNCATE workflow_runs, audit_events, spec_revisions, projects RESTART IDENTITY CASCADE"))
     engine.dispose()
 
 
@@ -105,7 +108,9 @@ def client(app: FastAPI) -> Iterator[TestClient]:
 @pytest.fixture
 def offline_app() -> FastAPI:
     """App whose database is never reached: for auth, config and middleware tests."""
-    return create_app(Settings(database_url=PLACEHOLDER_URL, environment=Environment.TEST, max_body_bytes=4096))
+    return create_app(
+        Settings(database_url=PLACEHOLDER_URL, environment=Environment.TEST, max_body_bytes=4096), model_runtime=None
+    )
 
 
 @pytest.fixture

@@ -1,0 +1,13 @@
+[project]
+name = "model-gateway"
+version = "0.1.0"
+description = "Provider-neutral model access: OpenAI-compatible profiles (Hugging Face router, self-hosted, Ollama), structured output with validation and repair, budgets and policies."
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.9,<3", "httpx>=0.27,<1"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/model_gateway"]

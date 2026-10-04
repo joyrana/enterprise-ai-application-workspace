@@ -46,12 +46,14 @@ jobs:
       - name: Lint
         run: uv run ruff check --output-format github .
       - name: Type check
-        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy packages/application-spec/src services/api/src
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy packages/application-spec/src packages/model-gateway/src packages/skill-sdk/src skills/src evals/src services/api/src
       - name: Tests (unit + integration against PostgreSQL)
+        env:
+          SUMMARY_PATTERN: "[0-9]+ passed"
         run: >-
           $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "pytest"
           uv run pytest --tb=short
-          --cov=appspec --cov=workspace_api --cov-report=term-missing
+          --cov=appspec --cov=model_gateway --cov=skill_sdk --cov=workspace_skills --cov=workspace_evals --cov=workspace_api --cov-report=term-missing
           --junitxml=reports/pytest.xml
       - name: Generated contracts are up to date
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "contracts" uv run python -m workspace_api.export --check --out contracts
@@ -93,6 +95,7 @@ jobs:
       - name: Tests
         env:
           DEBUG_PRINT_LIMIT: "1500" # keep DOM dumps short so failure annotations show the summary
+          SUMMARY_PATTERN: "(Test Files|Tests) +[0-9]+"
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "vitest" npm test
       - name: Production build
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "build" npm run build

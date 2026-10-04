@@ -6,12 +6,14 @@ import { ProblemMessage } from "../../components/ProblemMessage";
 import { RouterLink } from "../../components/RouterLink";
 import { useAsync } from "../../hooks/useAsync";
 import { AuditTab } from "./AuditTab";
+import { DiscoveryTab } from "./DiscoveryTab";
 import { HistoryTab } from "./HistoryTab";
 import { OverviewTab } from "./OverviewTab";
 import { SpecEditorTab } from "./SpecEditorTab";
 
 const TABS = [
   { id: "overview", label: "Overview" },
+  { id: "discovery", label: "Discovery" },
   { id: "specification", label: "Specification" },
   { id: "history", label: "History" },
   { id: "audit", label: "Audit" },
@@ -93,6 +95,7 @@ export function ProjectPage() {
       </TabList>
       <section className={styles.panel} aria-label={TABS.find((t) => t.id === selected)?.label}>
         {selected === "overview" && <OverviewTab revision={revision} />}
+        {selected === "discovery" && <DiscoveryTab projectId={projectId} etag={etag} onApplied={onSaved} />}
         {selected === "specification" && (
           <SpecEditorTab
             key={etag}

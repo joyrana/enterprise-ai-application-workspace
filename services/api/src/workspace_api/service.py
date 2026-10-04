@@ -285,9 +285,10 @@ class UpdateResult:
     created: bool
 
 
-def update_spec(
-    session: Session, principal: Principal, project_id: uuid.UUID, if_match: str | None, update: SpecUpdate
-) -> UpdateResult:
+def lock_project_at_revision(
+    session: Session, principal: Principal, project_id: uuid.UUID, if_match: str | None
+) -> Project:
+    """Lock the project row and check the caller's If-Match against the current revision."""
     expected = parse_if_match(if_match)
     project = _project(session, principal, project_id, lock=True)
     if expected != project.current_revision:
@@ -296,8 +297,25 @@ def update_spec(
             "Reload, re-apply your change, and save again.",
             current_revision=project.current_revision,
         )
+    return project
 
-    issues = validate_spec(update.spec)
+
+def write_revision(
+    session: Session,
+    principal: Principal,
+    project: Project,
+    spec: ApplicationSpec,
+    change_summary: str | None,
+    *,
+    audit_action: str = "spec.revised",
+    audit_details: dict[str, Any] | None = None,
+) -> UpdateResult:
+    """Validate and append a new revision for a locked project. The caller commits.
+
+    Shared by manual saves and by applying skill proposals, so every change to a
+    specification goes through the same validation, stamping and audit path.
+    """
+    issues = validate_spec(spec)
     errors = [i for i in issues if i.severity is Severity.ERROR]
     if errors:
         raise SpecInvalid(
@@ -306,13 +324,12 @@ def update_spec(
         )
 
     current = _revision_row(session, project, project.current_revision)
-    if semantic_fingerprint(update.spec) == current.semantic_hash:
-        # Nothing changed: no new revision. The request-scoped session ends the transaction (and the lock).
+    if semantic_fingerprint(spec) == current.semantic_hash:
         return UpdateResult(_revision_out(current), created=False)
 
     new_revision = project.current_revision + 1
-    stamped = stamp_revisions(load_spec(current.document), update.spec, new_revision)
-    row = _new_revision(project.id, new_revision, stamped, principal.user_id, update.change_summary)
+    stamped = stamp_revisions(load_spec(current.document), spec, new_revision)
+    row = _new_revision(project.id, new_revision, stamped, principal.user_id, change_summary)
     session.add(row)
     project.current_revision = new_revision
     project.name = stamped.metadata.name
@@ -322,15 +339,41 @@ def update_spec(
         session,
         principal,
         project.id,
-        "spec.revised",
+        audit_action,
         revision=new_revision,
         content_hash=row.content_hash,
-        change_summary=update.change_summary,
+        change_summary=change_summary,
         warnings=len(issues),
+        **(audit_details or {}),
     )
-    session.commit()
-    session.refresh(row)
+    session.flush()
     return UpdateResult(_revision_out(row), created=True)
+
+
+def current_spec(session: Session, project: Project) -> ApplicationSpec:
+    return load_spec(_revision_row(session, project, project.current_revision).document)
+
+
+def spec_at(session: Session, project: Project, revision: int) -> ApplicationSpec:
+    return load_spec(_revision_row(session, project, revision).document)
+
+
+def audit(session: Session, principal: Principal, project_id: uuid.UUID | None, action: str, **details: Any) -> None:
+    _audit(session, principal, project_id, action, **details)
+
+
+def find_project(session: Session, principal: Principal, project_id: uuid.UUID, *, lock: bool = False) -> Project:
+    return _project(session, principal, project_id, lock=lock)
+
+
+def update_spec(
+    session: Session, principal: Principal, project_id: uuid.UUID, if_match: str | None, update: SpecUpdate
+) -> UpdateResult:
+    project = lock_project_at_revision(session, principal, project_id, if_match)
+    result = write_revision(session, principal, project, update.spec, update.change_summary)
+    # Commit the new revision; for a no-op this simply ends the transaction and releases the lock.
+    session.commit()
+    return result
 
 
 def list_revisions(

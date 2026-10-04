@@ -7,6 +7,7 @@ Tables:
 * ``spec_revisions`` — immutable, append-only spec documents. A revision is
   never updated after insert; history is the audit trail of the spec.
 * ``audit_events`` — append-only security- and change-relevant events.
+* ``workflow_runs`` — skill executions and the proposals awaiting a decision.
 
 Every query in the service layer filters on ``tenant_id``.
 """
@@ -20,6 +21,7 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -91,6 +93,48 @@ class AuditEvent(Base):
     __table_args__ = (Index("ix_audit_tenant_project_id", "tenant_id", "project_id", "id"),)
 
 
+RUN_STATUSES = ("queued", "running", "succeeded", "failed")
+
+
+class WorkflowRun(Base):
+    """One execution of a skill against a project. Holds proposals until a person decides on them.
+
+    The description a person typed is stored in ``input`` (tenant-scoped project
+    data). Model telemetry in ``model`` never contains prompt or completion text.
+    """
+
+    __tablename__ = "workflow_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    skill_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    skill_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    input: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    base_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    model: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    error: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    decisions: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    applied_revision: Mapped[int | None] = mapped_column(Integer)
+    created_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    idempotency_key: Mapped[str | None] = mapped_column(String(128))
+    idempotency_fingerprint: Mapped[str | None] = mapped_column(String(80))
+
+    __table_args__ = (
+        CheckConstraint(f"status IN {RUN_STATUSES!r}", name="ck_workflow_runs_status"),
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_workflow_runs_tenant_idempotency_key"),
+        Index("ix_workflow_runs_tenant_project_created", "tenant_id", "project_id", "created_at"),
+        Index("ix_workflow_runs_tenant_status", "tenant_id", "status"),
+    )
+
+
 class Database:
     """Owns the engine and session factory for one application instance."""
 
@@ -101,6 +145,10 @@ class Database:
     def session(self) -> Iterator[Session]:
         with self._sessions() as session:
             yield session
+
+    def new_session(self) -> Session:
+        """A session owned by the caller (background work outside a request). Close it when done."""
+        return self._sessions()
 
     def dispose(self) -> None:
         self.engine.dispose()

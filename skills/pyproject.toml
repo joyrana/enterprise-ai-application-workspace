@@ -1,0 +1,18 @@
+[project]
+name = "workspace-skills"
+version = "0.1.0"
+description = "Built-in skills for the Enterprise AI Application Workspace."
+requires-python = ">=3.12"
+dependencies = ["skill-sdk", "model-gateway", "appspec"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/workspace_skills"]
+
+[tool.uv.sources]
+skill-sdk = { workspace = true }
+model-gateway = { workspace = true }
+appspec = { workspace = true }

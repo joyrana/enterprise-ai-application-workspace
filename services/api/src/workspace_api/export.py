@@ -21,7 +21,7 @@ from .config import Settings
 
 def openapi_text() -> str:
     # Creating the engine does not open a connection, so a placeholder URL is safe here.
-    app = create_app(Settings(database_url="postgresql+psycopg://export@localhost/unused"))
+    app = create_app(Settings(database_url="postgresql+psycopg://export@localhost/unused"), model_runtime=None)
     return json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n"
 
 

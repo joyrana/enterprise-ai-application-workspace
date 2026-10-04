@@ -72,6 +72,30 @@ class SpecInvalid(AppError):
     status, code, title = 422, "spec-invalid", "The specification is not valid"
 
 
+class Forbidden(AppError):
+    status, code, title = 403, "forbidden", "Not allowed"
+
+
+class ModelPolicyDenied(AppError):
+    status, code, title = 403, "model-policy-denied", "This project's data may not be sent to the configured model"
+
+
+class ModelNotConfigured(AppError):
+    status, code, title = 503, "model-not-configured", "No AI model is configured"
+
+
+class TooManyRuns(AppError):
+    status, code, title = 429, "too-many-active-runs", "Too many AI runs are already in progress"
+
+
+class RunNotApplicable(AppError):
+    status, code, title = 409, "run-not-applicable", "This run has no proposals to apply"
+
+
+class RunAlreadyApplied(AppError):
+    status, code, title = 409, "run-already-applied", "Decisions for this run were already applied"
+
+
 class PayloadTooLarge(AppError):
     status, code, title = 413, "payload-too-large", "Request body is too large"
 
