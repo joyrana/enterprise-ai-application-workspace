@@ -3,7 +3,13 @@ import { expect, test, type Page } from "@playwright/test";
 
 /** Fails on serious or critical WCAG 2.1 A/AA violations reported by axe-core. */
 async function expectNoSeriousA11yViolations(page: Page, where: string): Promise<void> {
-  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    // Fluent UI's focus manager (tabster) inserts invisible, aria-hidden focus sentinels
+    // (<i data-tabster-dummy tabindex="0">) that immediately redirect focus. axe reports them as
+    // aria-hidden-focus; they are library internals, not app markup, so only they are excluded.
+    .exclude("[data-tabster-dummy]")
+    .analyze();
   const serious = results.violations
     .filter((v) => v.impact === "serious" || v.impact === "critical")
     .map(
@@ -30,6 +36,9 @@ test("create a project, discover requirements, add acceptance criteria, review h
   await page.getByRole("button", { name: "Create project" }).click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  // Regression guard: the app root must not stay aria-hidden after the dialog closes.
+  await expect(page.locator("#root")).not.toHaveAttribute("aria-hidden", "true");
+  await expect(page.getByRole("main")).toBeFocused();
   await expect(page.getByText("Not yet known").first()).toBeVisible();
   await expectNoSeriousA11yViolations(page, "project overview");
 
@@ -95,22 +104,12 @@ test("the skill selector reflects applicability and honours an explicit choice",
   await expect(page.getByText("Skill: Business discovery (chosen by you)")).toBeVisible({ timeout: 45_000 });
 });
 
-// TEMPORARY diagnostic (removed before merge): what is aria-hidden after the create dialog closes?
-test("diagnostic: aria-hidden state after creating a project", async ({ page }) => {
+test("cancelling the create dialog leaves the page accessible", async ({ page }) => {
   await page.goto("/projects");
-  const before = await page.evaluate(() =>
-    [...document.querySelectorAll("[aria-hidden='true'], [inert]")].map((e) => e.outerHTML.slice(0, 200)),
-  );
-  console.log("BEFORE", JSON.stringify(before));
   await page.getByRole("button", { name: "New project" }).click();
-  await page.getByRole("textbox", { name: /Name/ }).fill(`E2E diag ${Date.now()}`);
-  await page.getByRole("button", { name: "Create project" }).click();
-  await page.waitForURL(/\/projects\/[0-9a-f-]+$/);
-  await page.waitForTimeout(2000);
-  const after = await page.evaluate(() => ({
-    hidden: [...document.querySelectorAll("[aria-hidden='true'], [inert]")].map((e) => e.outerHTML.slice(0, 200)),
-    bodyChildren: [...document.body.children].map((e) => e.outerHTML.slice(0, 160)),
-    active: document.activeElement?.outerHTML.slice(0, 160),
-  }));
-  console.log("AFTER", JSON.stringify(after));
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("#root")).not.toHaveAttribute("aria-hidden", "true");
+  await expect(page.getByRole("heading", { level: 1, name: "Projects" })).toBeVisible();
 });

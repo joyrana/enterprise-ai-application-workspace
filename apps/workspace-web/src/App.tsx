@@ -2,6 +2,7 @@ import { FluentProvider, webDarkTheme, webLightTheme } from "@fluentui/react-com
 import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { CreateProjectProvider } from "./pages/CreateProjectProvider";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectPage } from "./pages/project/ProjectPage";
@@ -20,15 +21,17 @@ function usePrefersDark(): boolean {
 
 export function AppRoutes() {
   return (
-    <AppShell>
-      <Routes>
-        <Route path="/" element={<Navigate to="/projects" replace />} />
-        <Route path="/projects" element={<ProjectsPage />} />
-        <Route path="/projects/:projectId" element={<ProjectPage />} />
-        <Route path="/projects/:projectId/:tab" element={<ProjectPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </AppShell>
+    <CreateProjectProvider>
+      <AppShell>
+        <Routes>
+          <Route path="/" element={<Navigate to="/projects" replace />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:projectId" element={<ProjectPage />} />
+          <Route path="/projects/:projectId/:tab" element={<ProjectPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </AppShell>
+    </CreateProjectProvider>
   );
 }
 
