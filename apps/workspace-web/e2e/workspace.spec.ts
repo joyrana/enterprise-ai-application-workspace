@@ -6,7 +6,13 @@ async function expectNoSeriousA11yViolations(page: Page, where: string): Promise
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   const serious = results.violations
     .filter((v) => v.impact === "serious" || v.impact === "critical")
-    .map((v) => `${v.id} (${v.impact}): ${v.help} — ${v.nodes.length} node(s)`);
+    .map(
+      (v) =>
+        `${v.id} (${v.impact}): ${v.help} — ${v.nodes
+          .slice(0, 3)
+          .map((n) => `${n.target.join(" ")} ${n.html.slice(0, 160)}`)
+          .join(" | ")}`,
+    );
   expect(serious, `accessibility violations on ${where}`).toEqual([]);
 }
 
@@ -87,4 +93,24 @@ test("the skill selector reflects applicability and honours an explicit choice",
   await page.getByRole("textbox", { name: /What do you need/ }).fill("An app for finance approvals.");
   await page.getByRole("button", { name: "Run" }).click();
   await expect(page.getByText("Skill: Business discovery (chosen by you)")).toBeVisible({ timeout: 45_000 });
+});
+
+// TEMPORARY diagnostic (removed before merge): what is aria-hidden after the create dialog closes?
+test("diagnostic: aria-hidden state after creating a project", async ({ page }) => {
+  await page.goto("/projects");
+  const before = await page.evaluate(() =>
+    [...document.querySelectorAll("[aria-hidden='true'], [inert]")].map((e) => e.outerHTML.slice(0, 200)),
+  );
+  console.log("BEFORE", JSON.stringify(before));
+  await page.getByRole("button", { name: "New project" }).click();
+  await page.getByRole("textbox", { name: /Name/ }).fill(`E2E diag ${Date.now()}`);
+  await page.getByRole("button", { name: "Create project" }).click();
+  await page.waitForURL(/\/projects\/[0-9a-f-]+$/);
+  await page.waitForTimeout(2000);
+  const after = await page.evaluate(() => ({
+    hidden: [...document.querySelectorAll("[aria-hidden='true'], [inert]")].map((e) => e.outerHTML.slice(0, 200)),
+    bodyChildren: [...document.body.children].map((e) => e.outerHTML.slice(0, 160)),
+    active: document.activeElement?.outerHTML.slice(0, 160),
+  }));
+  console.log("AFTER", JSON.stringify(after));
 });
