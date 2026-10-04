@@ -152,7 +152,14 @@ def evaluate(checks: Checks, output: SkillOutput) -> list[CheckResult]:
     return results
 
 
-def run_trial(scenario: Scenario, repeat: int, provider: ModelProvider, *, call_timeout_s: float = 120.0) -> Trial:
+def run_trial(
+    scenario: Scenario,
+    repeat: int,
+    provider: ModelProvider,
+    *,
+    call_timeout_s: float = 120.0,
+    deadline_s: float | None = None,
+) -> Trial:
     skill = BusinessDiscovery()
     manifest = skill.manifest
     context = SkillContext(
@@ -161,9 +168,9 @@ def run_trial(scenario: Scenario, repeat: int, provider: ModelProvider, *, call_
         budget=Budget(
             max_calls=manifest.max_model_calls,
             max_total_tokens=manifest.max_total_tokens,
-            deadline_s=manifest.timeout_s,
+            deadline_s=deadline_s or manifest.timeout_s,
         ),
-        call_timeout_s=call_timeout_s,
+        call_timeout_s=deadline_s or call_timeout_s,
     )
     started = time.perf_counter()
     try:
@@ -226,10 +233,22 @@ def summarize(trials: list[Trial]) -> dict[str, Any]:
 
 
 def run_suite(
-    scenarios: list[Scenario], provider_factory: Callable[[], ModelProvider], *, repeats: int = 1
+    scenarios: list[Scenario],
+    provider_factory: Callable[[], ModelProvider],
+    *,
+    repeats: int = 1,
+    deadline_s: float | None = None,
 ) -> tuple[list[Trial], dict[str, Any]]:
-    trials = [run_trial(s, r, provider_factory()) for r in range(repeats) for s in scenarios]
+    trials = [run_trial(s, r, provider_factory(), deadline_s=deadline_s) for r in range(repeats) for s in scenarios]
     return trials, summarize(trials)
+
+
+def summary_line(model: str, s: dict[str, Any]) -> str:
+    return (
+        f"discovery[{model}] pass {s['pass_rate']:.0%}, completion {s['completion_rate']:.0%}, "
+        f"repairs {s['repair_rate']:.0%}, latency mean {s['latency_ms']['mean'] / 1000:.1f}s, "
+        f"tokens/trial {s['tokens_per_trial_mean']:.0f}, errors {s['errors'] or 'none'}"
+    )
 
 
 def markdown(report: dict[str, Any]) -> str:
@@ -265,6 +284,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--out", type=Path, default=Path("reports/evals"))
+    parser.add_argument(
+        "--deadline-s",
+        type=float,
+        default=None,
+        help="Per-trial deadline override (e.g. for CPU-only inference); recorded in the report.",
+    )
     args = parser.parse_args(argv)
     if not 1 <= args.repeats <= 20:
         parser.error("--repeats must be between 1 and 20")
@@ -274,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
         print("No model configured. Set MODEL_PROFILE and MODEL_ID (see .env.example).", file=sys.stderr)
         return 2
     scenarios = load_scenarios(args.dataset)
-    trials, summary = run_suite(scenarios, settings.build_provider, repeats=args.repeats)
+    trials, summary = run_suite(scenarios, settings.build_provider, repeats=args.repeats, deadline_s=args.deadline_s)
     manifest = BusinessDiscovery.manifest
     report = {
         "model": settings.label,
@@ -285,6 +310,7 @@ def main(argv: list[str] | None = None) -> int:
         "repeats": args.repeats,
         "temperature": settings.temperature,
         "structured_mode": settings.structured_mode.value,
+        "deadline_s_override": args.deadline_s,
         "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "commit": os.environ.get("GITHUB_SHA"),
         "summary": summary,
@@ -295,6 +321,7 @@ def main(argv: list[str] | None = None) -> int:
     (args.out / f"{stem}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     (args.out / f"{stem}.md").write_text(markdown(report), encoding="utf-8")
     print(markdown(report))
+    print(summary_line(settings.label, summary))
     return 0
 
 
