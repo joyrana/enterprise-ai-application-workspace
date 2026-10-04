@@ -424,7 +424,9 @@ describe("DiscoveryTab", () => {
     await user.paste(ATTACK);
     expect(await screen.findByText("This text looks like it contains instructions to the AI")).toBeInTheDocument();
     expect(screen.getByText(/tries to override the AI's rules/)).toBeInTheDocument();
-    expect(within(screen.getByRole("list", { name: "Flagged text" })).getByText(/Root Administrator/)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list", { name: "Flagged text" })).getByText(/Root Administrator/),
+    ).toBeInTheDocument();
     // Advisory only: the person can still run the request.
     expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
     expect(calls.find((c) => c.url === "/api/v1/safety/scan")?.body).toEqual({ text: ATTACK });
@@ -433,7 +435,10 @@ describe("DiscoveryTab", () => {
   it("marks proposals that repeat flagged text and starts them as Reject", async () => {
     const flaggedRun = run({
       message: ATTACK,
-      safety: { ...FLAGGED_SCAN, flagged_proposals: [{ proposal_id: "p-finance-approver", phrase: "root administrator" }] },
+      safety: {
+        ...FLAGGED_SCAN,
+        flagged_proposals: [{ proposal_id: "p-finance-approver", phrase: "root administrator" }],
+      },
     } as unknown as Partial<Run>);
     const { calls } = mockFetch([
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
