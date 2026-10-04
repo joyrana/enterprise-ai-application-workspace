@@ -73,33 +73,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{project_id}/discovery-runs": {
+    "/api/v1/projects/{project_id}/runs": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Recent discovery runs, newest first (resume after a page refresh) */
-        get: operations["list_discovery_runs_api_v1_projects__project_id__discovery_runs_get"];
+        /** Recent AI runs, newest first (resume after a page refresh) */
+        get: operations["list_project_runs_api_v1_projects__project_id__runs_get"];
         put?: never;
-        /** Start business discovery on a description; poll the run for proposals */
-        post: operations["start_discovery_api_v1_projects__project_id__discovery_runs_post"];
+        /** Start an AI run: route the message to a skill (or use skill_id) and poll for proposals */
+        post: operations["start_run_api_v1_projects__project_id__runs_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{project_id}/discovery-runs/{run_id}": {
+    "/api/v1/projects/{project_id}/runs/{run_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get a discovery run and its proposals */
-        get: operations["get_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__get"];
+        /** Get an AI run, its routing decision and proposals */
+        get: operations["get_project_run_api_v1_projects__project_id__runs__run_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -108,7 +108,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{project_id}/discovery-runs/{run_id}/apply": {
+    "/api/v1/projects/{project_id}/runs/{run_id}/apply": {
         parameters: {
             query?: never;
             header?: never;
@@ -118,7 +118,24 @@ export interface paths {
         get?: never;
         put?: never;
         /** Apply per-proposal decisions (accept, confirm, reject) as one new revision */
-        post: operations["apply_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__apply_post"];
+        post: operations["apply_project_run_api_v1_projects__project_id__runs__run_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Skills and whether each can run on this project now */
+        get: operations["list_project_skills_api_v1_projects__project_id__skills_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -682,11 +699,6 @@ export interface components {
             id?: components["schemas"]["Tracked_Annotated_str__StringConstraints__FieldInfo_annotation_NoneType__required_True__description__Stable__human-readable_identifier__lowercase_kebab-case_____"];
             version?: components["schemas"]["appspec__common__Tracked_Annotated_str__StringConstraints____2"];
         };
-        /** DiscoveryRunCreate */
-        DiscoveryRunCreate: {
-            /** Description */
-            description: string;
-        };
         /** EntityField */
         EntityField: {
             /** Description */
@@ -1122,6 +1134,16 @@ export interface components {
             /** @default proposed */
             status: components["schemas"]["ItemStatus"];
         };
+        /** RunCreate */
+        RunCreate: {
+            /** Message */
+            message: string;
+            /**
+             * Skill Id
+             * @description Run this skill. Omit to let the workspace route the request to the best applicable skill.
+             */
+            skill_id?: string | null;
+        };
         /** RunError */
         RunError: {
             /** Kind */
@@ -1164,8 +1186,6 @@ export interface components {
             decisions: {
                 [key: string]: string;
             } | null;
-            /** Description */
-            description: string;
             error: components["schemas"]["RunError"] | null;
             /** Finished At */
             finished_at: string | null;
@@ -1174,15 +1194,21 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Message */
+            message: string;
             model: components["schemas"]["RunModelInfo"] | null;
             /** Not Applicable Reason */
             not_applicable_reason: string | null;
             /** Proposals */
             proposals: (components["schemas"]["SetFact"] | components["schemas"]["AddItem"] | components["schemas"]["AddOpenQuestion"])[];
-            /** Skill Id */
-            skill_id: string;
+            routing: components["schemas"]["RunRouting"] | null;
+            /**
+             * Skill Id
+             * @description Null until routing chooses a skill, or when no skill fits.
+             */
+            skill_id: string | null;
             /** Skill Version */
-            skill_version: string;
+            skill_version: string | null;
             /** Started At */
             started_at: string | null;
             /**
@@ -1197,6 +1223,26 @@ export interface components {
         RunPage: {
             /** Items */
             items: components["schemas"]["RunOut"][];
+        };
+        /** RunRouting */
+        RunRouting: {
+            /** Candidates */
+            candidates: string[];
+            /** Chosen */
+            chosen: string | null;
+            /** Confidence */
+            confidence: number | null;
+            /**
+             * Method
+             * @description explicit | single-candidate | model | no-candidates
+             */
+            method: string;
+            /** Model Id */
+            model_id: string | null;
+            /** Rationale */
+            rationale: string;
+            /** Total Tokens */
+            total_tokens: number;
         };
         /** Screen */
         Screen: {
@@ -1258,6 +1304,30 @@ export interface components {
          * @enum {string}
          */
         Severity: "error" | "warning";
+        /** SkillInfo */
+        SkillInfo: {
+            /** Applicable */
+            applicable: boolean;
+            /** Category */
+            category: string;
+            /** Description */
+            description: string;
+            /** Id */
+            id: string;
+            /** Message Required */
+            message_required: boolean;
+            /** Name */
+            name: string;
+            /** Unmet Preconditions */
+            unmet_preconditions: string[];
+            /** Version */
+            version: string;
+        };
+        /** SkillList */
+        SkillList: {
+            /** Items */
+            items: components["schemas"]["SkillInfo"][];
+        };
         /**
          * Source
          * @enum {string}
@@ -1917,7 +1987,7 @@ export interface operations {
             };
         };
     };
-    list_discovery_runs_api_v1_projects__project_id__discovery_runs_get: {
+    list_project_runs_api_v1_projects__project_id__runs_get: {
         parameters: {
             query?: never;
             header?: {
@@ -1995,7 +2065,7 @@ export interface operations {
             };
         };
     };
-    start_discovery_api_v1_projects__project_id__discovery_runs_post: {
+    start_run_api_v1_projects__project_id__runs_post: {
         parameters: {
             query?: never;
             header?: {
@@ -2013,7 +2083,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DiscoveryRunCreate"];
+                "application/json": components["schemas"]["RunCreate"];
             };
         };
         responses: {
@@ -2127,7 +2197,7 @@ export interface operations {
             };
         };
     };
-    get_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__get: {
+    get_project_run_api_v1_projects__project_id__runs__run_id__get: {
         parameters: {
             query?: never;
             header?: {
@@ -2207,7 +2277,7 @@ export interface operations {
             };
         };
     };
-    apply_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__apply_post: {
+    apply_project_run_api_v1_projects__project_id__runs__run_id__apply_post: {
         parameters: {
             query?: never;
             header?: {
@@ -2312,6 +2382,84 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    list_project_skills_api_v1_projects__project_id__skills_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
