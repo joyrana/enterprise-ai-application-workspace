@@ -173,7 +173,7 @@ def summary_line(method: str, label: str, m: dict[str, Any]) -> str:
     return (
         f"routing[{method}:{label}] accuracy {m['accuracy']:.0%} ({m['correct']}/{m['cases']}), "
         f"false invocations {m['false_invocation_rate']:.0%}, missed {m['missed_invocation_rate']:.0%}, "
-        f"model calls {m['model_calls']}"
+        f"model calls {m['model_calls']}, errors {m['errors'] or 'none'}"
     )
 
 
@@ -193,6 +193,9 @@ def markdown(report: dict[str, Any]) -> str:
     ]
     for label, s in m["per_label"].items():
         lines.append(f"| {label} | {s['support']} | {s['precision']:.2f} | {s['recall']:.2f} | {s['f1']:.2f} |")
+    if m["errors"]:
+        errors = ", ".join(f"{k} x{v}" for k, v in m["errors"].items())
+        lines += ["", f"Errors (method failed, counted as wrong): {errors}"]
     if m["confusion"]:
         lines += ["", "Misroutes: " + ", ".join(f"{k} x{v}" for k, v in m["confusion"].items())]
     lines.append("")

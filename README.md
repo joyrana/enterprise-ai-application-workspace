@@ -5,7 +5,7 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 2b (skills and routing).** Projects, the canonical specification, revision
+> **Status: Milestone 2c (real-model evidence and end-to-end tests).** Projects, the canonical specification, revision
 > history, audit trail and the workspace UI exist, plus three AI discovery skills with routing
 > and human review. Skill routing, orchestration, design-system adapters and code generation are
 > **not implemented yet**; see the roadmap below.
@@ -128,14 +128,24 @@ uv run python -m workspace_evals.routing --method lexical   # baseline, no model
 | 0 | Repository assessment, plan, ADRs | Done ([assessment](docs/assessment/milestone-0.md)) |
 | 1 | Foundation: spec, persistence, API, workspace shell, CI | Done |
 | 2a | Model gateway (Qwen / gpt-oss), skill SDK, business discovery with human review, discovery evals | Done |
-| 2b | Acceptance-criteria and conflict-detection skills, two-stage routing, routing evals | In review |
-| 2c | Checkpointed orchestration, real-model baselines, Playwright E2E | Next |
+| 2b | Acceptance-criteria and conflict-detection skills, two-stage routing, routing evals | Done |
+| 2c | Real-model evaluation (Ollama + Qwen in CI), Playwright E2E with axe | In review |
+| 2d | Prompt-injection hardening, checkpointed orchestration, more model baselines | Next |
 | 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Planned |
 | 4 | React generation, isolated builds, preview, diff review | Planned |
 | 5 | Incremental changes, edit preservation, resilience | Planned |
 | 6 | Angular + Material 3 | Planned |
 | 7 | Organization design systems and policies | Planned |
 | 8 | Research-grade evaluation | Planned |
+
+## Real-model evaluation
+
+`Actions → Real-model evaluation (Ollama) → Run workflow` evaluates routing and discovery
+against an open-weight model served by Ollama on the CI runner (default `qwen3:4b-instruct`,
+CPU only, no secrets). Latest results and their exact conditions are in
+[docs/status.md](docs/status.md). End-to-end browser tests with axe accessibility checks run on
+every PR (`cd apps/workspace-web && npm run e2e` locally, with the API and
+`scripts/e2e/fake_openai_server.py` running).
 
 ## Documentation
 
