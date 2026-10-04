@@ -124,7 +124,8 @@ class OpenAICompatibleProvider:
     def _backoff(self, attempt: int, retry_after: float | None) -> float:
         if retry_after is not None:
             return retry_after
-        return min(8.0, 0.5 * (2**attempt)) * (0.5 + self._rng() / 2)
+        base: float = min(8.0, 0.5 * (1 << attempt))
+        return base * (0.5 + self._rng() / 2)
 
     def complete(
         self,

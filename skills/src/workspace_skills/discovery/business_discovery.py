@@ -123,7 +123,7 @@ def to_proposals(spec: ApplicationSpec, answer: DiscoveryAnswer) -> list[SetFact
         fact = spec.objective if path == "/objective" else spec.domain
         if value and value.strip() and fact.status is not FactStatus.CONFIRMED:
             proposals.append(
-                SetFact(proposal_id=proposal_ids.allocate(f"p-{path.strip('/')}"), path=path, value=value.strip())  # type: ignore[arg-type]
+                SetFact(proposal_id=proposal_ids.allocate(f"p-{path.strip('/')}"), path=path, value=value.strip())
             )
 
     existing_personas = {_norm(p.name): p.id for p in spec.personas}

@@ -258,7 +258,10 @@ def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry
         skill = registry.get(run.skill_id, run.skill_version)
         manifest = skill.manifest
 
-        status, result, model, error = "failed", None, None, None
+        status = "failed"
+        result: dict[str, Any] | None = None
+        model: dict[str, Any] | None = None
+        error: dict[str, Any] | None = None
         try:
             check_data_policy(
                 runtime.capabilities, _classification(spec), allow_remote=runtime.allow_remote_for_confidential
