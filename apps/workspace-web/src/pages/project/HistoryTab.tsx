@@ -99,7 +99,7 @@ export function HistoryTab({ projectId }: { projectId: string }) {
               {detail?.status === "loading" && <Spinner label="Loading revision" />}
               {detail?.status === "error" && <ProblemMessage error={detail.error} />}
               {detail?.status === "done" && (
-                <pre className={styles.code} tabIndex={0} aria-label={`Revision ${viewing} JSON`}>
+                <pre className={styles.code} role="region" tabIndex={0} aria-label={`Revision ${viewing} JSON`}>
                   {JSON.stringify(detail.data.spec, null, 2)}
                 </pre>
               )}

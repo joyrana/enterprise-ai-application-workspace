@@ -40,22 +40,23 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: Install (locked)
-        run: uv sync --locked
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "uv sync" uv sync --locked
       - name: Format
-        run: uv run ruff format --check .
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "ruff format" uv run ruff format --check .
       - name: Lint
-        run: uv run ruff check .
+        run: uv run ruff check --output-format github .
       - name: Type check
-        run: uv run mypy packages/application-spec/src services/api/src
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy packages/application-spec/src services/api/src
       - name: Tests (unit + integration against PostgreSQL)
         run: >-
-          uv run pytest
+          $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "pytest"
+          uv run pytest --tb=short
           --cov=appspec --cov=workspace_api --cov-report=term-missing
           --junitxml=reports/pytest.xml
       - name: Generated contracts are up to date
-        run: uv run python -m workspace_api.export --check --out contracts
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "contracts" uv run python -m workspace_api.export --check --out contracts
       - name: Dependency vulnerability audit
-        run: uv run pip-audit --skip-editable --progress-spinner off
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "pip-audit" uv run pip-audit --skip-editable --progress-spinner off
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
@@ -80,21 +81,21 @@ jobs:
           cache: npm
           cache-dependency-path: apps/workspace-web/package-lock.json
       - name: Install (locked)
-        run: npm ci
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "npm ci" npm ci
       - name: Generated API types match the OpenAPI contract
-        run: npm run check:api
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "API types" npm run check:api
       - name: Format
-        run: npm run format:check
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "prettier" npm run format:check
       - name: Lint (including accessibility rules)
-        run: npm run lint
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "eslint" npm run lint
       - name: Type check
-        run: npm run typecheck
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "tsc" npm run typecheck
       - name: Tests
-        run: npm test
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "vitest" npm test
       - name: Production build
-        run: npm run build
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "build" npm run build
       - name: Dependency vulnerability audit (runtime dependencies)
-        run: npm audit --omit=dev --audit-level=high
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "npm audit" npm audit --omit=dev --audit-level=high
 
   secrets:
     name: Secret scan
