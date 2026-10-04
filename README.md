@@ -104,6 +104,7 @@ between models. See [ADR-0007](docs/adr/0007-model-providers.md). This lands in 
 
 ## Documentation
 
+- [Implementation status, verified results and known limitations](docs/status.md)
 - [Milestone 0 assessment and acceptance criteria](docs/assessment/milestone-0.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Architecture decision records](docs/adr/README.md)
