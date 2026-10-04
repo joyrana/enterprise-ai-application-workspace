@@ -286,9 +286,12 @@ interface RunViewProps {
 function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }: RunViewProps) {
   const styles = useStyles();
   const views = useMemo(() => run.proposals.map(viewProposal), [run.proposals]);
-  const [decisions, setDecisions] = useState<Record<string, DecisionValue>>(() =>
-    Object.fromEntries(views.map((v) => [v.id, "accept" as DecisionValue])),
-  );
+  // Only explicit choices are stored; every proposal without one is "accept". One function
+  // serves both the radio buttons and the apply request, so what is shown is what is sent.
+  // (Initialising state from the proposals broke when a run started queued and its proposals
+  // arrived later: the UI showed "Accept" but sent "reject". Found by the E2E suite.)
+  const [decisions, setDecisions] = useState<Record<string, DecisionValue>>({});
+  const decisionFor = (id: string): DecisionValue => decisions[id] ?? "accept";
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState<unknown>(null);
   const [results, setResults] = useState<ApplyRunResult["results"] | null>(null);
@@ -364,7 +367,7 @@ function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }:
       const { result, etag: nextEtag } = await api.applyRun(
         projectId,
         run.id,
-        { decisions: views.map((v) => ({ proposal_id: v.id, decision: decisions[v.id] ?? "reject" })) },
+        { decisions: views.map((v) => ({ proposal_id: v.id, decision: decisionFor(v.id) })) },
         etag,
       );
       setResults(result.results);
@@ -422,7 +425,7 @@ function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }:
             <ProposalRow
               key={v.id}
               view={v}
-              value={decisions[v.id] ?? "accept"}
+              value={decisionFor(v.id)}
               onChange={(value) => setDecisions((prev) => ({ ...prev, [v.id]: value }))}
             />
           ))}
