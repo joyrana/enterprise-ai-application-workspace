@@ -13,6 +13,7 @@ import {
   Select,
   Spinner,
   Subtitle2,
+  Switch,
   Textarea,
   makeStyles,
   mergeClasses,
@@ -29,9 +30,11 @@ import {
   type SafetyScan,
   type SkillInfo,
   type SpecRevision,
+  type Workflow,
 } from "../../api/client";
 import { ProblemMessage } from "../../components/ProblemMessage";
 import { formatDateTime } from "../../format";
+import { WorkflowProgress } from "./WorkflowProgress";
 import { GROUP_LABELS, OUTCOME_LABELS, viewProposal, type ProposalGroup, type ProposalView } from "./proposals";
 
 const MAX_CHARS = 8000;
@@ -45,6 +48,7 @@ const GROUP_ORDER: ProposalGroup[] = [
   "other",
 ];
 const AUTO = "";
+const PIPELINE_ID = "requirements-pipeline";
 
 const PRECONDITION_LABELS: Record<string, string> = {
   "/functional_requirements": "functional requirements",
@@ -169,6 +173,10 @@ function isActive(run: Run | null): boolean {
   return run !== null && (run.status === "queued" || run.status === "running");
 }
 
+function isWorkflowOpen(workflow: Workflow | null): boolean {
+  return workflow !== null && workflow.status !== "completed" && workflow.status !== "cancelled";
+}
+
 export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDelayMs = 400 }: Props) {
   const styles = useStyles();
   const [status, setStatus] = useState<AiStatus | null>(null);
@@ -180,20 +188,24 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDe
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<unknown>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(newKey);
+  const [workflow, setWorkflow] = useState<Workflow | null>(null);
+  const [asPipeline, setAsPipeline] = useState(false);
   const draftScan = useInjectionScan(message, scanDelayMs);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
       setLoadError(null);
       try {
-        const [ai, runs, skillList] = await Promise.all([
+        const [ai, runs, skillList, workflows] = await Promise.all([
           api.aiStatus(signal),
           api.listRuns(projectId, signal),
           api.listSkills(projectId, signal),
+          api.listWorkflows(projectId, signal),
         ]);
         setStatus(ai);
         setRun(runs.items[0] ?? null);
         setSkills(skillList.items);
+        setWorkflow(workflows.items[0] ?? null);
       } catch (error) {
         if (!signal?.aborted) setLoadError(error);
       }
@@ -224,6 +236,33 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDe
     };
   }, [activeRunId, projectId, pollMs]);
 
+  // While a workflow is running, follow it: when one step finishes without needing review,
+  // the server starts the next step, and the newest step run replaces the one shown.
+  const runningWorkflowId = workflow?.status === "running" ? workflow.id : undefined;
+  useEffect(() => {
+    if (!runningWorkflowId) return;
+    const controller = new AbortController();
+    const timer = window.setInterval(() => {
+      api.getWorkflow(projectId, runningWorkflowId, controller.signal).then(
+        (next) => {
+          setWorkflow(next);
+          const latest = next.steps[next.current_step]?.run_ids.at(-1) ?? next.steps.at(-1)?.run_ids.at(-1);
+          if (latest) {
+            api.getRun(projectId, latest, controller.signal).then(
+              (latestRun) => setRun(latestRun),
+              () => undefined,
+            );
+          }
+        },
+        () => undefined, // retried on the next tick
+      );
+    }, pollMs);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [runningWorkflowId, projectId, pollMs]);
+
   const refreshSkills = useCallback(() => {
     api.listSkills(projectId).then(
       (list) => setSkills(list.items),
@@ -235,8 +274,15 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDe
     setStarting(true);
     setStartError(null);
     try {
-      const created = await api.startRun(projectId, message.trim(), skillId || null, idempotencyKey);
-      setRun(created);
+      if (asPipeline) {
+        const started = await api.startWorkflow(projectId, PIPELINE_ID, message.trim(), idempotencyKey);
+        setWorkflow(started);
+        const first = started.steps[0]?.run_ids.at(-1);
+        if (first) setRun(await api.getRun(projectId, first));
+      } else {
+        const created = await api.startRun(projectId, message.trim(), skillId || null, idempotencyKey);
+        setRun(created);
+      }
       setIdempotencyKey(newKey());
     } catch (error) {
       setStartError(error);
@@ -264,7 +310,8 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDe
   const trimmed = message.trim();
   const tooLong = message.length > MAX_CHARS;
   const selected = skills.find((s) => s.id === skillId);
-  const busy = starting || isActive(run);
+  const busy = starting || isActive(run) || workflow?.status === "running";
+  const showWorkflow = workflow !== null && (isWorkflowOpen(workflow) || run?.workflow_id === workflow.id);
 
   return (
     <div className={styles.root}>
@@ -287,7 +334,7 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDe
         label="Skill"
         hint={selected ? selected.description : "The workspace picks the skill that fits your request."}
       >
-        <Select value={skillId} onChange={(_, data) => setSkillId(data.value)}>
+        <Select value={skillId} disabled={asPipeline} onChange={(_, data) => setSkillId(data.value)}>
           <option value={AUTO}>Let the workspace choose</option>
           {skills.map((s) => (
             <option key={s.id} value={s.id} disabled={!s.applicable}>
@@ -314,12 +361,28 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDe
         />
       </Field>
       {draftScan && draftScan.risk !== "none" && <InjectionWarning scan={draftScan} phase="draft" />}
+      <Switch
+        checked={asPipeline}
+        onChange={(_, data) => setAsPipeline(data.checked)}
+        label="Run as a pipeline: discovery, then acceptance criteria, then a conflict check, pausing for your review after each step"
+      />
       <div className={styles.row}>
         <Button appearance="primary" onClick={start} disabled={busy || !trimmed || tooLong}>
           {starting ? "Starting…" : "Run"}
         </Button>
       </div>
       {startError !== null && <ProblemMessage error={startError} />}
+
+      {showWorkflow && workflow && (
+        <WorkflowProgress
+          projectId={projectId}
+          workflow={workflow}
+          onChanged={(next) => {
+            setWorkflow(next);
+            void load();
+          }}
+        />
+      )}
 
       {run !== null && (
         <RunView
@@ -332,6 +395,8 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDe
             setRun(result.run);
             onApplied({ revision: result.revision, etag: nextEtag });
             refreshSkills();
+            // A workflow step was decided: the server started the next step; show it.
+            if (result.run.workflow_id) void load();
           }}
           onRetry={(text) => setMessage(text)}
           onReload={() => void load()}
@@ -406,6 +471,18 @@ function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }:
         <MessageBarBody>
           <MessageBarTitle>No proposals</MessageBarTitle>
           {run.not_applicable_reason}
+          {routed && <div className={styles.detail}>{routed}</div>}
+        </MessageBarBody>
+      </MessageBar>
+    );
+  }
+
+  if (run.proposals.length === 0 && !run.decisions && !results) {
+    return (
+      <MessageBar intent="info" layout="multiline" role="status">
+        <MessageBarBody>
+          <MessageBarTitle>Nothing to review</MessageBarTitle>
+          {run.summary ?? "The run finished without proposals."}
           {routed && <div className={styles.detail}>{routed}</div>}
         </MessageBarBody>
       </MessageBar>

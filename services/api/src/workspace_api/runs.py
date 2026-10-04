@@ -42,10 +42,10 @@ from skill_sdk import (
     unmet_preconditions,
 )
 
-from . import service
+from . import service, workflows
 from .ai import ModelRuntime
 from .auth import Principal
-from .db import Database, WorkflowRun
+from .db import Database, Project, WorkflowRun
 from .errors import (
     FieldError,
     IdempotencyConflict,
@@ -79,7 +79,7 @@ log = logging.getLogger("workspace_api.runs")
 MAX_ACTIVE_RUNS_PER_TENANT = 3
 ROUTING_DEADLINE_S = 60.0
 _STALE_GRACE = timedelta(seconds=60)
-_IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
+IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 _COMMANDS = TypeAdapter(list[SpecCommand])
 
 
@@ -160,6 +160,8 @@ def _run_out(run: WorkflowRun) -> RunOut:
         error=RunError.model_validate(run.error) if run.error else None,
         applied_revision=run.applied_revision,
         decisions=run.decisions,
+        workflow_id=run.workflow_id,
+        workflow_step=run.workflow_step,
         created_by=run.created_by,
         created_at=run.created_at,
         started_at=run.started_at,
@@ -192,7 +194,7 @@ def _deadline_s(run: WorkflowRun, registry: SkillRegistry) -> float:
     return ROUTING_DEADLINE_S + (skill_timeout or longest)
 
 
-def _expire_if_stale(session: Session, run: WorkflowRun, registry: SkillRegistry) -> None:
+def expire_if_stale(session: Session, run: WorkflowRun, registry: SkillRegistry) -> None:
     """Mark runs that can no longer finish (process stopped) as interrupted."""
     if run.status not in ("queued", "running"):
         return
@@ -239,6 +241,76 @@ def list_skills(session: Session, principal: Principal, project_id: uuid.UUID, r
 # --------------------------------------------------------------------------- create
 
 
+def check_active_limit(session: Session, principal: Principal) -> None:
+    active = session.scalar(
+        select(func.count())
+        .select_from(WorkflowRun)
+        .where(WorkflowRun.tenant_id == principal.tenant_id, WorkflowRun.status.in_(("queued", "running")))
+    )
+    if (active or 0) >= MAX_ACTIVE_RUNS_PER_TENANT:
+        raise TooManyRuns(f"At most {MAX_ACTIVE_RUNS_PER_TENANT} AI runs may be active at once. Try again shortly.")
+
+
+def data_policy_problem(runtime: ModelRuntime, spec: ApplicationSpec) -> str | None:
+    """Why this project's data may not go to the configured model, or None."""
+    try:
+        check_data_policy(
+            runtime.capabilities, _classification(spec), allow_remote=runtime.allow_remote_for_confidential
+        )
+    except ModelError as exc:
+        return exc.detail
+    return None
+
+
+def new_run(
+    session: Session,
+    principal: Principal,
+    project: Project,
+    *,
+    message: str,
+    skill_id: str | None,
+    skill_version: str | None,
+    model_label: str,
+    idempotency_key: str | None = None,
+    idempotency_fingerprint: str | None = None,
+    workflow_id: uuid.UUID | None = None,
+    workflow_step: int | None = None,
+) -> WorkflowRun:
+    """Insert a queued run (screened for prompt injection) and audit it. The caller commits and executes."""
+    report = scan_text(message)
+    run = WorkflowRun(
+        id=uuid.uuid4(),
+        tenant_id=principal.tenant_id,
+        project_id=project.id,
+        skill_id=skill_id,
+        skill_version=skill_version,
+        status="queued",
+        input={"message": message},
+        safety=report.model_dump(mode="json") | {"flagged_proposals": []},
+        base_revision=project.current_revision,
+        created_by=principal.user_id,
+        idempotency_key=idempotency_key,
+        idempotency_fingerprint=idempotency_fingerprint,
+        workflow_id=workflow_id,
+        workflow_step=workflow_step,
+    )
+    session.add(run)
+    service.audit(
+        session,
+        principal,
+        project.id,
+        "ai.run.started",
+        run_id=str(run.id),
+        skill=f"{skill_id}@{skill_version}" if skill_id else "auto",
+        model=model_label,
+        message_chars=len(message),
+        injection_risk=report.risk,
+        injection_signals=sorted({s.kind.value for s in report.signals}),
+        workflow_id=str(workflow_id) if workflow_id else None,
+    )
+    return run
+
+
 def create_run(
     session: Session,
     principal: Principal,
@@ -252,7 +324,7 @@ def create_run(
     project = service.find_project(session, principal, project_id)
     fingerprint = None
     if idempotency_key is not None:
-        if not _IDEMPOTENCY_KEY.fullmatch(idempotency_key):
+        if not IDEMPOTENCY_KEY.fullmatch(idempotency_key):
             raise InvalidRequest("Idempotency-Key must be 8-128 characters of [A-Za-z0-9._:-].")
         fingerprint = "sha256:" + hashlib.sha256(f"{project_id}:{body.model_dump_json()}".encode()).hexdigest()
         existing = session.scalars(
@@ -277,48 +349,21 @@ def create_run(
         raise ModelNotConfigured(
             "Set MODEL_PROFILE and MODEL_ID (see .env.example and docs/adr/0007-model-providers.md)."
         )
-    try:
-        check_data_policy(
-            runtime.capabilities, _classification(spec), allow_remote=runtime.allow_remote_for_confidential
-        )
-    except ModelError as exc:
-        raise ModelPolicyDenied(exc.detail) from exc
+    problem = data_policy_problem(runtime, spec)
+    if problem is not None:
+        raise ModelPolicyDenied(problem)
 
-    active = session.scalar(
-        select(func.count())
-        .select_from(WorkflowRun)
-        .where(WorkflowRun.tenant_id == principal.tenant_id, WorkflowRun.status.in_(("queued", "running")))
-    )
-    if (active or 0) >= MAX_ACTIVE_RUNS_PER_TENANT:
-        raise TooManyRuns(f"At most {MAX_ACTIVE_RUNS_PER_TENANT} AI runs may be active at once. Try again shortly.")
-
-    report = scan_text(body.message)
-    run = WorkflowRun(
-        id=uuid.uuid4(),
-        tenant_id=principal.tenant_id,
-        project_id=project.id,
-        skill_id=body.skill_id,
-        skill_version=skill_version,
-        status="queued",
-        input={"message": body.message},
-        safety=report.model_dump(mode="json") | {"flagged_proposals": []},
-        base_revision=project.current_revision,
-        created_by=principal.user_id,
-        idempotency_key=idempotency_key,
-        idempotency_fingerprint=fingerprint,
-    )
-    session.add(run)
-    service.audit(
+    check_active_limit(session, principal)
+    run = new_run(
         session,
         principal,
-        project.id,
-        "ai.run.started",
-        run_id=str(run.id),
-        skill=f"{body.skill_id}@{skill_version}" if body.skill_id else "auto",
-        model=runtime.label,
-        message_chars=len(body.message),
-        injection_risk=report.risk,
-        injection_signals=sorted({s.kind.value for s in report.signals}),
+        project,
+        message=body.message,
+        skill_id=body.skill_id,
+        skill_version=skill_version,
+        model_label=runtime.label,
+        idempotency_key=idempotency_key,
+        idempotency_fingerprint=fingerprint,
     )
     try:
         session.commit()
@@ -344,7 +389,17 @@ def _failed_model_info(runtime: ModelRuntime, prompt_version: str | None, exc: M
 
 
 def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry: SkillRegistry) -> None:
-    """Route and run a queued request to completion. Safe to call more than once (claims atomically)."""
+    """Route and run a queued request to completion. Safe to call more than once (claims atomically).
+
+    When the run is a workflow step, the workflow checkpoint is updated in the same
+    transaction, and any step that can start next (no review needed) runs here too.
+    """
+    pending = [run_id]
+    while pending:
+        pending.extend(_execute_one(db, pending.pop(0), runtime, registry))
+
+
+def _execute_one(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry: SkillRegistry) -> list[uuid.UUID]:
     session = db.new_session()
     try:
         claimed = session.execute(
@@ -355,7 +410,7 @@ def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry
         ).first()
         session.commit()
         if claimed is None:
-            return
+            return []
         run = session.get(WorkflowRun, run_id)
         assert run is not None
         principal = Principal(tenant_id=run.tenant_id, user_id=run.created_by)
@@ -446,7 +501,9 @@ def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry
             flagged_proposals=len((run.safety or {}).get("flagged_proposals", [])),
             error_kind=error["kind"] if error else None,
         )
+        next_runs = workflows.on_run_finished(session, run, runtime, registry) if run.workflow_id else []
         session.commit()
+        return next_runs
     finally:
         session.close()
 
@@ -459,7 +516,7 @@ def get_run(
 ) -> RunOut:
     service.find_project(session, principal, project_id)
     run = _run(session, principal, project_id, run_id)
-    _expire_if_stale(session, run, registry)
+    expire_if_stale(session, run, registry)
     return _run_out(run)
 
 
@@ -474,7 +531,7 @@ def list_runs(session: Session, principal: Principal, project_id: uuid.UUID, reg
         )
     )
     for run in rows:
-        _expire_if_stale(session, run, registry)
+        expire_if_stale(session, run, registry)
     return RunPage(items=[_run_out(r) for r in rows])
 
 
@@ -488,7 +545,10 @@ def apply_run(
     run_id: uuid.UUID,
     if_match: str | None,
     body: ApplyRunRequest,
-) -> ApplyRunResult:
+    runtime: ModelRuntime | None = None,
+    registry: SkillRegistry | None = None,
+) -> tuple[ApplyRunResult, list[uuid.UUID]]:
+    """Apply decisions. Returns the result and any workflow step runs to execute next."""
     project = service.lock_project_at_revision(session, principal, project_id, if_match)
     run = _run(session, principal, project_id, run_id, lock=True)
     if run.applied_revision is not None or run.decisions is not None:
@@ -550,8 +610,12 @@ def apply_run(
         )
     run.decisions = {pid: d.value for pid, d in decisions.items()}
     run.applied_revision = outcome.revision.revision if outcome.created else None
+    next_runs: list[uuid.UUID] = []
+    if run.workflow_id and registry is not None:
+        next_runs = workflows.on_run_applied(session, principal, run, runtime, registry)
     session.commit()
     session.refresh(run)
-    return ApplyRunResult(
+    result = ApplyRunResult(
         run=_run_out(run), results=results, revision=outcome.revision, revision_created=outcome.created
     )
+    return result, next_runs

@@ -216,6 +216,8 @@ class RunOut(ApiModel):
     error: RunError | None
     applied_revision: int | None
     decisions: dict[str, str] | None
+    workflow_id: uuid.UUID | None = Field(default=None, description="Set when this run is a workflow step.")
+    workflow_step: int | None = Field(default=None, description="Index of the workflow step this run executes.")
     created_by: str
     created_at: datetime
     started_at: datetime | None
@@ -241,3 +243,59 @@ class ApplyRunResult(ApiModel):
     results: list[CommandResult]
     revision: SpecRevisionOut
     revision_created: bool
+
+
+class WorkflowStepDefinitionOut(ApiModel):
+    id: str
+    title: str
+    skill_id: str
+
+
+class WorkflowDefinitionOut(ApiModel):
+    id: str
+    version: str
+    name: str
+    description: str
+    steps: list[WorkflowStepDefinitionOut]
+    max_attempts_per_step: int
+
+
+class WorkflowDefinitionList(ApiModel):
+    items: list[WorkflowDefinitionOut]
+
+
+class WorkflowCreate(ApiModel):
+    definition_id: str = Field(max_length=64)
+    message: Description8k
+
+
+class WorkflowStepOut(ApiModel):
+    id: str
+    title: str
+    skill_id: str
+    status: str = Field(description="pending | running | awaiting_review | completed | skipped | failed")
+    attempts: int
+    run_ids: list[uuid.UUID]
+    reason: str | None
+    applied_revision: int | None
+
+
+class WorkflowOut(ApiModel):
+    id: uuid.UUID
+    definition_id: str
+    definition_version: str
+    name: str
+    status: str = Field(description="running | awaiting_review | completed | failed | cancelled")
+    current_step: int
+    steps: list[WorkflowStepOut]
+    message: str
+    active_run_id: uuid.UUID | None = Field(description="The step run that is queued or running, if any.")
+    can_resume: bool = Field(description="A failed step can be retried, or a stalled step restarted.")
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+    finished_at: datetime | None
+
+
+class WorkflowPage(ApiModel):
+    items: list[WorkflowOut]

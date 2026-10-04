@@ -95,7 +95,9 @@ def app(database_url: str) -> Iterator[FastAPI]:
     yield application
     engine = application.state.db.engine
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE workflow_runs, audit_events, spec_revisions, projects RESTART IDENTITY CASCADE"))
+        conn.execute(
+            text("TRUNCATE workflow_runs, workflows, audit_events, spec_revisions, projects RESTART IDENTITY CASCADE")
+        )
     engine.dispose()
 
 

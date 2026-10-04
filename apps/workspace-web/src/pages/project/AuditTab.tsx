@@ -23,6 +23,12 @@ const ACTION_LABELS: Record<string, string> = {
   "ai.run.failed": "AI run failed",
   "ai.proposals.applied": "AI proposals applied",
   "ai.flagged_proposals.accepted": "Flagged AI proposals accepted",
+  "workflow.started": "Workflow started",
+  "workflow.step_skipped": "Workflow step skipped",
+  "workflow.completed": "Workflow completed",
+  "workflow.failed": "Workflow stopped at a failed step",
+  "workflow.resumed": "Workflow resumed",
+  "workflow.cancelled": "Workflow cancelled",
 };
 
 function describe(details: Record<string, unknown>): string {

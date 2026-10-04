@@ -34,6 +34,11 @@ export type ApplyRunResult = Json<ApplyPath["post"]["responses"][200]>;
 export type DecisionValue = ApplyRunRequest["decisions"][number]["decision"];
 export type SafetyScan = Json<paths["/api/v1/safety/scan"]["post"]["responses"][200]>;
 export type RunSafety = NonNullable<Run["safety"]>;
+type WorkflowPath = paths["/api/v1/projects/{project_id}/workflows/{workflow_id}"];
+export type Workflow = Json<WorkflowPath["get"]["responses"][200]>;
+export type WorkflowPage = Json<paths["/api/v1/projects/{project_id}/workflows"]["get"]["responses"][200]>;
+export type WorkflowDefinitionList = Json<paths["/api/v1/workflow-definitions"]["get"]["responses"][200]>;
+export type WorkflowDefinition = WorkflowDefinitionList["items"][number];
 
 export interface ProblemDetails {
   type: string;
@@ -220,6 +225,50 @@ export const api = {
 
   async getRun(projectId: string, runId: string, signal?: AbortSignal): Promise<Run> {
     return (await request<Run>(`/api/v1/projects/${enc(projectId)}/runs/${enc(runId)}`, { signal })).data;
+  },
+
+  async listWorkflowDefinitions(signal?: AbortSignal): Promise<WorkflowDefinitionList> {
+    return (await request<WorkflowDefinitionList>("/api/v1/workflow-definitions", { signal })).data;
+  },
+
+  async listWorkflows(projectId: string, signal?: AbortSignal): Promise<WorkflowPage> {
+    return (await request<WorkflowPage>(`/api/v1/projects/${enc(projectId)}/workflows`, { signal })).data;
+  },
+
+  async getWorkflow(projectId: string, workflowId: string, signal?: AbortSignal): Promise<Workflow> {
+    return (await request<Workflow>(`/api/v1/projects/${enc(projectId)}/workflows/${enc(workflowId)}`, { signal }))
+      .data;
+  },
+
+  async startWorkflow(
+    projectId: string,
+    definitionId: string,
+    message: string,
+    idempotencyKey: string,
+  ): Promise<Workflow> {
+    return (
+      await request<Workflow>(`/api/v1/projects/${enc(projectId)}/workflows`, {
+        method: "POST",
+        body: { definition_id: definitionId, message },
+        headers: { "Idempotency-Key": idempotencyKey },
+      })
+    ).data;
+  },
+
+  async resumeWorkflow(projectId: string, workflowId: string): Promise<Workflow> {
+    return (
+      await request<Workflow>(`/api/v1/projects/${enc(projectId)}/workflows/${enc(workflowId)}/resume`, {
+        method: "POST",
+      })
+    ).data;
+  },
+
+  async cancelWorkflow(projectId: string, workflowId: string): Promise<Workflow> {
+    return (
+      await request<Workflow>(`/api/v1/projects/${enc(projectId)}/workflows/${enc(workflowId)}/cancel`, {
+        method: "POST",
+      })
+    ).data;
   },
 
   async scanText(text: string, signal?: AbortSignal): Promise<SafetyScan> {
