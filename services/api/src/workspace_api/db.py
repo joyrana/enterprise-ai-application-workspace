@@ -110,10 +110,12 @@ class WorkflowRun(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )
-    skill_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    skill_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: Null until routing has chosen a skill (or when no skill fits the request).
+    skill_id: Mapped[str | None] = mapped_column(String(64))
+    skill_version: Mapped[str | None] = mapped_column(String(32))
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     input: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    routing: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     base_revision: Mapped[int] = mapped_column(Integer, nullable=False)
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     model: Mapped[dict[str, Any] | None] = mapped_column(JSONB)

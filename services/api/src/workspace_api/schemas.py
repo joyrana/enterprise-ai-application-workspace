@@ -112,8 +112,38 @@ class AiStatus(ApiModel):
     structured_mode: str | None
 
 
-class DiscoveryRunCreate(ApiModel):
-    description: Description8k
+class RunCreate(ApiModel):
+    message: Description8k
+    skill_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description="Run this skill. Omit to let the workspace route the request to the best applicable skill.",
+    )
+
+
+class SkillInfo(ApiModel):
+    id: str
+    name: str
+    description: str
+    category: str
+    version: str
+    applicable: bool
+    unmet_preconditions: list[str]
+    message_required: bool
+
+
+class SkillList(ApiModel):
+    items: list[SkillInfo]
+
+
+class RunRouting(ApiModel):
+    method: str = Field(description="explicit | single-candidate | model | no-candidates")
+    candidates: list[str]
+    chosen: str | None
+    confidence: float | None
+    rationale: str
+    model_id: str | None
+    total_tokens: int
 
 
 class RunError(ApiModel):
@@ -140,10 +170,11 @@ class RunModelInfo(ApiModel):
 
 class RunOut(ApiModel):
     id: uuid.UUID
-    skill_id: str
-    skill_version: str
+    skill_id: str | None = Field(description="Null until routing chooses a skill, or when no skill fits.")
+    skill_version: str | None
     status: str = Field(description="queued | running | succeeded | failed")
-    description: str
+    message: str
+    routing: RunRouting | None
     base_revision: int
     summary: str | None
     not_applicable_reason: str | None

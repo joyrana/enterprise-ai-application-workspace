@@ -5,9 +5,9 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 2a (AI discovery).** Projects, the canonical specification, revision
-> history, audit trail and the workspace UI exist, plus AI-assisted business discovery with
-> human review. Skill routing, orchestration, design-system adapters and code generation are
+> **Status: Milestone 2b (skills and routing).** Projects, the canonical specification, revision
+> history, audit trail and the workspace UI exist, plus three AI discovery skills with routing
+> and human review. Skill routing, orchestration, design-system adapters and code generation are
 > **not implemented yet**; see the roadmap below.
 > Development authentication only: do not expose this build to untrusted users.
 
@@ -28,8 +28,12 @@ security policies.
   proposes objective, domain, personas, requirements, assumptions and open questions; you
   accept, confirm or reject each proposal, and accepted ones become one new revision with
   model provenance. Confirmed facts are never overwritten by later runs.
-- **Evaluation** (`evals/`): a versioned discovery dataset with deterministic checks and a
-  runner that reports completion, pass rate, repairs, latency and tokens for a real model.
+- **More skills and routing**: `acceptance-criteria` (Given/When/Then for requirements
+  without criteria) and `requirements-conflict-detection` (contradictions and duplicates
+  raised as blocking questions). Requests are routed by preconditions first; the model only
+  chooses when several skills apply, and you can always pick a skill yourself (ADR-0009).
+- **Evaluation** (`evals/`): discovery scenarios with deterministic checks, and a labeled
+  routing set scored for a lexical baseline (in CI) and for the model router (opt-in).
 - **CI**: lint, format, strict typing, unit and PostgreSQL integration tests, contract drift
   checks, production build, dependency audit, secret scan.
 
@@ -86,7 +90,7 @@ services/api/                FastAPI service, Alembic migrations, tests
 packages/application-spec/   Canonical spec library (no web/DB dependencies)
 packages/model-gateway/      Model providers (HF router, self-hosted, Ollama), validation, budgets
 packages/skill-sdk/          Skill manifests, registry, typed spec commands
-skills/                      Built-in skills (business-discovery)
+skills/                      Built-in skills (business discovery, acceptance criteria, conflict check)
 evals/                       Evaluation datasets and runners
 contracts/                   Generated OpenAPI + JSON Schema (drift-checked in CI)
 docs/                        Assessment, architecture, ADRs, threat model
@@ -109,10 +113,12 @@ export MODEL_PROFILE=ollama MODEL_ID=gpt-oss:20b
 uv run uvicorn workspace_api.main:app --reload --port 8000   # then open a project → Discovery
 ```
 
-Evaluate the configured model on the discovery dataset (writes JSON and Markdown reports):
+Evaluate the configured model (writes JSON and Markdown reports):
 
 ```bash
 uv run python -m workspace_evals.discovery --repeats 3 --out reports/evals
+uv run python -m workspace_evals.routing --method router --repeats 3 --out reports/evals
+uv run python -m workspace_evals.routing --method lexical   # baseline, no model needed
 ```
 
 ## Roadmap
@@ -121,8 +127,9 @@ uv run python -m workspace_evals.discovery --repeats 3 --out reports/evals
 |---|---|---|
 | 0 | Repository assessment, plan, ADRs | Done ([assessment](docs/assessment/milestone-0.md)) |
 | 1 | Foundation: spec, persistence, API, workspace shell, CI | Done |
-| 2a | Model gateway (Qwen / gpt-oss), skill SDK, business discovery with human review, discovery evals | In review |
-| 2b | More discovery skills, intent routing with labeled evals, orchestration with checkpointing | Next |
+| 2a | Model gateway (Qwen / gpt-oss), skill SDK, business discovery with human review, discovery evals | Done |
+| 2b | Acceptance-criteria and conflict-detection skills, two-stage routing, routing evals | In review |
+| 2c | Checkpointed orchestration, real-model baselines, Playwright E2E | Next |
 | 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Planned |
 | 4 | React generation, isolated builds, preview, diff review | Planned |
 | 5 | Incremental changes, edit preservation, resilience | Planned |

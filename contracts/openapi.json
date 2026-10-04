@@ -1275,22 +1275,6 @@
         "title": "DesignSystemSelection",
         "type": "object"
       },
-      "DiscoveryRunCreate": {
-        "additionalProperties": false,
-        "properties": {
-          "description": {
-            "maxLength": 8000,
-            "minLength": 1,
-            "title": "Description",
-            "type": "string"
-          }
-        },
-        "required": [
-          "description"
-        ],
-        "title": "DiscoveryRunCreate",
-        "type": "object"
-      },
       "EntityField": {
         "additionalProperties": false,
         "properties": {
@@ -2572,6 +2556,35 @@
         "title": "Role",
         "type": "object"
       },
+      "RunCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Run this skill. Omit to let the workspace route the request to the best applicable skill.",
+            "title": "Skill Id"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "RunCreate",
+        "type": "object"
+      },
       "RunError": {
         "additionalProperties": false,
         "properties": {
@@ -2694,10 +2707,6 @@
             ],
             "title": "Decisions"
           },
-          "description": {
-            "title": "Description",
-            "type": "string"
-          },
           "error": {
             "anyOf": [
               {
@@ -2723,6 +2732,10 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
             "type": "string"
           },
           "model": {
@@ -2771,13 +2784,38 @@
             "title": "Proposals",
             "type": "array"
           },
+          "routing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunRouting"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "skill_id": {
-            "title": "Skill Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null until routing chooses a skill, or when no skill fits.",
+            "title": "Skill Id"
           },
           "skill_version": {
-            "title": "Skill Version",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Version"
           },
           "started_at": {
             "anyOf": [
@@ -2813,7 +2851,8 @@
           "skill_id",
           "skill_version",
           "status",
-          "description",
+          "message",
+          "routing",
           "base_revision",
           "summary",
           "not_applicable_reason",
@@ -2845,6 +2884,75 @@
           "items"
         ],
         "title": "RunPage",
+        "type": "object"
+      },
+      "RunRouting": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "method": {
+            "description": "explicit | single-candidate | model | no-candidates",
+            "title": "Method",
+            "type": "string"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "total_tokens": {
+            "title": "Total Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "method",
+          "candidates",
+          "chosen",
+          "confidence",
+          "rationale",
+          "model_id",
+          "total_tokens"
+        ],
+        "title": "RunRouting",
         "type": "object"
       },
       "Screen": {
@@ -3020,6 +3128,75 @@
         ],
         "title": "Severity",
         "type": "string"
+      },
+      "SkillInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "applicable": {
+            "title": "Applicable",
+            "type": "boolean"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "message_required": {
+            "title": "Message Required",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unmet_preconditions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmet Preconditions",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "category",
+          "version",
+          "applicable",
+          "unmet_preconditions",
+          "message_required"
+        ],
+        "title": "SkillInfo",
+        "type": "object"
+      },
+      "SkillList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SkillInfo"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SkillList",
+        "type": "object"
       },
       "Source": {
         "enum": [
@@ -4560,9 +4737,9 @@
         ]
       }
     },
-    "/api/v1/projects/{project_id}/discovery-runs": {
+    "/api/v1/projects/{project_id}/runs": {
       "get": {
-        "operationId": "list_discovery_runs_api_v1_projects__project_id__discovery_runs_get",
+        "operationId": "list_project_runs_api_v1_projects__project_id__runs_get",
         "parameters": [
           {
             "description": "Project identifier.",
@@ -4680,13 +4857,13 @@
             "description": "Unprocessable Entity"
           }
         },
-        "summary": "Recent discovery runs, newest first (resume after a page refresh)",
+        "summary": "Recent AI runs, newest first (resume after a page refresh)",
         "tags": [
           "ai"
         ]
       },
       "post": {
-        "operationId": "start_discovery_api_v1_projects__project_id__discovery_runs_post",
+        "operationId": "start_run_api_v1_projects__project_id__runs_post",
         "parameters": [
           {
             "description": "Project identifier.",
@@ -4757,7 +4934,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DiscoveryRunCreate"
+                "$ref": "#/components/schemas/RunCreate"
               }
             }
           },
@@ -4884,15 +5061,15 @@
             "description": "Service Unavailable"
           }
         },
-        "summary": "Start business discovery on a description; poll the run for proposals",
+        "summary": "Start an AI run: route the message to a skill (or use skill_id) and poll for proposals",
         "tags": [
           "ai"
         ]
       }
     },
-    "/api/v1/projects/{project_id}/discovery-runs/{run_id}": {
+    "/api/v1/projects/{project_id}/runs/{run_id}": {
       "get": {
-        "operationId": "get_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__get",
+        "operationId": "get_project_run_api_v1_projects__project_id__runs__run_id__get",
         "parameters": [
           {
             "description": "Project identifier.",
@@ -5022,15 +5199,15 @@
             "description": "Unprocessable Entity"
           }
         },
-        "summary": "Get a discovery run and its proposals",
+        "summary": "Get an AI run, its routing decision and proposals",
         "tags": [
           "ai"
         ]
       }
     },
-    "/api/v1/projects/{project_id}/discovery-runs/{run_id}/apply": {
+    "/api/v1/projects/{project_id}/runs/{run_id}/apply": {
       "post": {
-        "operationId": "apply_discovery_run_api_v1_projects__project_id__discovery_runs__run_id__apply_post",
+        "operationId": "apply_project_run_api_v1_projects__project_id__runs__run_id__apply_post",
         "parameters": [
           {
             "description": "Project identifier.",
@@ -5220,6 +5397,132 @@
           }
         },
         "summary": "Apply per-proposal decisions (accept, confirm, reject) as one new revision",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/skills": {
+      "get": {
+        "operationId": "list_project_skills_api_v1_projects__project_id__skills_get",
+        "parameters": [
+          {
+            "description": "Project identifier.",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "description": "Project identifier.",
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Development only: tenant identifier.",
+            "in": "header",
+            "name": "x-dev-tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: tenant identifier.",
+              "title": "X-Dev-Tenant"
+            }
+          },
+          {
+            "description": "Development only: user identifier.",
+            "in": "header",
+            "name": "x-dev-user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: user identifier.",
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Skills and whether each can run on this project now",
         "tags": [
           "ai"
         ]

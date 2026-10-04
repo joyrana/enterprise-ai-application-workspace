@@ -1,6 +1,6 @@
 import type { Proposal } from "../../api/client";
 
-export type ProposalGroup = "facts" | "personas" | "requirements" | "assumptions" | "questions" | "other";
+export type ProposalGroup = "facts" | "personas" | "requirements" | "criteria" | "assumptions" | "questions" | "other";
 
 export interface ProposalView {
   id: string;
@@ -15,6 +15,7 @@ export const GROUP_LABELS: Record<ProposalGroup, string> = {
   facts: "Key facts",
   personas: "Personas",
   requirements: "Functional requirements",
+  criteria: "Acceptance criteria",
   assumptions: "Assumptions",
   questions: "Open questions",
   other: "Other",
@@ -49,6 +50,8 @@ export function viewProposal(proposal: Proposal): ProposalView {
       group: "questions",
       label: "Question",
       text: str(p.question),
+      detail:
+        Array.isArray(p.related_ids) && p.related_ids.length > 0 ? `Related: ${p.related_ids.join(", ")}` : undefined,
       badges: p.blocking === true ? ["Blocking"] : [],
     };
   }
@@ -72,6 +75,15 @@ export function viewProposal(proposal: Proposal): ProposalView {
           text: str(item.title),
           detail: str(item.description),
           badges: item.priority ? [str(item.priority).toUpperCase()] : [],
+        };
+      case "acceptance_criteria":
+        return {
+          id,
+          group: "criteria",
+          label: "Acceptance criterion",
+          text: `Given ${str(item.given)}, when ${str(item.when)}, then ${str(item.then)}`,
+          detail: `For requirement ${str(item.requirement_id)}`,
+          badges: [],
         };
       case "assumptions":
         return { id, group: "assumptions", label: "Assumption", text: str(item.statement), badges: [] };

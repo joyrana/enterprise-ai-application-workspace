@@ -88,6 +88,10 @@ class TooManyRuns(AppError):
     status, code, title = 429, "too-many-active-runs", "Too many AI runs are already in progress"
 
 
+class SkillNotApplicable(AppError):
+    status, code, title = 422, "skill-not-applicable", "That skill cannot run on this project yet"
+
+
 class RunNotApplicable(AppError):
     status, code, title = 409, "run-not-applicable", "This run has no proposals to apply"
 

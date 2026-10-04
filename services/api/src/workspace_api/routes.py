@@ -22,13 +22,14 @@ from .schemas import (
     ApplyRunRequest,
     ApplyRunResult,
     AuditPage,
-    DiscoveryRunCreate,
     Health,
     ProjectCreate,
     ProjectOut,
     ProjectPage,
+    RunCreate,
     RunOut,
     RunPage,
+    SkillList,
     SpecRevisionOut,
     SpecRevisionPage,
     SpecUpdate,
@@ -242,12 +243,24 @@ def ai_status(request: Request, principal: CurrentPrincipal) -> AiStatus:
     )
 
 
+@api.get(
+    "/projects/{project_id}/skills",
+    response_model=SkillList,
+    tags=["ai"],
+    summary="Skills and whether each can run on this project now",
+)
+def list_project_skills(
+    project_id: ProjectId, request: Request, principal: CurrentPrincipal, session: DbSession
+) -> SkillList:
+    return runs.list_skills(session, principal, project_id, _registry(request))
+
+
 @api.post(
-    "/projects/{project_id}/discovery-runs",
+    "/projects/{project_id}/runs",
     response_model=RunOut,
     status_code=status.HTTP_202_ACCEPTED,
     tags=["ai"],
-    summary="Start business discovery on a description; poll the run for proposals",
+    summary="Start an AI run: route the message to a skill (or use skill_id) and poll for proposals",
     responses={
         200: {"model": RunOut, "description": "Replay of an earlier request with the same Idempotency-Key."},
         403: _PROBLEM,
@@ -256,9 +269,9 @@ def ai_status(request: Request, principal: CurrentPrincipal) -> AiStatus:
         503: _PROBLEM,
     },
 )
-def start_discovery(
+def start_run(
     project_id: ProjectId,
-    body: DiscoveryRunCreate,
+    body: RunCreate,
     request: Request,
     principal: CurrentPrincipal,
     session: DbSession,
@@ -268,8 +281,8 @@ def start_discovery(
 ) -> RunOut:
     runtime = _runtime(request)
     registry = _registry(request)
-    run, created = runs.create_discovery_run(session, principal, project_id, body, idempotency_key, runtime, registry)
-    response.headers["Location"] = f"/api/v1/projects/{project_id}/discovery-runs/{run.id}"
+    run, created = runs.create_run(session, principal, project_id, body, idempotency_key, runtime, registry)
+    response.headers["Location"] = f"/api/v1/projects/{project_id}/runs/{run.id}"
     if created and runtime is not None:
         background.add_task(runs.execute_run, request.app.state.db, run.id, runtime, registry)
     else:
@@ -278,37 +291,37 @@ def start_discovery(
 
 
 @api.get(
-    "/projects/{project_id}/discovery-runs",
+    "/projects/{project_id}/runs",
     response_model=RunPage,
     tags=["ai"],
-    summary="Recent discovery runs, newest first (resume after a page refresh)",
+    summary="Recent AI runs, newest first (resume after a page refresh)",
 )
-def list_discovery_runs(
+def list_project_runs(
     project_id: ProjectId, request: Request, principal: CurrentPrincipal, session: DbSession
 ) -> RunPage:
     return runs.list_runs(session, principal, project_id, _registry(request))
 
 
 @api.get(
-    "/projects/{project_id}/discovery-runs/{run_id}",
+    "/projects/{project_id}/runs/{run_id}",
     response_model=RunOut,
     tags=["ai"],
-    summary="Get a discovery run and its proposals",
+    summary="Get an AI run, its routing decision and proposals",
 )
-def get_discovery_run(
+def get_project_run(
     project_id: ProjectId, run_id: RunId, request: Request, principal: CurrentPrincipal, session: DbSession
 ) -> RunOut:
     return runs.get_run(session, principal, project_id, run_id, _registry(request))
 
 
 @api.post(
-    "/projects/{project_id}/discovery-runs/{run_id}/apply",
+    "/projects/{project_id}/runs/{run_id}/apply",
     response_model=ApplyRunResult,
     tags=["ai"],
     summary="Apply per-proposal decisions (accept, confirm, reject) as one new revision",
     responses={409: _PROBLEM, 412: _PROBLEM, 428: _PROBLEM},
 )
-def apply_discovery_run(
+def apply_project_run(
     project_id: ProjectId,
     run_id: RunId,
     body: ApplyRunRequest,

@@ -63,8 +63,13 @@ def project(client: TestClient) -> dict[str, Any]:
     return body
 
 
-def start(client: TestClient, pid: str, description: str = "Finance ops app", **headers: str) -> Any:
-    return client.post(f"/api/v1/projects/{pid}/discovery-runs", json={"description": description}, headers=headers)
+def start(
+    client: TestClient, pid: str, message: str = "Finance ops app", skill_id: str | None = None, **headers: str
+) -> Any:
+    body: dict[str, Any] = {"message": message}
+    if skill_id is not None:
+        body["skill_id"] = skill_id
+    return client.post(f"/api/v1/projects/{pid}/runs", json=body, headers=headers)
 
 
 def decide(run: dict[str, Any], decision: str = "accept") -> list[dict[str, str]]:
@@ -96,7 +101,7 @@ def test_starting_without_a_model_is_503_and_creates_nothing(client: TestClient,
     response = start(client, project["id"])
     assert response.status_code == 503
     assert response.json()["type"] == "urn:workspace:error:model-not-configured"
-    assert client.get(f"/api/v1/projects/{project['id']}/discovery-runs").json()["items"] == []
+    assert client.get(f"/api/v1/projects/{project['id']}/runs").json()["items"] == []
 
 
 def test_remote_model_is_refused_for_confidential_projects(
@@ -118,10 +123,10 @@ def test_remote_model_is_refused_for_confidential_projects(
     assert provider.requests == []  # nothing was sent to the model
 
 
-def test_description_is_validated(client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider]) -> None:
+def test_message_is_validated(client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider]) -> None:
     ai(ANSWER)
-    assert start(client, project["id"], description="   ").status_code == 422
-    assert start(client, project["id"], description="x" * 8001).status_code == 422
+    assert start(client, project["id"], message="   ").status_code == 422
+    assert start(client, project["id"], message="x" * 8001).status_code == 422
 
 
 # --------------------------------------------------------------------------- run lifecycle
@@ -131,15 +136,15 @@ def test_discovery_run_produces_proposals_without_changing_the_spec(
     client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider]
 ) -> None:
     provider = ai(ANSWER)
-    response = start(client, project["id"], description="Configure adjustments and approve risky transactions")
+    response = start(client, project["id"], message="Configure adjustments and approve risky transactions")
     assert response.status_code == 202
     run_id = response.json()["id"]
-    assert response.headers["location"].endswith(f"/discovery-runs/{run_id}")
+    assert response.headers["location"].endswith(f"/runs/{run_id}")
 
     # TestClient runs background tasks before returning, so the run has finished.
-    run = client.get(f"/api/v1/projects/{project['id']}/discovery-runs/{run_id}").json()
+    run = client.get(f"/api/v1/projects/{project['id']}/runs/{run_id}").json()
     assert run["status"] == "succeeded"
-    assert run["description"] == "Configure adjustments and approve risky transactions"
+    assert run["message"] == "Configure adjustments and approve risky transactions"
     assert run["base_revision"] == 1
     assert len(run["proposals"]) == 7
     assert run["model"]["model_id"] == "fake-model"
@@ -158,7 +163,7 @@ def test_runs_are_listed_newest_first_for_resume(
     ai(ANSWER, ANSWER)
     first = start(client, project["id"]).json()["id"]
     second = start(client, project["id"]).json()["id"]
-    items = client.get(f"/api/v1/projects/{project['id']}/discovery-runs").json()["items"]
+    items = client.get(f"/api/v1/projects/{project['id']}/runs").json()["items"]
     assert [r["id"] for r in items] == [second, first]
 
 
@@ -179,7 +184,7 @@ def test_model_failure_is_recorded_with_classified_error(
 ) -> None:
     ai(ModelError(ErrorKind.RATE_LIMITED, "HTTP 429 from provider"))
     run_id = start(client, project["id"]).json()["id"]
-    run = client.get(f"/api/v1/projects/{project['id']}/discovery-runs/{run_id}").json()
+    run = client.get(f"/api/v1/projects/{project['id']}/runs/{run_id}").json()
     assert run["status"] == "failed"
     assert run["error"] == {
         "kind": "rate_limited",
@@ -193,7 +198,7 @@ def test_schema_failure_after_repair_is_recorded(
 ) -> None:
     ai("not json at all", "<think>still</think> nope")
     run_id = start(client, project["id"]).json()["id"]
-    run = client.get(f"/api/v1/projects/{project['id']}/discovery-runs/{run_id}").json()
+    run = client.get(f"/api/v1/projects/{project['id']}/runs/{run_id}").json()
     assert run["status"] == "failed"
     assert run["error"]["kind"] == "schema_failure"
     assert run["model"]["calls"] == 2
@@ -203,8 +208,8 @@ def test_not_an_application_request(
     client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider]
 ) -> None:
     ai({"is_application_request": False, "not_applicable_reason": "That is a weather question."})
-    run_id = start(client, project["id"], description="Will it rain in Pune?").json()["id"]
-    run = client.get(f"/api/v1/projects/{project['id']}/discovery-runs/{run_id}").json()
+    run_id = start(client, project["id"], message="Will it rain in Pune?").json()["id"]
+    run = client.get(f"/api/v1/projects/{project['id']}/runs/{run_id}").json()
     assert run["status"] == "succeeded"
     assert run["proposals"] == []
     assert run["not_applicable_reason"] == "That is a weather question."
@@ -242,7 +247,7 @@ def test_interrupted_runs_are_marked_failed(app: FastAPI, client: TestClient, pr
             ),
             {"id": run_id, "pid": project["id"], "old": old},
         )
-    run = client.get(f"/api/v1/projects/{project['id']}/discovery-runs/{run_id}").json()
+    run = client.get(f"/api/v1/projects/{project['id']}/runs/{run_id}").json()
     assert run["status"] == "failed"
     assert run["error"]["kind"] == "interrupted"
 
@@ -250,7 +255,7 @@ def test_interrupted_runs_are_marked_failed(app: FastAPI, client: TestClient, pr
 def test_runs_are_tenant_scoped(client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider]) -> None:
     ai(ANSWER)
     run_id = start(client, project["id"]).json()["id"]
-    base = f"/api/v1/projects/{project['id']}/discovery-runs"
+    base = f"/api/v1/projects/{project['id']}/runs"
     assert client.get(f"{base}/{run_id}", headers=OTHER).status_code == 404
     assert client.get(base, headers=OTHER).status_code == 404
     assert start(client, project["id"], **OTHER).status_code == 404
@@ -271,7 +276,7 @@ def test_apply_creates_one_revision_with_model_provenance(
     ai(ANSWER)
     pid = project["id"]
     run = start(client, pid).json()
-    run = client.get(f"/api/v1/projects/{pid}/discovery-runs/{run['id']}").json()
+    run = client.get(f"/api/v1/projects/{pid}/runs/{run['id']}").json()
     decisions = decide(run, "accept")
     objective = next(d for d in decisions if d["proposal_id"] == "p-objective")
     objective["decision"] = "confirm"
@@ -279,7 +284,7 @@ def test_apply_creates_one_revision_with_model_provenance(
     next(d for d in decisions if d["proposal_id"] == question["proposal_id"])["decision"] = "reject"
 
     response = client.post(
-        f"/api/v1/projects/{pid}/discovery-runs/{run['id']}/apply",
+        f"/api/v1/projects/{pid}/runs/{run['id']}/apply",
         json={"decisions": decisions},
         headers={"If-Match": '"r1"'},
     )
@@ -313,8 +318,8 @@ def test_apply_twice_is_refused(client: TestClient, project: dict[str, Any], ai:
     ai(ANSWER)
     pid = project["id"]
     run = start(client, pid).json()
-    run = client.get(f"/api/v1/projects/{pid}/discovery-runs/{run['id']}").json()
-    url = f"/api/v1/projects/{pid}/discovery-runs/{run['id']}/apply"
+    run = client.get(f"/api/v1/projects/{pid}/runs/{run['id']}").json()
+    url = f"/api/v1/projects/{pid}/runs/{run['id']}/apply"
     assert client.post(url, json={"decisions": decide(run)}, headers={"If-Match": '"r1"'}).status_code == 200
     again = client.post(url, json={"decisions": decide(run)}, headers={"If-Match": '"r2"'})
     assert again.status_code == 409
@@ -327,8 +332,8 @@ def test_apply_requires_current_revision(
     ai(ANSWER)
     pid = project["id"]
     run = start(client, pid).json()
-    url = f"/api/v1/projects/{pid}/discovery-runs/{run['id']}/apply"
-    run = client.get(f"/api/v1/projects/{pid}/discovery-runs/{run['id']}").json()
+    url = f"/api/v1/projects/{pid}/runs/{run['id']}/apply"
+    run = client.get(f"/api/v1/projects/{pid}/runs/{run['id']}").json()
     assert client.post(url, json={"decisions": decide(run)}).status_code == 428
     assert client.post(url, json={"decisions": decide(run)}, headers={"If-Match": '"r7"'}).status_code == 412
 
@@ -339,7 +344,7 @@ def test_apply_rejects_unknown_or_duplicate_proposals(
     ai(ANSWER)
     pid = project["id"]
     run = start(client, pid).json()
-    url = f"/api/v1/projects/{pid}/discovery-runs/{run['id']}/apply"
+    url = f"/api/v1/projects/{pid}/runs/{run['id']}/apply"
     decisions = [
         {"proposal_id": "p-objective", "decision": "accept"},
         {"proposal_id": "p-objective", "decision": "confirm"},
@@ -356,9 +361,9 @@ def test_reject_all_creates_no_revision_but_records_decisions(
     ai(ANSWER)
     pid = project["id"]
     run = start(client, pid).json()
-    run = client.get(f"/api/v1/projects/{pid}/discovery-runs/{run['id']}").json()
+    run = client.get(f"/api/v1/projects/{pid}/runs/{run['id']}").json()
     response = client.post(
-        f"/api/v1/projects/{pid}/discovery-runs/{run['id']}/apply",
+        f"/api/v1/projects/{pid}/runs/{run['id']}/apply",
         json={"decisions": decide(run, "reject")},
         headers={"If-Match": '"r1"'},
     )
@@ -376,7 +381,7 @@ def test_failed_run_cannot_be_applied(
     pid = project["id"]
     run = start(client, pid).json()
     response = client.post(
-        f"/api/v1/projects/{pid}/discovery-runs/{run['id']}/apply",
+        f"/api/v1/projects/{pid}/runs/{run['id']}/apply",
         json={"decisions": [{"proposal_id": "p-objective", "decision": "accept"}]},
         headers={"If-Match": '"r1"'},
     )
@@ -392,15 +397,125 @@ def test_confirmed_facts_survive_a_later_run(
     assert put.status_code == 200
     confirmed_objective = put.json()["spec"]["objective"]
     provider = ai(ANSWER)
-    run = start(client, pid).json()
-    run = client.get(f"/api/v1/projects/{pid}/discovery-runs/{run['id']}").json()
+    run = start(client, pid, skill_id="business-discovery").json()
+    run = client.get(f"/api/v1/projects/{pid}/runs/{run['id']}").json()
+    assert run["routing"]["method"] == "explicit"
     # The skill does not propose a new objective because it is confirmed...
     assert all(p.get("path") != "/objective" for p in run["proposals"])
     # ...and told the model it is already known.
     assert "Objective: Reduce manual effort" in provider.requests[0][1].content
     apply = client.post(
-        f"/api/v1/projects/{pid}/discovery-runs/{run['id']}/apply",
+        f"/api/v1/projects/{pid}/runs/{run['id']}/apply",
         json={"decisions": decide(run, "confirm")},
         headers={"If-Match": '"r2"'},
     )
     assert apply.json()["revision"]["spec"]["objective"] == confirmed_objective
+
+
+# --------------------------------------------------------------------------- skills and routing
+
+
+def _put_example(client: TestClient, pid: str, spec: dict[str, Any]) -> None:
+    assert (
+        client.put(f"/api/v1/projects/{pid}/spec", json={"spec": spec}, headers={"If-Match": '"r1"'}).status_code == 200
+    )
+
+
+def test_skills_report_applicability(client: TestClient, project: dict[str, Any]) -> None:
+    items = {s["id"]: s for s in client.get(f"/api/v1/projects/{project['id']}/skills").json()["items"]}
+    assert set(items) == {"business-discovery", "acceptance-criteria", "requirements-conflict-detection"}
+    assert items["business-discovery"]["applicable"] is True
+    assert items["business-discovery"]["message_required"] is True
+    assert items["acceptance-criteria"]["applicable"] is False
+    assert items["acceptance-criteria"]["unmet_preconditions"] == ["/functional_requirements"]
+
+
+def test_single_candidate_routing_skips_the_model(
+    client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider]
+) -> None:
+    provider = ai(ANSWER)
+    run_id = start(client, project["id"]).json()["id"]
+    run = client.get(f"/api/v1/projects/{project['id']}/runs/{run_id}").json()
+    assert run["routing"]["method"] == "single-candidate"
+    assert run["routing"]["candidates"] == ["business-discovery"]
+    assert run["skill_id"] == "business-discovery"
+    assert len(provider.requests) == 1  # only the skill call
+
+
+def test_model_routes_among_several_skills(
+    client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider], example_spec: dict[str, Any]
+) -> None:
+    pid = project["id"]
+    _put_example(client, pid, example_spec)
+    provider = ai(
+        {"skill_id": "acceptance-criteria", "confidence": 0.86, "rationale": "Asks how to test requirements."},
+        {
+            "criteria": [
+                {"requirement_id": "validate-source-files", "given": "a file", "when": "uploaded", "then": "checked"}
+            ]
+        },
+    )
+    run_id = start(client, pid, message="How will QA verify file validation?").json()["id"]
+    run = client.get(f"/api/v1/projects/{pid}/runs/{run_id}").json()
+    assert run["status"] == "succeeded", run["error"]
+    assert run["skill_id"] == "acceptance-criteria"
+    assert run["routing"]["method"] == "model"
+    assert run["routing"]["confidence"] == 0.86
+    assert run["routing"]["total_tokens"] == 150
+    assert [p["collection"] for p in run["proposals"]] == ["acceptance_criteria"]
+    assert run["model"]["prompt_version"] == "acceptance-criteria@1"
+    assert len(provider.requests) == 2
+
+    applied = client.post(
+        f"/api/v1/projects/{pid}/runs/{run_id}/apply",
+        json={"decisions": decide(run)},
+        headers={"If-Match": '"r2"'},
+    ).json()
+    criterion = applied["revision"]["spec"]["acceptance_criteria"][-1]
+    assert criterion["requirement_id"] == "validate-source-files"
+    assert criterion["provenance"]["skill_id"] == "acceptance-criteria"
+
+
+def test_routing_to_none_produces_no_proposals(
+    client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider], example_spec: dict[str, Any]
+) -> None:
+    pid = project["id"]
+    _put_example(client, pid, example_spec)
+    provider = ai({"skill_id": "none", "confidence": 0.9, "rationale": "This is a weather question."})
+    run_id = start(client, pid, message="Will it rain tomorrow?").json()["id"]
+    run = client.get(f"/api/v1/projects/{pid}/runs/{run_id}").json()
+    assert run["status"] == "succeeded"
+    assert run["skill_id"] is None
+    assert run["proposals"] == []
+    assert run["not_applicable_reason"] == "This is a weather question."
+    assert len(provider.requests) == 1
+    apply = client.post(
+        f"/api/v1/projects/{pid}/runs/{run_id}/apply",
+        json={"decisions": [{"proposal_id": "p-x", "decision": "accept"}]},
+        headers={"If-Match": '"r2"'},
+    )
+    assert apply.status_code == 409
+
+
+def test_routing_failure_fails_the_run(
+    client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider], example_spec: dict[str, Any]
+) -> None:
+    pid = project["id"]
+    _put_example(client, pid, example_spec)
+    ai(ModelError(ErrorKind.UNAVAILABLE, "HTTP 503"))
+    run = client.get(f"/api/v1/projects/{pid}/runs/{start(client, pid).json()['id']}").json()
+    assert run["status"] == "failed"
+    assert run["error"]["kind"] == "provider_unavailable"
+    assert run["skill_id"] is None
+
+
+def test_explicit_skill_must_be_applicable(
+    client: TestClient, project: dict[str, Any], ai: Callable[..., FakeProvider]
+) -> None:
+    ai()
+    response = start(client, project["id"], message="criteria please", skill_id="acceptance-criteria")
+    assert response.status_code == 422
+    body = response.json()
+    assert body["type"] == "urn:workspace:error:skill-not-applicable"
+    assert "/functional_requirements" in body["detail"]
+    assert start(client, project["id"], skill_id="no-such-skill").status_code == 422

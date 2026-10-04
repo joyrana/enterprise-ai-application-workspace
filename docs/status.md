@@ -1,6 +1,49 @@
 # Implementation status
 
-Last updated: 2026-10-04 · Milestone 2a (PR #2)
+Last updated: 2026-10-04 · Milestone 2b (PR #3)
+
+## Milestone 2b — More skills and two-stage routing
+
+Evidence: GitHub Actions run
+[37207001777](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37207001777)
+on PR #3 (counts from the runners' summary lines, published as PR notices).
+
+| Check | Result |
+|---|---|
+| Python: ruff, mypy `--strict`, pytest **238 passed** (incl. new skills, router, routing harness, API routing against PostgreSQL 16, migrations 0001→0003) | Pass |
+| Routing eval, lexical baseline (deterministic) | **63% accuracy (19/30)**, 33% false invocations, 33% missed, 0 model calls |
+| Contracts, TypeScript API types, pip-audit, npm audit, gitleaks | Pass |
+| Web: lint (jsx-a11y), `tsc`, Vitest **31 passed**, production build | Pass |
+| Dependency review | Not run: "Dependency graph" disabled in repository settings |
+
+The lexical baseline is a real measurement. Model routing and the two new skills are
+verified only with a fake provider; their quality with Qwen or gpt-oss is not yet measured.
+
+### Milestone 2b checklist
+
+- [x] `acceptance-criteria` skill (deterministic targeting, no model call when nothing to do)
+- [x] `requirements-conflict-detection` skill (deterministic duplicates + model contradictions)
+- [x] Two-stage router: precondition filter; explicit / single-candidate without a model; constrained model choice
+- [x] Routing recorded on runs and explained in the UI; explicit skill choice with applicability
+- [x] Labeled routing dataset v1 and runner; baseline published by CI
+- [ ] Real-model routing and discovery baselines (Qwen, gpt-oss)
+- [ ] Discovery-quality eval scenarios for the two new skills
+
+### Known limitations (2b)
+
+- Routing runs inside the same in-process executor as skills (see 2a limitations).
+- The lexical baseline over-invokes on out-of-scope requests; model routing is expected to
+  improve this, but that is unmeasured until a real model is run.
+- No routing accuracy threshold is enforced yet (by design, until real baselines exist).
+
+### Next slice: Milestone 2c
+
+1. Real-model baselines for discovery and routing (gpt-oss on Ollama, Qwen on the HF router),
+   recorded here with model, dataset version and commit.
+2. Checkpointed, resumable orchestration for multi-step workflows; ADR on LangGraph.
+3. Playwright E2E smoke test (create project → run → apply → history) with axe checks.
+
+---
 
 ## Milestone 2a — AI discovery with human review
 
@@ -53,7 +96,7 @@ PR notices.
 - Starlette reports that `httpx` in its TestClient is deprecated in favour of `httpx2`;
   harmless now, to be addressed when upgrading test dependencies.
 
-### Next slice: Milestone 2b
+### Next slice at the time: Milestone 2b (delivered above)
 
 1. Baseline eval runs for gpt-oss (Ollama) and Qwen (HF router), recorded with model and commit.
 2. Additional discovery skills (persona-discovery, requirements-elicitation, acceptance-criteria,

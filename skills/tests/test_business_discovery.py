@@ -150,5 +150,5 @@ def test_missing_model_is_reported() -> None:
 
 @pytest.mark.parametrize("description", ["", "   ", "x" * 8001])
 def test_description_is_validated(description: str) -> None:
-    with pytest.raises(ValueError, match="description"):
+    with pytest.raises(ValueError, match="message"):
         BusinessDiscovery().run(context(FakeProvider([])), {"description": description})

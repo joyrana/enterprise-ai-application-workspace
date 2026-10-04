@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from appspec import ApplicationSpec, FactStatus
 from appspec.model import ID_COLLECTIONS
-from model_gateway import ErrorKind, Message, ModelError, generate_structured
+from model_gateway import Message, generate_structured
 from skill_sdk import (
     AddItem,
     AddOpenQuestion,
@@ -26,9 +26,9 @@ from skill_sdk import (
     SkillManifest,
     SkillOutput,
 )
+from workspace_skills.common import model_info, read_message, require_provider, summarize
 
 PROMPT_VERSION = "business-discovery@1"
-MAX_DESCRIPTION_CHARS = 8000
 
 
 class _Answer(BaseModel):
@@ -206,7 +206,7 @@ class BusinessDiscovery:
         version="0.1.0",
         category=Category.DISCOVERY,
         intents=("describe an application", "start a new application", "what should we build"),
-        required_inputs=("description",),
+        required_inputs=("message",),
         max_model_calls=2,
         max_total_tokens=40_000,
         timeout_s=180,
@@ -223,17 +223,11 @@ class BusinessDiscovery:
     )
 
     def run(self, context: SkillContext, inputs: dict[str, Any]) -> SkillOutput:
-        description = str(inputs.get("description", "")).strip()
-        if not description:
-            raise ValueError("description is required")
-        if len(description) > MAX_DESCRIPTION_CHARS:
-            raise ValueError(f"description must be at most {MAX_DESCRIPTION_CHARS} characters")
-        if context.provider is None:
-            raise ModelError(ErrorKind.NOT_CONFIGURED)
-
+        message = read_message(inputs, required=True)
+        provider = require_provider(context)
         result = generate_structured(
-            context.provider,
-            build_messages(context.spec, description),
+            provider,
+            build_messages(context.spec, message),
             DiscoveryAnswer,
             budget=context.budget,
             max_repairs=self.manifest.retry.max_repairs,
@@ -241,28 +235,13 @@ class BusinessDiscovery:
             prices=context.prices,
         )
         answer = result.value
-        proposals = to_proposals(context.spec, answer)
-        model_info = {
-            "model_id": result.model_id,
-            "profile": result.profile,
-            "prompt_version": PROMPT_VERSION,
-            "usage": result.usage.model_dump() | {"total_tokens": result.usage.total_tokens},
-            "repaired": result.repaired,
-            "estimated_cost_usd": result.estimated_cost_usd,
-            "calls": [c.model_dump() for c in result.calls],
-        }
+        info = model_info(result, PROMPT_VERSION)
         if not answer.is_application_request:
             return SkillOutput(
                 summary="The description does not look like a request to build an application.",
                 proposals=[],
                 not_applicable_reason=answer.not_applicable_reason or "Not an application request.",
-                model=model_info,
+                model=info,
             )
-        kinds = {"set_fact": 0, "add_item": 0, "add_open_question": 0}
-        for proposal in proposals:
-            kinds[proposal.op] += 1
-        summary = (
-            f"{len(proposals)} proposal(s): {kinds['set_fact']} fact(s), {kinds['add_item']} item(s), "
-            f"{kinds['add_open_question']} open question(s)."
-        )
-        return SkillOutput(summary=summary, proposals=proposals, model=model_info)
+        proposals = to_proposals(context.spec, answer)
+        return SkillOutput(summary=summarize(proposals), proposals=proposals, model=info)

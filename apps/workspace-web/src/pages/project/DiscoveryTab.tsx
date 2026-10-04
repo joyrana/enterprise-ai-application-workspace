@@ -10,6 +10,7 @@ import {
   MessageBarTitle,
   Radio,
   RadioGroup,
+  Select,
   Spinner,
   Subtitle2,
   Textarea,
@@ -24,6 +25,7 @@ import {
   type ApplyRunResult,
   type DecisionValue,
   type Run,
+  type SkillInfo,
   type SpecRevision,
 } from "../../api/client";
 import { ProblemMessage } from "../../components/ProblemMessage";
@@ -31,7 +33,40 @@ import { formatDateTime } from "../../format";
 import { GROUP_LABELS, OUTCOME_LABELS, viewProposal, type ProposalGroup, type ProposalView } from "./proposals";
 
 const MAX_CHARS = 8000;
-const GROUP_ORDER: ProposalGroup[] = ["facts", "personas", "requirements", "assumptions", "questions", "other"];
+const GROUP_ORDER: ProposalGroup[] = [
+  "facts",
+  "personas",
+  "requirements",
+  "criteria",
+  "assumptions",
+  "questions",
+  "other",
+];
+const AUTO = "";
+
+const PRECONDITION_LABELS: Record<string, string> = {
+  "/functional_requirements": "functional requirements",
+  "/objective": "a business objective",
+  "/personas": "personas",
+};
+
+function routingLabel(run: Run, skills: SkillInfo[]): string | null {
+  const routing = run.routing;
+  if (!routing) return null;
+  const name = skills.find((s) => s.id === routing.chosen)?.name ?? routing.chosen;
+  switch (routing.method) {
+    case "explicit":
+      return `Skill: ${name} (chosen by you)`;
+    case "single-candidate":
+      return `Skill: ${name} (the only skill that applies right now)`;
+    case "model":
+      return routing.chosen
+        ? `Skill: ${name} (chosen by the model${routing.confidence != null ? `, ${Math.round(routing.confidence * 100)}% confident` : ""})`
+        : "No skill fits this request (decided by the model)";
+    default:
+      return "No skill applies yet";
+  }
+}
 
 const useStyles = makeStyles({
   root: { display: "grid", gap: tokens.spacingVerticalL },
@@ -73,7 +108,9 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Prop
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [run, setRun] = useState<Run | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
-  const [description, setDescription] = useState("");
+  const [message, setMessage] = useState("");
+  const [skills, setSkills] = useState<SkillInfo[]>([]);
+  const [skillId, setSkillId] = useState<string>(AUTO);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<unknown>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(newKey);
@@ -82,9 +119,14 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Prop
     async (signal?: AbortSignal) => {
       setLoadError(null);
       try {
-        const [ai, runs] = await Promise.all([api.aiStatus(signal), api.listRuns(projectId, signal)]);
+        const [ai, runs, skillList] = await Promise.all([
+          api.aiStatus(signal),
+          api.listRuns(projectId, signal),
+          api.listSkills(projectId, signal),
+        ]);
         setStatus(ai);
         setRun(runs.items[0] ?? null);
+        setSkills(skillList.items);
       } catch (error) {
         if (!signal?.aborted) setLoadError(error);
       }
@@ -115,11 +157,18 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Prop
     };
   }, [activeRunId, projectId, pollMs]);
 
+  const refreshSkills = useCallback(() => {
+    api.listSkills(projectId).then(
+      (list) => setSkills(list.items),
+      () => undefined, // applicability refreshes again on the next load
+    );
+  }, [projectId]);
+
   const start = async () => {
     setStarting(true);
     setStartError(null);
     try {
-      const created = await api.startDiscovery(projectId, description.trim(), idempotencyKey);
+      const created = await api.startRun(projectId, message.trim(), skillId || null, idempotencyKey);
       setRun(created);
       setIdempotencyKey(newKey());
     } catch (error) {
@@ -145,8 +194,9 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Prop
     );
   }
 
-  const trimmed = description.trim();
-  const tooLong = description.length > MAX_CHARS;
+  const trimmed = message.trim();
+  const tooLong = message.length > MAX_CHARS;
+  const selected = skills.find((s) => s.id === skillId);
   const busy = starting || isActive(run);
 
   return (
@@ -167,22 +217,38 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Prop
       </div>
 
       <Field
-        label="Describe the application you need"
-        hint="Who will use it, what they need to do, and anything that must or must not happen. Proposals are only added after you review them."
+        label="Skill"
+        hint={selected ? selected.description : "The workspace picks the skill that fits your request."}
+      >
+        <Select value={skillId} onChange={(_, data) => setSkillId(data.value)}>
+          <option value={AUTO}>Let the workspace choose</option>
+          {skills.map((s) => (
+            <option key={s.id} value={s.id} disabled={!s.applicable}>
+              {s.applicable
+                ? s.name
+                : `${s.name} (needs ${s.unmet_preconditions.map((p) => PRECONDITION_LABELS[p] ?? p).join(", ")})`}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field
+        label="What do you need?"
+        hint="Describe the application, or ask for something specific such as acceptance criteria or a conflict check. Proposals are only added after you review them."
         validationState={tooLong ? "error" : "none"}
         validationMessage={tooLong ? `Use at most ${MAX_CHARS} characters.` : undefined}
       >
         <Textarea
-          value={description}
+          value={message}
           resize="vertical"
           rows={5}
-          onChange={(_, data) => setDescription(data.value)}
+          onChange={(_, data) => setMessage(data.value)}
           placeholder="For example: finance operations need to configure adjustments, validate source files, simulate calculations and send risky transactions for approval."
         />
       </Field>
       <div className={styles.row}>
         <Button appearance="primary" onClick={start} disabled={busy || !trimmed || tooLong}>
-          {starting ? "Starting…" : "Propose requirements"}
+          {starting ? "Starting…" : "Run"}
         </Button>
       </div>
       {startError !== null && <ProblemMessage error={startError} />}
@@ -192,12 +258,14 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Prop
           key={run.id}
           projectId={projectId}
           run={run}
+          skills={skills}
           etag={etag}
           onApplied={(result, nextEtag) => {
             setRun(result.run);
             onApplied({ revision: result.revision, etag: nextEtag });
+            refreshSkills();
           }}
-          onRetry={(text) => setDescription(text)}
+          onRetry={(text) => setMessage(text)}
           onReload={() => void load()}
         />
       )}
@@ -208,13 +276,14 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500 }: Prop
 interface RunViewProps {
   projectId: string;
   run: Run;
+  skills: SkillInfo[];
   etag: string;
   onApplied: (result: ApplyRunResult, etag: string) => void;
-  onRetry: (description: string) => void;
+  onRetry: (message: string) => void;
   onReload: () => void;
 }
 
-function RunView({ projectId, run, etag, onApplied, onRetry, onReload }: RunViewProps) {
+function RunView({ projectId, run, skills, etag, onApplied, onRetry, onReload }: RunViewProps) {
   const styles = useStyles();
   const views = useMemo(() => run.proposals.map(viewProposal), [run.proposals]);
   const [decisions, setDecisions] = useState<Record<string, DecisionValue>>(() =>
@@ -224,6 +293,7 @@ function RunView({ projectId, run, etag, onApplied, onRetry, onReload }: RunView
   const [applyError, setApplyError] = useState<unknown>(null);
   const [results, setResults] = useState<ApplyRunResult["results"] | null>(null);
 
+  const routed = routingLabel(run, skills);
   const meta = run.model
     ? `${run.model.model_id} · ${run.model.usage.total_tokens} tokens · ${(run.model.latency_ms / 1000).toFixed(1)} s${
         run.model.repaired ? " · output repaired once" : ""
@@ -242,7 +312,7 @@ function RunView({ projectId, run, etag, onApplied, onRetry, onReload }: RunView
           {run.error?.message ?? "The run failed."}
         </MessageBarBody>
         <MessageBarActions>
-          <Button onClick={() => onRetry(run.description)}>Use this description again</Button>
+          <Button onClick={() => onRetry(run.message)}>Use this request again</Button>
         </MessageBarActions>
       </MessageBar>
     );
@@ -254,6 +324,7 @@ function RunView({ projectId, run, etag, onApplied, onRetry, onReload }: RunView
         <MessageBarBody>
           <MessageBarTitle>No proposals</MessageBarTitle>
           {run.not_applicable_reason}
+          {routed && <div className={styles.detail}>{routed}</div>}
         </MessageBarBody>
       </MessageBar>
     );
@@ -316,10 +387,20 @@ function RunView({ projectId, run, etag, onApplied, onRetry, onReload }: RunView
         <Subtitle2 as="h2">{run.summary}</Subtitle2>
         <div>
           <Caption1>
-            From “{run.description.slice(0, 120)}
-            {run.description.length > 120 ? "…" : ""}” · {formatDateTime(run.created_at)}
+            From “{run.message.slice(0, 120)}
+            {run.message.length > 120 ? "…" : ""}” · {formatDateTime(run.created_at)}
           </Caption1>
         </div>
+        {routed && (
+          <div>
+            <Caption1>{routed}</Caption1>
+          </div>
+        )}
+        {run.routing?.method === "model" && run.routing.rationale && (
+          <div>
+            <Caption1 className={styles.detail}>Why: {run.routing.rationale}</Caption1>
+          </div>
+        )}
         {meta && <Caption1>{meta}</Caption1>}
       </div>
       <Body1>
