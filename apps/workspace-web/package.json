@@ -12,11 +12,12 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
     "lint": "eslint . --max-warnings=0",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" playwright.config.ts",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" playwright.config.ts",
     "test": "vitest run",
     "gen:api": "openapi-typescript ../../contracts/openapi.json -o src/api/schema.d.ts",
-    "check:api": "openapi-typescript ../../contracts/openapi.json -o src/api/schema.check.d.ts && node scripts/compare.mjs src/api/schema.d.ts src/api/schema.check.d.ts"
+    "check:api": "openapi-typescript ../../contracts/openapi.json -o src/api/schema.check.d.ts && node scripts/compare.mjs src/api/schema.d.ts src/api/schema.check.d.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.54.0",
@@ -26,7 +27,9 @@
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@eslint/js": "^9.15.0",
+    "@playwright/test": "^1.55.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",

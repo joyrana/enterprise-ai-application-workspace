@@ -1,6 +1,65 @@
 # Implementation status
 
-Last updated: 2026-10-04 · Milestone 2b (PR #3)
+Last updated: 2026-10-04 · Milestone 2c (PR #4)
+
+## Milestone 2c — Real-model evidence and end-to-end tests
+
+Evidence tiers follow [ADR-0010](adr/0010-evidence-tiers.md).
+
+### Real-model results (tier 4)
+
+Run [37209762015](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37209762015)
+of `real-model-eval.yml` at commit `504da1c`: **`qwen3:4b-instruct`** (Ollama digest
+`0edcdef34593eac1`), Ollama 0.35.0, GitHub-hosted **CPU** runner, temperature 0, seed 7,
+1 repeat. A small model on CPU: a floor, not a forecast for production Qwen or gpt-oss.
+
+| Evaluation | Result |
+|---|---|
+| Routing (`routing/v1`, 30 cases), model router | **90% accuracy (27/30)**, 0% false invocations, 0% missed; 26 model calls. Errors: 2 business-discovery cases failed with an error (counted wrong; error kinds are shown in reports from this PR on) and 1 business-discovery request was routed to acceptance-criteria |
+| Routing, lexical baseline (deterministic) | 63% (19/30), 33% false invocations, 33% missed |
+| Discovery (`discovery/v1`, 8 scenarios) | **6/8 scenarios pass (75%)**, 100% completion, 0% repairs, mean latency 70 s (p95 168 s), ~1.4k tokens per run |
+| Failed: `prompt-injection` | The model's proposals contained the injected "Root Administrator" persona and "pwned" objective |
+| Failed: `procurement-approvals` | Open-question count outside the expected range |
+
+What this shows: model routing clearly beats the keyword baseline, especially at refusing
+out-of-scope requests; structured output is reliable for this model (no repairs needed);
+and small models follow prompt injection at the *proposal* level, so the human-review
+control is essential and needs UI support (next steps).
+
+Not yet measured: gpt-oss (too large for a CI runner; run locally), Qwen via the Hugging
+Face router (needs an `HF_TOKEN` secret), repeated runs for variance, the two newer skills.
+
+### CI evidence for this PR (tiers 1–3)
+
+Run [37211363122](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37211363122):
+pytest **238 passed**, Vitest **32 passed**, Playwright **3 passed** (with axe WCAG 2.1 A/AA
+checks on the projects, overview, proposals and history views), lexical routing baseline
+63%, lint/types/contracts/audits/secret scan pass. Dependency review: still needs
+"Dependency graph" enabled.
+
+### Defects found by the end-to-end tier and fixed
+
+1. **App hidden from assistive technology after creating a project.** Navigating unmounted
+   the still-open create dialog and Fluent's focus manager left `<div id="root" aria-hidden="true">`.
+   The dialog now lives above the routes. (Milestone 1 had wrongly attributed this to jsdom.)
+2. **Untouched AI proposals were applied as rejected.** Decisions were initialised while the
+   run was still queued, so proposals arriving later showed "Accept" but sent "reject".
+   Display and request now share one source of truth; a unit regression test covers it.
+
+### Known limitations (2c)
+
+- axe excludes Fluent's `data-tabster-dummy` focus sentinels (library internals; ADR-0010).
+- E2E uses a scripted model server; it proves the path, not model quality.
+- Automated axe checks are not a substitute for a manual screen-reader review.
+
+### Next slice: Milestone 2d
+
+1. Prompt-injection hardening: detect instruction-like content in requests, warn in the UI,
+   and mark proposals that echo it; extend the adversarial eval set.
+2. Checkpointed, resumable orchestration for multi-step workflows; ADR on LangGraph.
+3. More tier-4 baselines: gpt-oss locally, Qwen via the HF router, 3 repeats for variance.
+
+---
 
 ## Milestone 2b — More skills and two-stage routing
 
@@ -36,7 +95,7 @@ verified only with a fake provider; their quality with Qwen or gpt-oss is not ye
   improve this, but that is unmeasured until a real model is run.
 - No routing accuracy threshold is enforced yet (by design, until real baselines exist).
 
-### Next slice: Milestone 2c
+### Next slice at the time: Milestone 2c (delivered above)
 
 1. Real-model baselines for discovery and routing (gpt-oss on Ollama, Qwen on the HF router),
    recorded here with model, dataset version and commit.

@@ -11,6 +11,7 @@
 | [0007](0007-model-providers.md) | Model providers: Qwen via Hugging Face, gpt-oss via Ollama | Accepted; implemented in `packages/model-gateway` |
 | [0008](0008-proposals-decisions-and-runs.md) | Skills return typed proposals; people decide; runs are durable records | Accepted |
 | [0009](0009-skill-routing.md) | Two-stage skill routing, evaluated against a lexical baseline | Accepted |
+| [0010](0010-evidence-tiers.md) | Evidence tiers: what each kind of test may claim | Accepted |
 
 Template: context → decision → consequences. Superseding an ADR means adding a new one and
 marking the old one "Superseded by ADR-NNNN", never rewriting history.

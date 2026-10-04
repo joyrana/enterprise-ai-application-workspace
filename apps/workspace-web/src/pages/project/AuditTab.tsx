@@ -18,6 +18,10 @@ const useStyles = makeStyles({ scroll: { overflowX: "auto" } });
 const ACTION_LABELS: Record<string, string> = {
   "project.created": "Project created",
   "spec.revised": "Specification revised",
+  "ai.run.started": "AI run started",
+  "ai.run.succeeded": "AI run completed",
+  "ai.run.failed": "AI run failed",
+  "ai.proposals.applied": "AI proposals applied",
 };
 
 function describe(details: Record<string, unknown>): string {
@@ -25,6 +29,9 @@ function describe(details: Record<string, unknown>): string {
   if (typeof details.revision === "number") parts.push(`revision r${details.revision}`);
   if (typeof details.change_summary === "string") parts.push(`“${details.change_summary}”`);
   if (typeof details.name === "string") parts.push(details.name);
+  if (typeof details.skill === "string") parts.push(details.skill);
+  if (typeof details.applied === "number") parts.push(`${details.applied} applied`);
+  if (typeof details.error_kind === "string") parts.push(details.error_kind);
   return parts.join(" · ");
 }
 

@@ -167,6 +167,35 @@ describe("DiscoveryTab", () => {
     expect(post?.headers["Idempotency-Key"]).toMatch(/^discovery-/);
   });
 
+  it("sends accept for untouched proposals that arrived after the run started (regression)", async () => {
+    const { calls } = mockFetch([
+      { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
+      { method: "GET", path: BASE, body: { items: [] } },
+      {
+        method: "POST",
+        path: BASE,
+        status: 202,
+        body: run({ status: "queued", proposals: [], summary: null, model: null }),
+      },
+      { method: "GET", path: `${BASE}/${RUN_ID}`, body: run() },
+      {
+        method: "POST",
+        path: `${BASE}/${RUN_ID}/apply`,
+        body: { run: run({ applied_revision: 2 }), results: [], revision: specRevision(2), revision_created: true },
+        headers: { ETag: '"r2"' },
+      },
+    ]);
+    const user = userEvent.setup();
+    renderTab();
+    await user.type(await screen.findByRole("textbox", { name: /What do you need/ }), "Finance ops app");
+    await user.click(screen.getByRole("button", { name: "Run" }));
+    await user.click(await screen.findByRole("button", { name: "Apply decisions" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/apply"))).toBe(true));
+    const body = calls.find((c) => c.url.endsWith("/apply"))?.body as { decisions: { decision: string }[] };
+    expect(body.decisions.map((d) => d.decision)).toEqual(["accept", "accept", "accept"]);
+  });
+
   it("resumes an in-progress run after a refresh", async () => {
     mockFetch([
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },

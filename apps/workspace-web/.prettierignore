@@ -1,3 +1,5 @@
 src/api/schema.d.ts
 src/api/schema.check.d.ts
 dist
+playwright-report
+test-results

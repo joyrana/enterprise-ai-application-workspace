@@ -106,6 +106,87 @@ jobs:
       - name: Dependency vulnerability audit (runtime dependencies)
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "npm audit" npm audit --omit=dev --audit-level=high
 
+  e2e:
+    name: End-to-end (Playwright + axe)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+      APP_ENV: test
+      # A scripted OpenAI-compatible server stands in for the model: the real HTTP provider path
+      # is exercised, with deterministic answers. Model quality is measured separately (real-model-eval.yml).
+      MODEL_PROFILE: self-hosted
+      MODEL_BASE_URL: http://127.0.0.1:9100/v1
+      MODEL_ID: fake-e2e
+      MODEL_REMOTE: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/workspace-web/package-lock.json
+      - name: Install (locked)
+        run: |
+          uv sync --locked
+          (cd apps/workspace-web && npm ci)
+      - name: Migrate database
+        working-directory: services/api
+        run: uv run alembic upgrade head
+      - name: Start model stub and API
+        run: |
+          set -euo pipefail
+          nohup uv run python scripts/e2e/fake_openai_server.py --port 9100 > fake-model.log 2>&1 &
+          nohup uv run uvicorn workspace_api.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/readyz && exit 0
+            sleep 1
+          done
+          echo "::error::API did not become ready"; tail -n 50 api.log; exit 1
+      - name: Install Chromium for Playwright
+        working-directory: apps/workspace-web
+        run: npx playwright install --with-deps chromium
+      - name: Build web app
+        working-directory: apps/workspace-web
+        run: npm run build
+      - name: End-to-end tests
+        working-directory: apps/workspace-web
+        env:
+          SUMMARY_PATTERN: "[0-9]+ (passed|failed)"
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "playwright" npm run e2e
+      - name: API log and recent runs on failure
+        if: failure()
+        run: |
+          body=$(grep -v '"http.request"' api.log | tail -n 60 | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+          echo "::error title=api.log tail::${body}"
+          runs=$( (python3 scripts/e2e/dump_runs.py 2>&1 || true) | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+          echo "::error title=recent AI runs::${runs}"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            apps/workspace-web/playwright-report/
+            apps/workspace-web/test-results/
+            api.log
+            fake-model.log
+          retention-days: 14
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-24.04

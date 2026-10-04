@@ -61,7 +61,9 @@ def load_cases(path: Path = DEFAULT_DATASET) -> list[Case]:
     return [Case.model_validate_json(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def predict(case: Case, repeat: int, method: Method, provider: ModelProvider | None) -> Prediction:
+def predict(
+    case: Case, repeat: int, method: Method, provider: ModelProvider | None, *, deadline_s: float = 60.0
+) -> Prediction:
     registry = default_registry()
     spec = starting_spec(case.spec_state)
     started = time.perf_counter()
@@ -75,7 +77,13 @@ def predict(case: Case, repeat: int, method: Method, provider: ModelProvider | N
             label, stage = choice or NONE, "lexical"
         return Prediction(case_id=case.id, repeat=repeat, expected=case.expected, predicted=label, stage=stage)
     try:
-        decision = SkillRouter(registry).route(case.message, spec, provider=provider, budget=Budget(max_calls=2))
+        decision = SkillRouter(registry).route(
+            case.message,
+            spec,
+            provider=provider,
+            budget=Budget(max_calls=2, deadline_s=deadline_s),
+            call_timeout_s=deadline_s,
+        )
     except ModelError as exc:
         return Prediction(
             case_id=case.id,
@@ -146,10 +154,15 @@ def metrics(predictions: list[Prediction]) -> dict[str, Any]:
 
 
 def run(
-    cases: list[Case], method: Method, provider_factory: Callable[[], ModelProvider] | None, *, repeats: int = 1
+    cases: list[Case],
+    method: Method,
+    provider_factory: Callable[[], ModelProvider] | None,
+    *,
+    repeats: int = 1,
+    deadline_s: float = 60.0,
 ) -> tuple[list[Prediction], dict[str, Any]]:
     predictions = [
-        predict(case, r, method, provider_factory() if provider_factory else None)
+        predict(case, r, method, provider_factory() if provider_factory else None, deadline_s=deadline_s)
         for r in range(repeats)
         for case in cases
     ]
@@ -160,7 +173,7 @@ def summary_line(method: str, label: str, m: dict[str, Any]) -> str:
     return (
         f"routing[{method}:{label}] accuracy {m['accuracy']:.0%} ({m['correct']}/{m['cases']}), "
         f"false invocations {m['false_invocation_rate']:.0%}, missed {m['missed_invocation_rate']:.0%}, "
-        f"model calls {m['model_calls']}"
+        f"model calls {m['model_calls']}, errors {m['errors'] or 'none'}"
     )
 
 
@@ -180,6 +193,9 @@ def markdown(report: dict[str, Any]) -> str:
     ]
     for label, s in m["per_label"].items():
         lines.append(f"| {label} | {s['support']} | {s['precision']:.2f} | {s['recall']:.2f} | {s['f1']:.2f} |")
+    if m["errors"]:
+        errors = ", ".join(f"{k} x{v}" for k, v in m["errors"].items())
+        lines += ["", f"Errors (method failed, counted as wrong): {errors}"]
     if m["confusion"]:
         lines += ["", "Misroutes: " + ", ".join(f"{k} x{v}" for k, v in m["confusion"].items())]
     lines.append("")
@@ -192,6 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--out", type=Path, default=Path("reports/evals"))
+    parser.add_argument("--deadline-s", type=float, default=60.0, help="Routing deadline per case (recorded).")
     args = parser.parse_args(argv)
     if not 1 <= args.repeats <= 20:
         parser.error("--repeats must be between 1 and 20")
@@ -205,13 +222,14 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         factory = settings.build_provider
     cases = load_cases(args.dataset)
-    predictions, m = run(cases, args.method, factory, repeats=args.repeats)
+    predictions, m = run(cases, args.method, factory, repeats=args.repeats, deadline_s=args.deadline_s)
     report = {
         "method": args.method,
         "model": settings.label if settings else None,
         "router_prompt_version": ROUTER_PROMPT_VERSION,
         "dataset": str(args.dataset.relative_to(REPO_ROOT) if args.dataset.is_relative_to(REPO_ROOT) else args.dataset),
         "repeats": args.repeats,
+        "deadline_s": args.deadline_s,
         "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "commit": os.environ.get("GITHUB_SHA"),
         "metrics": m,

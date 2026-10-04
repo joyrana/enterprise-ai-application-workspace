@@ -15,12 +15,11 @@ import {
 } from "@fluentui/react-components";
 import { AddRegular } from "@fluentui/react-icons";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api, type Project } from "../api/client";
 import { ProblemMessage } from "../components/ProblemMessage";
 import { RouterLink } from "../components/RouterLink";
 import { useAsync } from "../hooks/useAsync";
-import { CreateProjectDialog } from "./CreateProjectDialog";
+import { useCreateProject } from "./CreateProjectProvider";
 import { formatDateTime } from "../format";
 
 const useStyles = makeStyles({
@@ -49,8 +48,7 @@ const useStyles = makeStyles({
 
 export function ProjectsPage() {
   const styles = useStyles();
-  const navigate = useNavigate();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const { openCreateProject } = useCreateProject();
   const [extra, setExtra] = useState<{ items: Project[]; cursor: string | null } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<unknown>(null);
@@ -81,7 +79,7 @@ export function ProjectsPage() {
       items.length === 0 ? (
         <div className={styles.empty}>
           <Body1>No projects yet. A project holds one application's requirements, design decisions and history.</Body1>
-          <Button appearance="primary" icon={<AddRegular />} onClick={() => setDialogOpen(true)}>
+          <Button appearance="primary" icon={<AddRegular />} onClick={openCreateProject}>
             Create your first project
           </Button>
         </div>
@@ -128,21 +126,13 @@ export function ProjectsPage() {
     <>
       <div className={styles.header}>
         <Title2 as="h1">Projects</Title2>
-        <Button appearance="primary" icon={<AddRegular />} onClick={() => setDialogOpen(true)}>
+        <Button appearance="primary" icon={<AddRegular />} onClick={openCreateProject}>
           New project
         </Button>
       </div>
       <section className={styles.panel} aria-busy={state.status === "loading"}>
         {content}
       </section>
-      <CreateProjectDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onCreated={(project) => {
-          setDialogOpen(false);
-          navigate(`/projects/${project.id}`);
-        }}
-      />
     </>
   );
 }
