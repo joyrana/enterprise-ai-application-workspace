@@ -1,6 +1,58 @@
 # Implementation status
 
-Last updated: 2026-10-04 · Milestone 2c (PR #4)
+Last updated: 2026-10-04 · Milestone 2d part 1 (PR #5)
+
+## Milestone 2d (part 1) — Prompt-injection hardening
+
+Decision record: [ADR-0011](adr/0011-prompt-injection-screening.md). Evidence tiers per
+[ADR-0010](adr/0010-evidence-tiers.md).
+
+### What was built
+
+- Deterministic detector `injection-scan@1` (`skill_sdk.safety`): instruction overrides, role
+  reassignment, prompt exfiltration, chat-template/delimiter markup, workflow tampering
+  ("mark everything confirmed"), output directives. It reports signals with offsets and a
+  risk level of none, suspicious or high.
+- Echo marking: proposals repeating a quoted phrase or adjacent content words found only in
+  flagged sentences are marked and **start as Reject**; accepting one is audited.
+- Skills add a security note after the delimited request when it is flagged (prompts `@2`).
+- API: per-run `safety` record (migration 0004), `POST /api/v1/safety/scan` for screening
+  before a run is started, and audit fields for risk and flagged counts. Request text never
+  enters the audit trail.
+- UI: warning while typing and on the run (advisory, not blocking), and red badges naming
+  the repeated phrase.
+
+### CI evidence (tiers 1–3 and deterministic baselines)
+
+Run [37219914996](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37219914996)
+at commit `08088e3`:
+
+| Check | Result |
+|---|---|
+| pytest (incl. API against PostgreSQL 16, migrations 0001→0004) | **279 passed** |
+| Vitest | **34 passed** |
+| Playwright + axe (new: injection warning → scripted echoing model → badge → default Reject → echoed persona absent from the spec) | **4 passed** |
+| Injection detector, `injection/v1` (46 cases; deterministic, floors enforced) | **precision 100%, recall 89% (24/27), false positives 0/19**. Missed: business-phrased, polite/indirect, Spanish |
+| Routing, lexical baseline | 63% (19/30), unchanged |
+| Lint, strict typing, contracts, audits, secret scan | Pass. Dependency review still needs "Dependency graph" enabled |
+
+The detector numbers are exact but optimistic: `injection/v1` was written together with the
+detector, so it is a development set, not a held-out test.
+
+### Known limitations (2d part 1)
+
+- Lexical screening misses camouflaged, indirect and non-English injections (measured above).
+- Only the request message is scanned; spec content from earlier accepted proposals is not.
+- Echo marking can flag a generic phrase that only the injected sentence used (conservative
+  by design; costs one click).
+
+### Next: Milestone 2d part 2
+
+Checkpointed, resumable orchestration for multi-step workflows, with an ADR on whether
+LangGraph earns its place; more tier-4 baselines (gpt-oss locally, Qwen via the HF router,
+3 repeats).
+
+---
 
 ## Milestone 2c — Real-model evidence and end-to-end tests
 

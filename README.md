@@ -5,7 +5,7 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 2c (real-model evidence and end-to-end tests).** Projects, the canonical specification, revision
+> **Status: Milestone 2d part 1 (prompt-injection hardening).** Projects, the canonical specification, revision
 > history, audit trail and the workspace UI exist, plus three AI discovery skills with routing
 > and human review. Skill routing, orchestration, design-system adapters and code generation are
 > **not implemented yet**; see the roadmap below.
@@ -32,6 +32,9 @@ security policies.
   without criteria) and `requirements-conflict-detection` (contradictions and duplicates
   raised as blocking questions). Requests are routed by preconditions first; the model only
   chooses when several skills apply, and you can always pick a skill yourself (ADR-0009).
+- **Prompt-injection screening** (ADR-0011): instruction-like text in a request is flagged
+  as you type, the model is warned, and proposals that repeat the flagged text are marked
+  and start as *Reject*. It is advisory; the structural review controls remain the boundary.
 - **Evaluation** (`evals/`): discovery scenarios with deterministic checks, and a labeled
   routing set scored for a lexical baseline (in CI) and for the model router (opt-in).
 - **CI**: lint, format, strict typing, unit and PostgreSQL integration tests, contract drift
@@ -119,6 +122,7 @@ Evaluate the configured model (writes JSON and Markdown reports):
 uv run python -m workspace_evals.discovery --repeats 3 --out reports/evals
 uv run python -m workspace_evals.routing --method router --repeats 3 --out reports/evals
 uv run python -m workspace_evals.routing --method lexical   # baseline, no model needed
+uv run python -m workspace_evals.injection                  # detector precision/recall, no model needed
 ```
 
 ## Roadmap
@@ -129,8 +133,8 @@ uv run python -m workspace_evals.routing --method lexical   # baseline, no model
 | 1 | Foundation: spec, persistence, API, workspace shell, CI | Done |
 | 2a | Model gateway (Qwen / gpt-oss), skill SDK, business discovery with human review, discovery evals | Done |
 | 2b | Acceptance-criteria and conflict-detection skills, two-stage routing, routing evals | Done |
-| 2c | Real-model evaluation (Ollama + Qwen in CI), Playwright E2E with axe | In review |
-| 2d | Prompt-injection hardening, checkpointed orchestration, more model baselines | Next |
+| 2c | Real-model evaluation (Ollama + Qwen in CI), Playwright E2E with axe | Done |
+| 2d | Prompt-injection hardening (in review); checkpointed orchestration, more model baselines (next) | In progress |
 | 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Planned |
 | 4 | React generation, isolated builds, preview, diff review | Planned |
 | 5 | Incremental changes, edit preservation, resilience | Planned |
