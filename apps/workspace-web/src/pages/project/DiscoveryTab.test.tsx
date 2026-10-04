@@ -115,7 +115,10 @@ function run(overrides: Partial<Run> = {}): Run {
 // Screening as you type is off unless a test opts in (scanDelayMs), so each test lists exactly the requests it expects.
 const WORKFLOW_ID = "33333333-3333-4333-8333-333333333333";
 
-function workflow(overrides: Partial<Workflow> = {}, stepStatuses = ["awaiting_review", "pending", "pending"]): Workflow {
+function workflow(
+  overrides: Partial<Workflow> = {},
+  stepStatuses = ["awaiting_review", "pending", "pending"],
+): Workflow {
   const titles = ["Discover requirements", "Write acceptance criteria", "Check for conflicts"];
   const skills = ["business-discovery", "acceptance-criteria", "requirements-conflict-detection"];
   return {
