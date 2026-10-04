@@ -415,7 +415,8 @@ def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry
                 }
                 model = output.model
                 if run.safety and run.safety.get("signals"):
-                    report = ScanReport.model_validate(run.safety)
+                    stored = {k: v for k, v in run.safety.items() if k != "flagged_proposals"}
+                    report = ScanReport.model_validate(stored)
                     flags = flag_echoes(message, report, output.proposals)
                     run.safety = run.safety | {"flagged_proposals": [f.model_dump() for f in flags]}
         except ModelError as exc:
