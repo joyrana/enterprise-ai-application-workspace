@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type AsyncState<T> =
-  | { status: "loading" }
-  | { status: "error"; error: unknown }
-  | { status: "success"; data: T };
+  { status: "loading" } | { status: "error"; error: unknown } | { status: "success"; data: T };
 
 /**
  * Runs `load` whenever `key` changes (or `reload` is called), aborting stale
