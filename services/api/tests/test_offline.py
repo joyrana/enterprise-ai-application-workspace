@@ -65,7 +65,7 @@ def test_missing_identity_headers_return_401_problem(offline_app: FastAPI) -> No
     [
         {"X-Dev-Tenant": "ACME", "X-Dev-User": "alice"},
         {"X-Dev-Tenant": "acme;drop", "X-Dev-User": "alice"},
-        {"X-Dev-Tenant": "acme", "X-Dev-User": "aliceé"},
+        {"X-Dev-Tenant": "acme", "X-Dev-User": "alice smith"},
         {"X-Dev-Tenant": "acme", "X-Dev-User": "../../etc"},
     ],
 )

@@ -50,7 +50,10 @@ describe("ProjectsPage", () => {
     await user.type(screen.getByRole("textbox", { name: /Name/ }), "  Finance ops  ");
     await user.click(screen.getByRole("button", { name: "Create project" }));
 
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    // The new page must be reachable by assistive technology (not left aria-hidden by the modal).
     expect(await screen.findByRole("heading", { level: 1, name: "Finance ops" })).toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByRole("main"));
     const post = calls.find((c) => c.method === "POST");
     expect(post?.body).toEqual({ name: "Finance ops", description: null });
     expect(post?.headers["Idempotency-Key"]).toMatch(/^create-[0-9a-f-]{36}$/);

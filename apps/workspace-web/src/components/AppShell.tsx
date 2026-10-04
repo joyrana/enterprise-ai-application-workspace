@@ -1,6 +1,6 @@
 import { Caption1, Text, makeStyles, tokens } from "@fluentui/react-components";
-import type { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { useEffect, useRef, type ReactNode } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { devIdentity } from "../api/client";
 
 const useStyles = makeStyles({
@@ -61,8 +61,27 @@ const useStyles = makeStyles({
   main: { gridArea: "main", padding: tokens.spacingHorizontalXXL, minWidth: 0 },
 });
 
+/**
+ * After client-side navigation, move focus to the main region so keyboard and
+ * screen-reader users land on the new page (and any closed modal releases focus).
+ */
+function useFocusMainOnNavigation() {
+  const { pathname } = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    mainRef.current?.focus({ preventScroll: true });
+  }, [pathname]);
+  return mainRef;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const styles = useStyles();
+  const mainRef = useFocusMainOnNavigation();
   return (
     <div className={styles.root}>
       <a className={styles.skip} href="#main">
@@ -88,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </li>
         </ul>
       </nav>
-      <main id="main" className={styles.main} tabIndex={-1}>
+      <main id="main" ref={mainRef} className={styles.main} tabIndex={-1}>
         {children}
       </main>
     </div>

@@ -91,6 +91,8 @@ jobs:
       - name: Type check
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "tsc" npm run typecheck
       - name: Tests
+        env:
+          DEBUG_PRINT_LIMIT: "1500" # keep DOM dumps short so failure annotations show the summary
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "vitest" npm test
       - name: Production build
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "build" npm run build
