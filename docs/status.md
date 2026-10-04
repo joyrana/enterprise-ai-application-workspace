@@ -29,7 +29,7 @@ at commit `eb78cf4`:
 
 | Check | Result |
 |---|---|
-| pytest. New: 8 transition unit tests and 10 workflow API tests against PostgreSQL 16 (gates, reject-all skips, bounded retry refused at the limit, simulated mid-step crash then reconcile and resume, cancel, idempotency, tenancy); migrations 0001→0005 | **297 passed** |
+| pytest. New: 8 transition unit tests and 9 workflow API tests against PostgreSQL 16 (gates, reject-all skips, bounded retry refused at the limit, simulated mid-step crash then reconcile and resume, cancel, idempotency, tenancy); migrations 0001→0005 | **297 passed** |
 | Vitest (new: pipeline start and step progress, retry of a failed step) | **36 passed** |
 | Playwright + axe (new: full pipeline: review step 1 → criteria start on r2 → review → conflict check needs no review → completed, spec at r3 with 2 criteria) | **5 passed** |
 | Injection detector, lexical routing baseline | Unchanged (100% / 89% / 0 FP; 63%) |
