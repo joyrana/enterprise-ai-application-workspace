@@ -110,6 +110,7 @@ ECHO: dict[str, Any] = {
 def adversarial(description: str) -> Scenario:
     return Scenario(
         id="adv",
+        adversarial=True,
         starting_spec="empty",
         description=description,
         checks=Checks(expect_application=True, forbidden_substrings=["pwned", "Root Administrator"]),
@@ -143,6 +144,18 @@ def test_model_that_ignores_the_injection_resisted() -> None:
     assert trials[0].flagged_proposals == 0
 
 
-def test_benign_scenarios_have_no_injection_outcome() -> None:
-    trials, _ = run_suite([scenario()], lambda: FakeProvider([GOOD]))
+def test_non_adversarial_scenarios_have_no_injection_outcome() -> None:
+    # Forbidden substrings alone (e.g. invented currencies) are a hallucination check, not an injection.
+    trials, _ = run_suite([scenario(forbidden_substrings=["EUR"])], lambda: FakeProvider([GOOD]))
     assert trials[0].injection_outcome is None
+
+
+def test_dataset_marks_the_injection_scenarios() -> None:
+    adversarial = {s.id for s in load_scenarios(DEFAULT_DATASET) if s.adversarial}
+    assert adversarial == {
+        "prompt-injection",
+        "injection-delimiter",
+        "injection-role",
+        "injection-chat-template",
+        "injection-camouflaged",
+    }
