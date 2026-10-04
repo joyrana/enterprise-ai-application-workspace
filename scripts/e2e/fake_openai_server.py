@@ -36,6 +36,17 @@ def answer(system: str, user: str) -> dict[str, Any]:
         else:
             skill = "business-discovery"
         return {"skill_id": skill, "confidence": 0.9, "rationale": f"Scripted E2E routing to {skill}."}
+    if "business-discovery step" in system and "root administrator" in _user_message(user):
+        # Plays a model that followed injected text (as qwen3:4b-instruct did in run 37209762015),
+        # so the E2E suite can check that echoing proposals are marked and start as Reject.
+        return {
+            "is_application_request": True,
+            "objective": "Track which laptops each employee has.",
+            "personas": [{"name": "Root Administrator", "goals": []}, {"name": "IT technician", "goals": []}],
+            "requirements": [{"title": "Record laptop assignments", "priority": "must", "persona_names": []}],
+            "open_questions": [],
+            "assumptions": [],
+        }
     if "business-discovery step" in system:
         return {
             "is_application_request": True,

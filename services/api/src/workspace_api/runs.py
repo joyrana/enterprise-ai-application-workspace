@@ -31,11 +31,14 @@ from skill_sdk import (
     Decision,
     Outcome,
     RoutingError,
+    ScanReport,
     SkillContext,
     SkillRegistry,
     SkillRouter,
     SpecCommand,
     apply_commands,
+    flag_echoes,
+    scan_text,
     unmet_preconditions,
 )
 
@@ -65,6 +68,8 @@ from .schemas import (
     RunOut,
     RunPage,
     RunRouting,
+    RunSafety,
+    SafetyScan,
     SkillInfo,
     SkillList,
 )
@@ -123,6 +128,16 @@ def _routing_out(raw: dict[str, Any] | None) -> RunRouting | None:
     )
 
 
+def scan(text: str) -> SafetyScan:
+    return SafetyScan.model_validate(scan_text(text).model_dump(mode="json"))
+
+
+def _safety_out(raw: dict[str, Any] | None) -> RunSafety | None:
+    if not raw:
+        return None
+    return RunSafety.model_validate({"flagged_proposals": [], **raw})
+
+
 def _message(run: WorkflowRun) -> str:
     return str(run.input.get("message") or run.input.get("description") or "")
 
@@ -136,6 +151,7 @@ def _run_out(run: WorkflowRun) -> RunOut:
         status=run.status,
         message=_message(run),
         routing=_routing_out(run.routing),
+        safety=_safety_out(run.safety),
         base_revision=run.base_revision,
         summary=result.get("summary"),
         not_applicable_reason=result.get("not_applicable_reason"),
@@ -276,6 +292,7 @@ def create_run(
     if (active or 0) >= MAX_ACTIVE_RUNS_PER_TENANT:
         raise TooManyRuns(f"At most {MAX_ACTIVE_RUNS_PER_TENANT} AI runs may be active at once. Try again shortly.")
 
+    report = scan_text(body.message)
     run = WorkflowRun(
         id=uuid.uuid4(),
         tenant_id=principal.tenant_id,
@@ -284,6 +301,7 @@ def create_run(
         skill_version=skill_version,
         status="queued",
         input={"message": body.message},
+        safety=report.model_dump(mode="json") | {"flagged_proposals": []},
         base_revision=project.current_revision,
         created_by=principal.user_id,
         idempotency_key=idempotency_key,
@@ -299,6 +317,8 @@ def create_run(
         skill=f"{body.skill_id}@{skill_version}" if body.skill_id else "auto",
         model=runtime.label,
         message_chars=len(body.message),
+        injection_risk=report.risk,
+        injection_signals=sorted({s.kind.value for s in report.signals}),
     )
     try:
         session.commit()
@@ -394,6 +414,11 @@ def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry
                     "proposals": [p.model_dump(mode="json") for p in output.proposals],
                 }
                 model = output.model
+                if run.safety and run.safety.get("signals"):
+                    stored = {k: v for k, v in run.safety.items() if k != "flagged_proposals"}
+                    report = ScanReport.model_validate(stored)
+                    flags = flag_echoes(message, report, output.proposals)
+                    run.safety = run.safety | {"flagged_proposals": [f.model_dump() for f in flags]}
         except ModelError as exc:
             error = {"kind": exc.kind.value, "message": exc.user_message}
             model = _failed_model_info(runtime, prompt_version, exc)
@@ -418,6 +443,7 @@ def execute_run(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registry
             skill=run.skill_id,
             routing=(run.routing or {}).get("method"),
             proposals=len(result["proposals"]) if result else 0,
+            flagged_proposals=len((run.safety or {}).get("flagged_proposals", [])),
             error_kind=error["kind"] if error else None,
         )
         session.commit()
@@ -508,6 +534,20 @@ def apply_run(
         audit_action="ai.proposals.applied",
         audit_details={"run_id": str(run.id), "applied": applied, "confirmed": confirmed, "decided": len(decisions)},
     )
+    flagged = {f["proposal_id"] for f in (run.safety or {}).get("flagged_proposals", [])}
+    accepted_flagged = sum(1 for r in results if r.outcome is Outcome.APPLIED and r.proposal_id in flagged)
+    if accepted_flagged:
+        service.audit(
+            session,
+            principal,
+            project.id,
+            "ai.flagged_proposals.accepted",
+            run_id=str(run.id),
+            count=accepted_flagged,
+            proposal_ids=sorted(
+                r.proposal_id for r in results if r.outcome is Outcome.APPLIED and r.proposal_id in flagged
+            ),
+        )
     run.decisions = {pid: d.value for pid, d in decisions.items()}
     run.applied_revision = outcome.revision.revision if outcome.created else None
     session.commit()

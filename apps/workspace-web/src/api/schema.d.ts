@@ -211,6 +211,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/safety/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Screen request text for prompt-injection signals before starting a run (deterministic, no model) */
+        post: operations["scan_text_api_v1_safety_scan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/schemas/application-spec": {
         parameters: {
             query?: never;
@@ -746,6 +763,16 @@ export interface components {
          * @enum {string}
          */
         FieldType: "string" | "text" | "integer" | "decimal" | "money" | "boolean" | "date" | "datetime" | "enum" | "file" | "reference";
+        /** FlaggedProposal */
+        FlaggedProposal: {
+            /**
+             * Phrase
+             * @description Text from the flagged part of the request that the proposal repeats.
+             */
+            phrase: string;
+            /** Proposal Id */
+            proposal_id: string;
+        };
         /** FormField */
         FormField: {
             /** Help Text */
@@ -1202,6 +1229,8 @@ export interface components {
             /** Proposals */
             proposals: (components["schemas"]["SetFact"] | components["schemas"]["AddItem"] | components["schemas"]["AddOpenQuestion"])[];
             routing: components["schemas"]["RunRouting"] | null;
+            /** @description Prompt-injection screening of the message; null for older runs. */
+            safety: components["schemas"]["RunSafety"] | null;
             /**
              * Skill Id
              * @description Null until routing chooses a skill, or when no skill fits.
@@ -1243,6 +1272,62 @@ export interface components {
             rationale: string;
             /** Total Tokens */
             total_tokens: number;
+        };
+        /** RunSafety */
+        RunSafety: {
+            /** Detector */
+            detector: string;
+            /**
+             * Flagged Proposals
+             * @description Proposals that repeat content from flagged sentences. Review them before accepting.
+             */
+            flagged_proposals: components["schemas"]["FlaggedProposal"][];
+            /**
+             * Risk
+             * @description none | suspicious | high
+             */
+            risk: string;
+            /** Signals */
+            signals: components["schemas"]["SafetySignal"][];
+        };
+        /** SafetyScan */
+        SafetyScan: {
+            /** Detector */
+            detector: string;
+            /**
+             * Risk
+             * @description none | suspicious | high
+             */
+            risk: string;
+            /** Signals */
+            signals: components["schemas"]["SafetySignal"][];
+        };
+        /** SafetyScanRequest */
+        SafetyScanRequest: {
+            /** Text */
+            text: string;
+        };
+        /** SafetySignal */
+        SafetySignal: {
+            /** End */
+            end: number;
+            /**
+             * Excerpt
+             * @description The sentence containing the signal, truncated.
+             */
+            excerpt: string;
+            /**
+             * Kind
+             * @description instruction_override | role_reassignment | prompt_exfiltration | template_markup | workflow_tampering | output_directive
+             */
+            kind: string;
+            /**
+             * Severity
+             * @description high | medium
+             */
+            severity: string;
+            /** Start */
+            start: number;
         };
         /** Screen */
         Screen: {
@@ -2841,6 +2926,85 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SpecValidationResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    scan_text_api_v1_safety_scan_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SafetyScanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SafetyScan"];
                 };
             };
             /** @description Bad Request */

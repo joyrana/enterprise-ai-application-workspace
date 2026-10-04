@@ -116,6 +116,8 @@ class WorkflowRun(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     input: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     routing: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    #: Deterministic injection scan of the message, plus proposals that echo flagged text.
+    safety: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     base_revision: Mapped[int] = mapped_column(Integer, nullable=False)
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     model: Mapped[dict[str, Any] | None] = mapped_column(JSONB)

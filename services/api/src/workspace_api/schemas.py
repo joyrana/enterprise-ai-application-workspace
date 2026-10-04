@@ -146,6 +146,38 @@ class RunRouting(ApiModel):
     total_tokens: int
 
 
+class SafetyScanRequest(ApiModel):
+    text: Description8k
+
+
+class SafetySignal(ApiModel):
+    kind: str = Field(
+        description="instruction_override | role_reassignment | prompt_exfiltration | template_markup | "
+        "workflow_tampering | output_directive"
+    )
+    severity: str = Field(description="high | medium")
+    start: int
+    end: int
+    excerpt: str = Field(description="The sentence containing the signal, truncated.")
+
+
+class SafetyScan(ApiModel):
+    detector: str
+    risk: str = Field(description="none | suspicious | high")
+    signals: list[SafetySignal]
+
+
+class FlaggedProposal(ApiModel):
+    proposal_id: str
+    phrase: str = Field(description="Text from the flagged part of the request that the proposal repeats.")
+
+
+class RunSafety(SafetyScan):
+    flagged_proposals: list[FlaggedProposal] = Field(
+        description="Proposals that repeat content from flagged sentences. Review them before accepting."
+    )
+
+
 class RunError(ApiModel):
     kind: str
     message: str
@@ -175,6 +207,7 @@ class RunOut(ApiModel):
     status: str = Field(description="queued | running | succeeded | failed")
     message: str
     routing: RunRouting | None
+    safety: RunSafety | None = Field(description="Prompt-injection screening of the message; null for older runs.")
     base_revision: int
     summary: str | None
     not_applicable_reason: str | None

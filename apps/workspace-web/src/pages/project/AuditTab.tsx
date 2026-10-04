@@ -22,6 +22,7 @@ const ACTION_LABELS: Record<string, string> = {
   "ai.run.succeeded": "AI run completed",
   "ai.run.failed": "AI run failed",
   "ai.proposals.applied": "AI proposals applied",
+  "ai.flagged_proposals.accepted": "Flagged AI proposals accepted",
 };
 
 function describe(details: Record<string, unknown>): string {

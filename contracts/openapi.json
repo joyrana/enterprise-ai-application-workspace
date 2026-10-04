@@ -1412,6 +1412,26 @@
         "title": "FieldType",
         "type": "string"
       },
+      "FlaggedProposal": {
+        "additionalProperties": false,
+        "properties": {
+          "phrase": {
+            "description": "Text from the flagged part of the request that the proposal repeats.",
+            "title": "Phrase",
+            "type": "string"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "phrase"
+        ],
+        "title": "FlaggedProposal",
+        "type": "object"
+      },
       "FormField": {
         "additionalProperties": false,
         "properties": {
@@ -2794,6 +2814,17 @@
               }
             ]
           },
+          "safety": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunSafety"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Prompt-injection screening of the message; null for older runs."
+          },
           "skill_id": {
             "anyOf": [
               {
@@ -2853,6 +2884,7 @@
           "status",
           "message",
           "routing",
+          "safety",
           "base_revision",
           "summary",
           "not_applicable_reason",
@@ -2953,6 +2985,124 @@
           "total_tokens"
         ],
         "title": "RunRouting",
+        "type": "object"
+      },
+      "RunSafety": {
+        "additionalProperties": false,
+        "properties": {
+          "detector": {
+            "title": "Detector",
+            "type": "string"
+          },
+          "flagged_proposals": {
+            "description": "Proposals that repeat content from flagged sentences. Review them before accepting.",
+            "items": {
+              "$ref": "#/components/schemas/FlaggedProposal"
+            },
+            "title": "Flagged Proposals",
+            "type": "array"
+          },
+          "risk": {
+            "description": "none | suspicious | high",
+            "title": "Risk",
+            "type": "string"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SafetySignal"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "detector",
+          "risk",
+          "signals",
+          "flagged_proposals"
+        ],
+        "title": "RunSafety",
+        "type": "object"
+      },
+      "SafetyScan": {
+        "additionalProperties": false,
+        "properties": {
+          "detector": {
+            "title": "Detector",
+            "type": "string"
+          },
+          "risk": {
+            "description": "none | suspicious | high",
+            "title": "Risk",
+            "type": "string"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SafetySignal"
+            },
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "detector",
+          "risk",
+          "signals"
+        ],
+        "title": "SafetyScan",
+        "type": "object"
+      },
+      "SafetyScanRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SafetyScanRequest",
+        "type": "object"
+      },
+      "SafetySignal": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "excerpt": {
+            "description": "The sentence containing the signal, truncated.",
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "kind": {
+            "description": "instruction_override | role_reassignment | prompt_exfiltration | template_markup | workflow_tampering | output_directive",
+            "title": "Kind",
+            "type": "string"
+          },
+          "severity": {
+            "description": "high | medium",
+            "title": "Severity",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "severity",
+          "start",
+          "end",
+          "excerpt"
+        ],
+        "title": "SafetySignal",
         "type": "object"
       },
       "Screen": {
@@ -6254,6 +6404,130 @@
         "summary": "Validate a candidate specification without saving it",
         "tags": [
           "specification"
+        ]
+      }
+    },
+    "/api/v1/safety/scan": {
+      "post": {
+        "operationId": "scan_text_api_v1_safety_scan_post",
+        "parameters": [
+          {
+            "description": "Development only: tenant identifier.",
+            "in": "header",
+            "name": "x-dev-tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: tenant identifier.",
+              "title": "X-Dev-Tenant"
+            }
+          },
+          {
+            "description": "Development only: user identifier.",
+            "in": "header",
+            "name": "x-dev-user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: user identifier.",
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SafetyScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetyScan"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Screen request text for prompt-injection signals before starting a run (deterministic, no model)",
+        "tags": [
+          "ai"
         ]
       }
     },

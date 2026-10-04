@@ -28,7 +28,7 @@ from workspace_skills.common import (
     wrap_user_text,
 )
 
-PROMPT_VERSION = "acceptance-criteria@1"
+PROMPT_VERSION = "acceptance-criteria@2"  # @2: security note after flagged requests
 MAX_TARGETS = 6
 MAX_PER_REQUIREMENT = 3
 _WORD = re.compile(r"[a-z0-9]+")

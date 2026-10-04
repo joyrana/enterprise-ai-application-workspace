@@ -7,7 +7,7 @@ from typing import Any
 
 from appspec import ApplicationSpec, FactStatus
 from model_gateway import ErrorKind, ModelError, ModelProvider, StructuredResult
-from skill_sdk import AddItem, AddOpenQuestion, SetFact, SkillContext
+from skill_sdk import AddItem, AddOpenQuestion, SetFact, SkillContext, scan_text, untrusted_notice
 
 MAX_MESSAGE_CHARS = 8000
 
@@ -56,9 +56,15 @@ def summarize(proposals: list[SetFact | AddItem | AddOpenQuestion]) -> str:
 
 
 def wrap_user_text(text: str, tag: str = "user_message") -> str:
-    """Delimit untrusted user text; a closing delimiter inside it cannot end the block."""
+    """Delimit untrusted user text; a closing delimiter inside it cannot end the block.
+
+    When the deterministic scan finds instruction-like content, a security note
+    follows the block so the model is told, outside the data, to treat it as data.
+    """
     safe = text.replace(f"</{tag}>", f"</ {tag}>")
-    return f"<{tag}>\n{safe}\n</{tag}>"
+    block = f"<{tag}>\n{safe}\n</{tag}>"
+    notice = untrusted_notice(scan_text(text))
+    return f"{block}\n\n{notice}" if notice else block
 
 
 def confirmed_context(spec: ApplicationSpec) -> str:

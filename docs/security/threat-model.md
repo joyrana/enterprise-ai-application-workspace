@@ -1,6 +1,6 @@
 # Threat model (Milestone 1 scope)
 
-Date: 2026-10-04, updated for Milestone 2a (model calls). Milestone 4 (untrusted code
+Date: 2026-10-04, updated for Milestone 2a (model calls) and 2d (injection screening). Milestone 4 (untrusted code
 execution) adds the next major trust boundary.
 
 ## Assets
@@ -37,7 +37,7 @@ execution) adds the next major trust boundary.
 | Secret leakage in the repo | `.env` git-ignored, placeholders only in `.env.example`, gitleaks scans full history in CI | — |
 | Supply-chain attacks | Lockfiles, `npm ci` / `uv sync --locked`, pip-audit, npm audit, dependency review, SHA-pinned actions, checksum-verified gitleaks download | Compromised upstream release within allowed ranges before advisories exist |
 | CI privilege abuse | `contents: read` by default; only `regenerate.yml` writes, only on non-main branches via `push` (not available to forks); no secrets used | — |
-| Prompt injection via descriptions | User text is delimited as data (closing delimiter neutralised); the prompt forbids following embedded instructions; the model answers a narrow schema, deterministic code builds commands; skills cannot set status, provenance or `confirmed_by`; every proposal needs a human decision; confirmed facts are never overwritten (ADR-0008) | **Measured:** `qwen3:4b-instruct` followed injected text in the adversarial discovery scenario (injected persona/objective appeared in its *proposals*; run 37209762015). The structural controls held (nothing applied without a decision; nothing confirmable by the model), but reviewers can be misled. Next: flag instruction-like content in requests and mark affected proposals in the UI |
+| Prompt injection via descriptions | User text is delimited as data (closing delimiter neutralised); the prompt forbids following embedded instructions; the model answers a narrow schema, deterministic code builds commands; skills cannot set status, provenance or `confirmed_by`; every proposal needs a human decision; confirmed facts are never overwritten (ADR-0008); deterministic screening (ADR-0011) warns before and after a run, adds a security note to the prompt, and marks proposals that echo flagged text so they start as Reject; accepting one is audited | **Measured:** `qwen3:4b-instruct` followed injected text (run 37209762015). Screening is lexical: camouflaged, indirect and non-English injections are missed (kept in the labeled set). Only the request is scanned, not spec content from earlier accepted proposals (indirect injection) |
 | Malformed or hostile model output | Strict extraction (first complete JSON object), Pydantic validation, one repair attempt, list caps, classified `schema_failure` | — |
 | Sensitive data sent to third parties | Data-classification gate refuses remote models for `confidential`/`restricted` projects unless an operator opts in; UI labels remote providers; audit records model and description length, not the text | Projects with *unknown* classification may use a remote model |
 | Model credential leakage | Tokens read from the environment only, sent only as the `Authorization` header, redacted from `repr`; provider error bodies are never echoed to clients or logs | — |
