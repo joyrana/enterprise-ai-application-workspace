@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -244,7 +244,8 @@ def list_projects(session: Session, principal: Principal, limit: int, cursor: st
             pid = uuid.UUID(str(data["id"]))
         except (KeyError, ValueError) as exc:
             raise InvalidRequest("Malformed pagination cursor.") from exc
-        stmt = stmt.where(tuple_(Project.created_at, Project.id) < tuple_(at, pid))
+        # Keyset pagination on (created_at, id), newest first.
+        stmt = stmt.where(or_(Project.created_at < at, and_(Project.created_at == at, Project.id < pid)))
     rows = list(session.scalars(stmt.order_by(Project.created_at.desc(), Project.id.desc()).limit(limit + 1)))
     next_cursor = None
     if len(rows) > limit:

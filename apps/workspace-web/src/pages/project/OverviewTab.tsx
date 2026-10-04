@@ -38,6 +38,7 @@ function valueAt(root: unknown, path: string): unknown {
 export function OverviewTab({ revision }: { revision: SpecRevision }) {
   const styles = useStyles();
   const { summary, spec, issues } = revision;
+  const openQuestions = spec.open_questions ?? [];
 
   return (
     <div className={styles.grid}>
@@ -104,11 +105,11 @@ export function OverviewTab({ revision }: { revision: SpecRevision }) {
         <Subtitle2 as="h2" id="questions-heading">
           Open questions ({summary.open_questions}, {summary.blocking_questions} blocking)
         </Subtitle2>
-        {spec.open_questions.length === 0 ? (
+        {openQuestions.length === 0 ? (
           <Body1 className={styles.muted}>No open questions recorded.</Body1>
         ) : (
           <ul className={styles.list}>
-            {spec.open_questions.map((q) => (
+            {openQuestions.map((q) => (
               <li key={q.id}>
                 {q.question}{" "}
                 {q.blocking && (

@@ -22,7 +22,7 @@ from .common import (
     TrackedItem,
 )
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION: Literal["1.0.0"] = "1.0.0"
 
 
 # --------------------------------------------------------------------------- enums
