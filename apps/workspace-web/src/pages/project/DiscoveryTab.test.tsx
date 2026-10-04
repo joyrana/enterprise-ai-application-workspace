@@ -355,6 +355,7 @@ describe("DiscoveryTab", () => {
           ],
         },
       },
+      workflowsRoute,
     ]);
     const user = userEvent.setup();
     renderTab();
@@ -387,6 +388,7 @@ describe("DiscoveryTab", () => {
         path: BASE,
         body: { items: [run({ proposals: [], summary: null, not_applicable_reason: "That is a weather question." })] },
       },
+      workflowsRoute,
     ]);
     renderTab();
     expect(await screen.findByText("That is a weather question.")).toBeInTheDocument();
