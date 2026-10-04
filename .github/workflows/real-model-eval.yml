@@ -30,7 +30,7 @@ permissions:
 
 concurrency:
   group: real-model-eval-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false # never cancel a long evaluation in flight
 
 jobs:
   evaluate:

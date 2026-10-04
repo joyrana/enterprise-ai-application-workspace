@@ -26,3 +26,5 @@ apps/workspace-web/src/api/schema.check.d.ts
 .idea/
 .vscode/
 .DS_Store
+playwright-report/
+test-results/
