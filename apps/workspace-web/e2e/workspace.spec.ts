@@ -26,6 +26,7 @@ async function expectNoSeriousA11yViolations(page: Page, where: string): Promise
 const DEV_HEADERS = { "X-Dev-Tenant": "demo", "X-Dev-User": "demo-user" };
 
 interface RunRecord {
+  message: string;
   status: string;
   skill_id: string | null;
   routing: { method: string; chosen: string | null; candidates: string[] } | null;
@@ -97,7 +98,17 @@ test("create a project, discover requirements, add acceptance criteria, review h
     .getByRole("textbox", { name: /What do you need/ })
     .fill("Write acceptance criteria so QA can test the requirements.");
   await page.getByRole("button", { name: "Run" }).click();
-  await expect.poll(async () => (await latestRun(page)).status, { timeout: 45_000 }).toMatch(/succeeded|failed/);
+  // Wait for *this* run (matched by its message): right after clicking, the latest run can still be the previous one.
+  const criteriaRequest = "Write acceptance criteria so QA can test the requirements.";
+  await expect
+    .poll(
+      async () => {
+        const run = await latestRun(page);
+        return run.message === criteriaRequest ? run.status : "not created yet";
+      },
+      { timeout: 45_000 },
+    )
+    .toMatch(/succeeded|failed/);
   const second = await latestRun(page);
   expect(second.routing?.chosen, JSON.stringify(second)).toBe("acceptance-criteria");
   expect(second.routing?.method, JSON.stringify(second)).toBe("model");
