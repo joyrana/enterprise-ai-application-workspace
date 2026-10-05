@@ -5,10 +5,10 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 2d part 1 (prompt-injection hardening).** Projects, the canonical specification, revision
+> **Status: Milestone 2d (prompt-injection hardening, checkpointed workflows).** Projects, the canonical specification, revision
 > history, audit trail and the workspace UI exist, plus three AI discovery skills with routing
-> and human review. Skill routing, orchestration, design-system adapters and code generation are
-> **not implemented yet**; see the roadmap below.
+> and human review, routing, and checkpointed multi-step workflows. Design-system adapters and
+> code generation are **not implemented yet**; see the roadmap below.
 > Development authentication only: do not expose this build to untrusted users.
 
 ## What works today
@@ -32,6 +32,10 @@ security policies.
   without criteria) and `requirements-conflict-detection` (contradictions and duplicates
   raised as blocking questions). Requests are routed by preconditions first; the model only
   chooses when several skills apply, and you can always pick a skill yourself (ADR-0009).
+- **Multi-step workflows** (ADR-0012): the requirements pipeline runs discovery, then
+  acceptance criteria, then a conflict check, pausing for your review after each step. Its
+  progress is checkpointed in PostgreSQL, so a crash never loses or repeats an applied step.
+  A failed step can be retried a bounded number of times.
 - **Prompt-injection screening** (ADR-0011): instruction-like text in a request is flagged
   as you type, the model is warned, and proposals that repeat the flagged text are marked
   and start as *Reject*. It is advisory; the structural review controls remain the boundary.
@@ -134,7 +138,7 @@ uv run python -m workspace_evals.injection                  # detector precision
 | 2a | Model gateway (Qwen / gpt-oss), skill SDK, business discovery with human review, discovery evals | Done |
 | 2b | Acceptance-criteria and conflict-detection skills, two-stage routing, routing evals | Done |
 | 2c | Real-model evaluation (Ollama + Qwen in CI), Playwright E2E with axe | Done |
-| 2d | Prompt-injection hardening (in review); checkpointed orchestration, more model baselines (next) | In progress |
+| 2d | Prompt-injection hardening (done); checkpointed workflows (in review); more model baselines (open) | In progress |
 | 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Planned |
 | 4 | React generation, isolated builds, preview, diff review | Planned |
 | 5 | Incremental changes, edit preservation, resilience | Planned |

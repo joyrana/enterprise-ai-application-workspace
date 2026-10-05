@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { Run } from "../../api/client";
+import type { Run, Workflow } from "../../api/client";
 import { mockFetch, problem } from "../../test/fetchMock";
 import { project, specRevision } from "../../test/fixtures";
 import { renderAt, renderWithProviders } from "../../test/render";
@@ -34,6 +34,8 @@ const SKILLS = {
   ],
 };
 const skillsRoute = { method: "GET", path: SKILLS_PATH, body: SKILLS };
+const WORKFLOWS_PATH = `/api/v1/projects/${project.id}/workflows`;
+const workflowsRoute = { method: "GET", path: WORKFLOWS_PATH, body: { items: [] } };
 const RUN_ID = "22222222-2222-4222-8222-222222222222";
 const CONFIGURED = {
   configured: true,
@@ -100,6 +102,8 @@ function run(overrides: Partial<Run> = {}): Run {
     error: null,
     applied_revision: null,
     decisions: null,
+    workflow_id: null,
+    workflow_step: null,
     created_by: "demo-user",
     created_at: "2026-10-04T10:00:00Z",
     started_at: "2026-10-04T10:00:00Z",
@@ -109,6 +113,42 @@ function run(overrides: Partial<Run> = {}): Run {
 }
 
 // Screening as you type is off unless a test opts in (scanDelayMs), so each test lists exactly the requests it expects.
+const WORKFLOW_ID = "33333333-3333-4333-8333-333333333333";
+
+function workflow(
+  overrides: Partial<Workflow> = {},
+  stepStatuses = ["awaiting_review", "pending", "pending"],
+): Workflow {
+  const titles = ["Discover requirements", "Write acceptance criteria", "Check for conflicts"];
+  const skills = ["business-discovery", "acceptance-criteria", "requirements-conflict-detection"];
+  return {
+    id: WORKFLOW_ID,
+    definition_id: "requirements-pipeline",
+    definition_version: "1",
+    name: "Requirements pipeline",
+    status: "awaiting_review",
+    current_step: 0,
+    steps: stepStatuses.map((status, i) => ({
+      id: ["discover", "criteria", "conflicts"][i],
+      title: titles[i],
+      skill_id: skills[i],
+      status,
+      attempts: status === "pending" ? 0 : 1,
+      run_ids: status === "pending" ? [] : [RUN_ID],
+      reason: null,
+      applied_revision: null,
+    })),
+    message: "Finance ops app",
+    active_run_id: null,
+    can_resume: false,
+    created_by: "demo-user",
+    created_at: "2026-10-04T10:00:00Z",
+    updated_at: "2026-10-04T10:00:00Z",
+    finished_at: null,
+    ...overrides,
+  } as unknown as Workflow;
+}
+
 function renderTab(onApplied = vi.fn(), scanDelayMs = 60_000) {
   renderWithProviders(
     <DiscoveryTab projectId={project.id} etag={'"r1"'} onApplied={onApplied} pollMs={10} scanDelayMs={scanDelayMs} />,
@@ -142,6 +182,7 @@ describe("DiscoveryTab", () => {
       },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [] } },
+      workflowsRoute,
     ]);
     renderAt(`/projects/${project.id}/discovery`);
     expect(await screen.findByText("No AI model is configured")).toBeInTheDocument();
@@ -153,6 +194,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [] } },
+      workflowsRoute,
       {
         method: "POST",
         path: BASE,
@@ -191,6 +233,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [] } },
+      workflowsRoute,
       {
         method: "POST",
         path: BASE,
@@ -220,6 +263,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [run({ status: "running", proposals: [], summary: null })] } },
+      workflowsRoute,
       { method: "GET", path: `${BASE}/${RUN_ID}`, body: run() },
     ]);
     renderTab();
@@ -233,6 +277,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [run()] } },
+      workflowsRoute,
       {
         method: "POST",
         path: `${BASE}/${RUN_ID}/apply`,
@@ -277,6 +322,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [run()] } },
+      workflowsRoute,
       {
         method: "POST",
         path: `${BASE}/${RUN_ID}/apply`,
@@ -309,6 +355,7 @@ describe("DiscoveryTab", () => {
           ],
         },
       },
+      workflowsRoute,
     ]);
     const user = userEvent.setup();
     renderTab();
@@ -326,6 +373,7 @@ describe("DiscoveryTab", () => {
       },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [] } },
+      workflowsRoute,
     ]);
     renderTab();
     expect(await screen.findByText(/descriptions leave your network/)).toBeInTheDocument();
@@ -340,6 +388,7 @@ describe("DiscoveryTab", () => {
         path: BASE,
         body: { items: [run({ proposals: [], summary: null, not_applicable_reason: "That is a weather question." })] },
       },
+      workflowsRoute,
     ]);
     renderTab();
     expect(await screen.findByText("That is a weather question.")).toBeInTheDocument();
@@ -349,6 +398,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [] } },
+      workflowsRoute,
       { method: "POST", path: BASE, status: 202, body: run({ status: "queued", proposals: [], summary: null }) },
     ]);
     const user = userEvent.setup();
@@ -400,6 +450,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [routed] } },
+      workflowsRoute,
     ]);
     renderTab();
     expect(
@@ -416,6 +467,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [] } },
+      workflowsRoute,
       { method: "POST", path: "/api/v1/safety/scan", body: FLAGGED_SCAN },
     ]);
     const user = userEvent.setup();
@@ -444,6 +496,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [flaggedRun] } },
+      workflowsRoute,
       {
         method: "POST",
         path: `${BASE}/${RUN_ID}/apply`,
@@ -466,6 +519,68 @@ describe("DiscoveryTab", () => {
     expect(body.decisions.map((d) => d.decision)).toEqual(["accept", "reject", "accept"]);
   });
 
+  it("starts the requirements pipeline and shows its steps", async () => {
+    const { calls } = mockFetch([
+      { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
+      { method: "GET", path: BASE, body: { items: [] } },
+      workflowsRoute,
+      { method: "POST", path: WORKFLOWS_PATH, status: 202, body: workflow() },
+      { method: "GET", path: `${BASE}/${RUN_ID}`, body: run({ workflow_id: WORKFLOW_ID, workflow_step: 0 }) },
+    ]);
+    const user = userEvent.setup();
+    renderTab();
+    await user.click(await screen.findByRole("switch", { name: /Run as a pipeline/ }));
+    expect(screen.getByRole("combobox", { name: "Skill" })).toBeDisabled();
+    await user.type(screen.getByRole("textbox", { name: /What do you need/ }), "Finance ops app");
+    await user.click(screen.getByRole("button", { name: "Run" }));
+
+    const steps = await screen.findByRole("list", { name: "Workflow steps" });
+    const items = within(steps).getAllByRole("listitem");
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveAttribute("aria-current", "step");
+    expect(within(items[0] as HTMLElement).getByText("Needs your review")).toBeInTheDocument();
+    expect(within(items[1] as HTMLElement).getByText("Waiting")).toBeInTheDocument();
+    expect(screen.getByText("Waiting for your review")).toBeInTheDocument();
+    // The first step's proposals are reviewed exactly like a single run.
+    expect(await screen.findByRole("heading", { name: /3 proposal/ })).toBeInTheDocument();
+
+    const post = calls.find((c) => c.url === WORKFLOWS_PATH && c.method === "POST");
+    expect(post?.body).toEqual({ definition_id: "requirements-pipeline", message: "Finance ops app" });
+    expect(post?.headers["Idempotency-Key"]).toMatch(/^discovery-/);
+  });
+
+  it("retries a failed workflow step", async () => {
+    const failedRun = run({
+      status: "failed",
+      proposals: [],
+      summary: null,
+      workflow_id: WORKFLOW_ID,
+      workflow_step: 0,
+      error: { kind: "provider_unavailable", message: "The model provider is unavailable." },
+    } as unknown as Partial<Run>);
+    const failed = workflow({ status: "failed", can_resume: true }, ["failed", "pending", "pending"]);
+    const { calls } = mockFetch([
+      { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
+      { method: "GET", path: BASE, body: { items: [failedRun] } },
+      { method: "GET", path: WORKFLOWS_PATH, body: { items: [failed] } },
+      { method: "POST", path: `${WORKFLOWS_PATH}/${WORKFLOW_ID}/resume`, body: workflow() },
+      // After resuming, the tab reloads to show the new step run.
+      { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
+      skillsRoute,
+      { method: "GET", path: BASE, body: { items: [run({ workflow_id: WORKFLOW_ID, workflow_step: 0 })] } },
+      { method: "GET", path: WORKFLOWS_PATH, body: { items: [workflow()] } },
+    ]);
+    const user = userEvent.setup();
+    renderTab();
+    expect(await screen.findByText("Stopped at a failed step")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retry step" }));
+    expect(await screen.findByText("Waiting for your review")).toBeInTheDocument();
+    expect(calls.some((c) => c.url.endsWith("/resume") && c.method === "POST")).toBe(true);
+    expect(await screen.findByRole("heading", { name: /3 proposal/ })).toBeInTheDocument();
+  });
+
   it("explains when the model decides no skill fits", async () => {
     const none = run({
       skill_id: null,
@@ -486,6 +601,7 @@ describe("DiscoveryTab", () => {
       { method: "GET", path: "/api/v1/ai/status", body: CONFIGURED },
       skillsRoute,
       { method: "GET", path: BASE, body: { items: [none] } },
+      workflowsRoute,
     ]);
     renderTab();
     expect(await screen.findByText("No skill fits this request (decided by the model)")).toBeInTheDocument();

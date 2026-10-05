@@ -100,6 +100,10 @@ class RunAlreadyApplied(AppError):
     status, code, title = 409, "run-already-applied", "Decisions for this run were already applied"
 
 
+class WorkflowStateConflict(AppError):
+    status, code, title = 409, "workflow-state-conflict", "The workflow cannot do that in its current state"
+
+
 class PayloadTooLarge(AppError):
     status, code, title = 413, "payload-too-large", "Request body is too large"
 

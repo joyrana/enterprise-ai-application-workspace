@@ -13,6 +13,7 @@
 | [0009](0009-skill-routing.md) | Two-stage skill routing, evaluated against a lexical baseline | Accepted |
 | [0010](0010-evidence-tiers.md) | Evidence tiers: what each kind of test may claim | Accepted |
 | [0011](0011-prompt-injection-screening.md) | Prompt-injection screening is advisory and deterministic | Accepted |
+| [0012](0012-workflow-orchestration.md) | Checkpointed workflows on our own tables; LangGraph not adopted yet | Accepted |
 
 Template: context → decision → consequences. Superseding an ADR means adding a new one and
 marking the old one "Superseded by ADR-NNNN", never rewriting history.

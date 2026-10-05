@@ -183,3 +183,44 @@ test("instruction-like text is flagged before running and echoing proposals star
   const personas = ((await spec.json()) as { spec: { personas: { name: string }[] } }).spec.personas;
   expect(personas.map((p) => p.name)).toEqual(["IT technician"]);
 });
+
+test("the requirements pipeline pauses for review after each step and completes", async ({ page }) => {
+  await page.goto("/projects");
+  await page.getByRole("button", { name: "New project" }).click();
+  await page.getByRole("textbox", { name: /Name/ }).fill(`E2E pipeline ${Date.now()}`);
+  await page.getByRole("button", { name: "Create project" }).click();
+  await page.getByRole("tab", { name: "Discovery" }).click();
+
+  await page.getByRole("switch", { name: /Run as a pipeline/ }).check();
+  await page
+    .getByRole("textbox", { name: /What do you need/ })
+    .fill("Finance operations need to configure adjustments and approve risky transactions.");
+  await page.getByRole("button", { name: "Run" }).click();
+
+  const steps = page.getByRole("list", { name: "Workflow steps" });
+  await expect(page.getByRole("heading", { name: /proposal\(s\)/ })).toBeVisible({ timeout: 45_000 });
+  await expect(steps.getByRole("listitem").nth(0)).toContainText("Needs your review");
+  await expect(steps.getByRole("listitem").nth(1)).toContainText("Waiting");
+  await expectNoSeriousA11yViolations(page, "pipeline step 1 review");
+
+  // Step 1 decided: the server starts acceptance criteria against the new revision.
+  await page.getByRole("button", { name: "Apply decisions" }).click();
+  await expect(page.getByRole("heading", { name: "Acceptance criteria" })).toBeVisible({ timeout: 45_000 });
+  await expect(steps.getByRole("listitem").nth(0)).toContainText("Done");
+  await expect(steps.getByRole("listitem").nth(1)).toContainText("Needs your review");
+
+  // Step 2 decided: the conflict check finds nothing, needs no review, and the workflow completes.
+  await page.getByRole("button", { name: "Apply decisions" }).click();
+  await expect(page.getByText("Completed", { exact: true })).toBeVisible({ timeout: 45_000 });
+  for (const index of [0, 1, 2]) {
+    await expect(steps.getByRole("listitem").nth(index)).toContainText("Done");
+  }
+  await expect(page.getByText("Nothing to review")).toBeVisible();
+  await expectNoSeriousA11yViolations(page, "pipeline completed");
+
+  const projectId = new URL(page.url()).pathname.split("/")[2];
+  const spec = await page.request.get(`/api/v1/projects/${projectId}/spec`, { headers: DEV_HEADERS });
+  const body = (await spec.json()) as { revision: number; spec: { acceptance_criteria: unknown[] } };
+  expect(body.revision).toBe(3);
+  expect(body.spec.acceptance_criteria).toHaveLength(2);
+});

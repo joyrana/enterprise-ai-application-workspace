@@ -7,7 +7,8 @@ Tables:
 * ``spec_revisions`` — immutable, append-only spec documents. A revision is
   never updated after insert; history is the audit trail of the spec.
 * ``audit_events`` — append-only security- and change-relevant events.
-* ``workflow_runs`` — skill executions and the proposals awaiting a decision.
+* ``workflow_runs`` — skill executions (AI runs) and the proposals awaiting a decision.
+* ``workflows`` — multi-step workflows; ``state`` is the checkpoint (ADR-0012).
 
 Every query in the service layer filters on ``tenant_id``.
 """
@@ -94,6 +95,36 @@ class AuditEvent(Base):
 
 
 RUN_STATUSES = ("queued", "running", "succeeded", "failed")
+WORKFLOW_STATUSES = ("running", "awaiting_review", "completed", "failed", "cancelled")
+
+
+class Workflow(Base):
+    """A multi-step workflow. ``state`` is its checkpoint, written in the same transaction as each event."""
+
+    __tablename__ = "workflows"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    definition_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    definition_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    state: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    input: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    idempotency_key: Mapped[str | None] = mapped_column(String(128))
+    idempotency_fingerprint: Mapped[str | None] = mapped_column(String(80))
+
+    __table_args__ = (
+        CheckConstraint(f"status IN {WORKFLOW_STATUSES!r}", name="ck_workflows_status"),
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_workflows_tenant_idempotency_key"),
+        Index("ix_workflows_tenant_project_created", "tenant_id", "project_id", "created_at"),
+    )
 
 
 class WorkflowRun(Base):
@@ -130,12 +161,18 @@ class WorkflowRun(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     idempotency_key: Mapped[str | None] = mapped_column(String(128))
     idempotency_fingerprint: Mapped[str | None] = mapped_column(String(80))
+    #: Set when the run is a step of a multi-step workflow.
+    workflow_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workflows.id", ondelete="CASCADE")
+    )
+    workflow_step: Mapped[int | None] = mapped_column(Integer)
 
     __table_args__ = (
         CheckConstraint(f"status IN {RUN_STATUSES!r}", name="ck_workflow_runs_status"),
         UniqueConstraint("tenant_id", "idempotency_key", name="uq_workflow_runs_tenant_idempotency_key"),
         Index("ix_workflow_runs_tenant_project_created", "tenant_id", "project_id", "created_at"),
         Index("ix_workflow_runs_tenant_status", "tenant_id", "status"),
+        Index("ix_workflow_runs_workflow", "workflow_id"),
     )
 
 

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from appspec import ApplicationSpec, json_schema
 from skill_sdk import SkillRegistry
 
-from . import runs, service
+from . import runs, service, workflows
 from .ai import ModelRuntime
 from .auth import CurrentPrincipal
 from .errors import Problem
@@ -36,6 +36,10 @@ from .schemas import (
     SpecRevisionPage,
     SpecUpdate,
     SpecValidationResult,
+    WorkflowCreate,
+    WorkflowDefinitionList,
+    WorkflowOut,
+    WorkflowPage,
 )
 
 
@@ -337,11 +341,139 @@ def apply_project_run(
     project_id: ProjectId,
     run_id: RunId,
     body: ApplyRunRequest,
+    request: Request,
     principal: CurrentPrincipal,
     session: DbSession,
     response: Response,
+    background: BackgroundTasks,
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> ApplyRunResult:
-    result = runs.apply_run(session, principal, project_id, run_id, if_match, body)
+    runtime = _runtime(request)
+    registry = _registry(request)
+    result, next_runs = runs.apply_run(session, principal, project_id, run_id, if_match, body, runtime, registry)
+    _schedule(request, background, next_runs, runtime, registry)
     response.headers["ETag"] = service.etag(result.revision.revision)
     return result
+
+
+def _schedule(
+    request: Request,
+    background: BackgroundTasks,
+    run_ids: list[uuid.UUID],
+    runtime: ModelRuntime | None,
+    registry: SkillRegistry,
+) -> None:
+    if runtime is None:
+        return
+    for run_id in run_ids:
+        background.add_task(runs.execute_run, request.app.state.db, run_id, runtime, registry)
+
+
+# --------------------------------------------------------------------------- workflows
+
+WorkflowId = Annotated[uuid.UUID, Path(description="Workflow identifier.")]
+
+
+@api.get(
+    "/workflow-definitions",
+    response_model=WorkflowDefinitionList,
+    tags=["workflows"],
+    summary="Built-in multi-step workflows",
+)
+def list_workflow_definitions(principal: CurrentPrincipal) -> WorkflowDefinitionList:
+    return workflows.list_definitions()
+
+
+@api.post(
+    "/projects/{project_id}/workflows",
+    response_model=WorkflowOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["workflows"],
+    summary="Start a multi-step workflow; it pauses for review after each step that proposes changes",
+    responses={
+        200: {"model": WorkflowOut, "description": "Replay of an earlier request with the same Idempotency-Key."},
+        403: _PROBLEM,
+        409: _PROBLEM,
+        429: _PROBLEM,
+        503: _PROBLEM,
+    },
+)
+def start_project_workflow(
+    project_id: ProjectId,
+    body: WorkflowCreate,
+    request: Request,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    response: Response,
+    background: BackgroundTasks,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> WorkflowOut:
+    runtime = _runtime(request)
+    registry = _registry(request)
+    wf, created, next_runs = workflows.start_workflow(
+        session, principal, project_id, body, idempotency_key, runtime, registry
+    )
+    response.headers["Location"] = f"/api/v1/projects/{project_id}/workflows/{wf.id}"
+    if not created:
+        response.status_code = status.HTTP_200_OK
+    _schedule(request, background, next_runs, runtime, registry)
+    return wf
+
+
+@api.get(
+    "/projects/{project_id}/workflows",
+    response_model=WorkflowPage,
+    tags=["workflows"],
+    summary="Recent workflows, newest first",
+)
+def list_project_workflows(
+    project_id: ProjectId, request: Request, principal: CurrentPrincipal, session: DbSession
+) -> WorkflowPage:
+    return workflows.list_workflows(session, principal, project_id, _registry(request))
+
+
+@api.get(
+    "/projects/{project_id}/workflows/{workflow_id}",
+    response_model=WorkflowOut,
+    tags=["workflows"],
+    summary="One workflow with its step checkpoint",
+)
+def get_project_workflow(
+    project_id: ProjectId, workflow_id: WorkflowId, request: Request, principal: CurrentPrincipal, session: DbSession
+) -> WorkflowOut:
+    return workflows.get_workflow(session, principal, project_id, workflow_id, _registry(request))
+
+
+@api.post(
+    "/projects/{project_id}/workflows/{workflow_id}/resume",
+    response_model=WorkflowOut,
+    tags=["workflows"],
+    summary="Retry a failed step (bounded) or restart a stalled one",
+    responses={409: _PROBLEM, 503: _PROBLEM},
+)
+def resume_project_workflow(
+    project_id: ProjectId,
+    workflow_id: WorkflowId,
+    request: Request,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    background: BackgroundTasks,
+) -> WorkflowOut:
+    runtime = _runtime(request)
+    registry = _registry(request)
+    wf, next_runs = workflows.resume_workflow(session, principal, project_id, workflow_id, runtime, registry)
+    _schedule(request, background, next_runs, runtime, registry)
+    return wf
+
+
+@api.post(
+    "/projects/{project_id}/workflows/{workflow_id}/cancel",
+    response_model=WorkflowOut,
+    tags=["workflows"],
+    summary="Cancel a workflow; a step run already in progress finishes but nothing further starts",
+    responses={409: _PROBLEM},
+)
+def cancel_project_workflow(
+    project_id: ProjectId, workflow_id: WorkflowId, principal: CurrentPrincipal, session: DbSession
+) -> WorkflowOut:
+    return workflows.cancel_workflow(session, principal, project_id, workflow_id)
