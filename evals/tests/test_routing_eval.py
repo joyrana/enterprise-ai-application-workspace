@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from model_gateway import ErrorKind, FakeProvider, ModelError
-from workspace_evals.routing import Case, load_cases, metrics, predict, run
+from workspace_evals.routing import Case, load_cases, markdown, metrics, predict, run
 
 
 def test_dataset_is_balanced_and_valid() -> None:
@@ -71,3 +71,37 @@ def test_metrics_precision_recall_and_rates() -> None:
     assert m["false_invocation_rate"] == 0.5
     assert m["per_label"]["acceptance-criteria"]["recall"] == 1.0
     assert m["confusion"] == {"none -> business-discovery": 1}
+
+
+def test_schema_failures_keep_their_diagnostic_for_the_report() -> None:
+    case = Case(id="c", spec_state="finance-example", message="contradictions?", expected="none")
+    bad = {"skill_id": "conflicts", "confidence": 0.8, "rationale": "r"}  # not a listed id
+    prediction = predict(case, 0, "router", FakeProvider([bad, bad]))
+    assert prediction.error_kind == "schema_failure"
+    assert prediction.error_detail is not None
+    assert "skill_id" in prediction.error_detail
+    m = metrics([prediction])
+    assert m["error_details"][0]["case_id"] == "c"
+    report = {
+        "method": "router",
+        "model": "fake",
+        "dataset": "d",
+        "repeats": 1,
+        "router_prompt_version": "router@1",
+        "run_at": "now",
+        "metrics": m,
+    }
+    assert "skill_id" in markdown(report)
+
+
+def test_variance_across_repeats_is_reported() -> None:
+    case = Case(id="c", spec_state="finance-example", message="contradictions?", expected="none")
+    replies = [
+        {"skill_id": "none", "confidence": 0.8, "rationale": "r"},
+        {"skill_id": "acceptance-criteria", "confidence": 0.6, "rationale": "r"},
+    ]
+    predictions, m = run([case], "router", lambda: FakeProvider([replies.pop(0)]), repeats=2)
+    assert [p.repeat for p in predictions] == [0, 1]
+    assert m["accuracy_by_repeat"] == [1.0, 0.0]
+    assert m["accuracy_stdev"] == 0.5
+    assert m["unstable_cases"] == ["c"]

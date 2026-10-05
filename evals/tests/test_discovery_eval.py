@@ -159,3 +159,15 @@ def test_dataset_marks_the_injection_scenarios() -> None:
         "injection-chat-template",
         "injection-camouflaged",
     }
+
+
+def test_repeat_variance_and_error_details_are_summarized() -> None:
+    replies: list[Any] = [GOOD, ModelError(ErrorKind.TIMEOUT, "deadline exceeded after 600s")]
+    s = scenario(min_personas=2)
+    trials, summary = run_suite([s], lambda: FakeProvider([replies.pop(0)]), repeats=2)
+    assert [t.passed for t in trials] == [True, False]
+    assert summary["pass_rate_by_repeat"] == [1.0, 0.0]
+    assert summary["unstable_scenarios"] == ["s"]
+    assert summary["error_details"] == [
+        {"scenario_id": "s", "repeat": 1, "kind": "timeout", "detail": "deadline exceeded after 600s"}
+    ]

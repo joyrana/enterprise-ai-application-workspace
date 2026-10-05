@@ -20,7 +20,7 @@ import re
 from importlib import resources
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, create_model
+from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator
 
 from appspec import ApplicationSpec
 from model_gateway import Budget, ErrorKind, Message, ModelError, ModelProvider, Prices, generate_structured
@@ -123,14 +123,29 @@ def lexical_choice(message: str, candidates: list[SkillManifest]) -> tuple[str |
     return best, scores
 
 
+RATIONALE_MAX = 400
+
+
+def _shorten(cls: type[BaseModel], value: object) -> object:
+    """The rationale is display-only: an over-long one is truncated rather than failing the route.
+
+    Measured: qwen3:4b-instruct wrote >400-character rationales for 2 of 30 routing cases, every
+    repeat, and again on the repair attempt (run 37254103610), so the whole decision was lost.
+    """
+    if isinstance(value, str) and len(value) > RATIONALE_MAX:
+        return value[: RATIONALE_MAX - 1].rstrip() + "…"
+    return value
+
+
 def _answer_model(ids: list[str]) -> type[BaseModel]:
     choice = Literal[(*ids, NONE)]  # type: ignore[valid-type]
     return create_model(
         "RouteAnswer",
         __config__=ConfigDict(extra="ignore"),
+        __validators__={"_shorten_rationale": field_validator("rationale", mode="before")(_shorten)},
         skill_id=(choice, ...),
         confidence=(float, Field(ge=0, le=1)),
-        rationale=(str, Field(min_length=1, max_length=400)),
+        rationale=(str, Field(min_length=1, max_length=RATIONALE_MAX)),
     )
 
 

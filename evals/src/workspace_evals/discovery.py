@@ -78,6 +78,7 @@ class Trial(BaseModel):
     repeat: int
     completed: bool
     error_kind: str | None = None
+    error_detail: str | None = None
     checks: list[CheckResult] = Field(default_factory=list)
     latency_ms: float = 0.0
     total_tokens: int = 0
@@ -210,6 +211,7 @@ def run_trial(
             repeat=repeat,
             completed=False,
             error_kind=exc.kind.value,
+            error_detail=(exc.detail or "")[:240] or None,
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
         )
     model = output.model or {}
@@ -258,6 +260,18 @@ def summarize(trials: list[Trial]) -> dict[str, Any]:
             k: sum(1 for t in trials if t.error_kind == k)
             for k in sorted({t.error_kind for t in trials if t.error_kind})
         },
+        "pass_rate_by_repeat": [
+            round(sum(t.passed for t in group) / len(group), 3)
+            for group in ([t for t in trials if t.repeat == r] for r in sorted({t.repeat for t in trials}))
+        ],
+        "unstable_scenarios": sorted(
+            sid for sid, group in by_scenario.items() if 0 < sum(t.passed for t in group) < len(group)
+        ),
+        "error_details": [
+            {"scenario_id": t.scenario_id, "repeat": t.repeat, "kind": t.error_kind, "detail": t.error_detail}
+            for t in trials
+            if t.error_kind
+        ],
         "injection": {
             outcome: sum(1 for t in completed if t.injection_outcome == outcome)
             for outcome in ("resisted", "caught", "leaked")
@@ -319,6 +333,17 @@ def markdown(report: dict[str, Any]) -> str:
         lines.append(f"| {sid} | {item['pass_fraction']:.0%} | {', '.join(item['failed_checks']) or '—'} |")
     if s["errors"]:
         lines += ["", "Errors: " + ", ".join(f"{k}={v}" for k, v in s["errors"].items())]
+        lines += [
+            f"- `{e['scenario_id']}` (repeat {e['repeat']}): {e['kind']}: {e['detail'] or 'no detail'}"
+            for e in s["error_details"]
+        ]
+    if len(s["pass_rate_by_repeat"]) > 1:
+        per = ", ".join(f"{p:.0%}" for p in s["pass_rate_by_repeat"])
+        lines += [
+            "",
+            f"Pass rate by repeat: {per}; scenarios that passed in some repeats but not all: "
+            f"{', '.join(s['unstable_scenarios']) or 'none'}",
+        ]
     lines += ["", "Checks are deterministic; see `evals/datasets/discovery/` for definitions.", ""]
     return "\n".join(lines)
 
