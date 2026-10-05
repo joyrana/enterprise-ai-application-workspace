@@ -108,3 +108,15 @@ def test_decision_serializes(router: SkillRouter) -> None:
     decision = router.route("x", ApplicationSpec.empty("e"), provider=None, budget=Budget())
     data: dict[str, Any] = decision.model_dump()
     assert data["method"] == "single-candidate"
+
+
+def test_over_long_rationale_is_truncated_not_failed(finance: ApplicationSpec) -> None:
+    long = "Because " + "the request clearly asks for discovery work " * 20
+    provider = FakeProvider([{"skill_id": "business-discovery", "confidence": 0.7, "rationale": long}])
+    decision = SkillRouter(default_registry()).route(
+        "Add a new module for vendor onboarding", finance, provider=provider, budget=Budget(max_calls=2)
+    )
+    assert decision.skill_id == "business-discovery"
+    assert len(decision.rationale) <= 400
+    assert decision.rationale.endswith("…")
+    assert len(provider.requests) == 1  # no repair call spent on it
