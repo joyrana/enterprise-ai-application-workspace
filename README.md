@@ -5,10 +5,11 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 2d complete; Milestone 3 (design systems) next.** Projects, the canonical specification, revision
+> **Status: Milestone 3 in progress (UI IR, design-system contracts, Fluent 2 preview).** Projects, the canonical specification, revision
 > history, audit trail and the workspace UI exist, plus three AI discovery skills with routing
-> and human review, routing, and checkpointed multi-step workflows. Design-system adapters and
-> code generation are **not implemented yet**; see the roadmap below.
+> and human review, routing, checkpointed multi-step workflows, and a design preview of the
+> screens the spec describes, rendered with Fluent 2. Code generation is **not implemented
+> yet**; see the roadmap below.
 > Development authentication only: do not expose this build to untrusted users.
 
 ## What works today
@@ -32,6 +33,11 @@ security policies.
   without criteria) and `requirements-conflict-detection` (contradictions and duplicates
   raised as blocking questions). Requests are routed by preconditions first; the model only
   chooses when several skills apply, and you can always pick a skill yourself (ADR-0009).
+- **Screens and design systems** (ADR-0013): the spec's screens (or, when none exist, its data
+  entities) are turned into a typed UI intermediate representation, checked for
+  accessibility rules and references, and mapped to Fluent 2 components through a contract
+  pinned to the installed Fluent version. The Screens tab previews them with real Fluent
+  components; nothing is executed.
 - **Multi-step workflows** (ADR-0012): the requirements pipeline runs discovery, then
   acceptance criteria, then a conflict check, pausing for your review after each step. Its
   progress is checkpointed in PostgreSQL, so a crash never loses or repeats an applied step.
