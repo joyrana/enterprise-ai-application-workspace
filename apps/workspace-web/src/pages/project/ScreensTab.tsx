@@ -55,7 +55,7 @@ export function ScreensTab({ projectId, revision }: { projectId: string; revisio
   const preview = state.data;
   const screens = preview.rendered;
   const current = screens.find((s) => s.screen_id === selected) ?? screens[0];
-  const irScreen = preview.document.screens.find((s) => s.id === current?.screen_id);
+  const irScreen = (preview.document.screens ?? []).find((s) => s.id === current?.screen_id);
   const errors = preview.issues.filter((i) => i.severity === "error").length;
 
   return (

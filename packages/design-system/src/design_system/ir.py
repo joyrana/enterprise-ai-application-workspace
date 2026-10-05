@@ -18,7 +18,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-IR_VERSION = "1"
+IR_VERSION: Literal["1"] = "1"
 
 NodeId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,95}$")]
 Label = Annotated[str, Field(min_length=1, max_length=200)]

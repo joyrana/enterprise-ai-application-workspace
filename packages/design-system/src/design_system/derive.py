@@ -106,10 +106,7 @@ def _spec_field(prefix: str, field: SpecFormField) -> FormField:
 
 
 def _columns(entity: DataEntity) -> list[Column]:
-    return [
-        Column(key=f.name, label=humanize(f.name), type=_COLUMN.get(f.type, "text"))  # type: ignore[arg-type]
-        for f in entity.fields
-    ]
+    return [Column(key=f.name, label=humanize(f.name), type=_COLUMN.get(f.type, "text")) for f in entity.fields]
 
 
 def _form_actions(prefix: str, cancel_target: str | None) -> list[Action]:
