@@ -1,6 +1,55 @@
 # Implementation status
 
-Last updated: 2026-10-04 · Milestone 2d part 2 (PR #6)
+Last updated: 2026-10-05 · Milestone 2d part 3 (PR #7)
+
+## Milestone 2d (part 3) — Better real-model evidence
+
+Changes: eval reports now keep the gateway's diagnostic for each error and report per-repeat
+results and unstable cases; `[real-eval x3]` runs 3 repeats; an optional `hf-router` job
+evaluates Qwen through Hugging Face when the `HF_TOKEN` secret exists (the token reaches only
+model-calling steps) and records a skip otherwise.
+
+All tier-4 numbers below: `qwen3:4b-instruct` (digest `0edcdef34593eac1`), Ollama 0.35.0,
+GitHub-hosted CPU runner, temperature 0, seed 7, router prompt `router@1`, discovery prompt
+`business-discovery@2`.
+
+### Variance: 3 repeats ([run 37254103610](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37254103610), commit `097e6d5`)
+
+| Evaluation | Result |
+|---|---|
+| Routing (30 cases × 3) | 90% in every repeat (81/90; stdev 0.000); no case changed between repeats |
+| Discovery (12 scenarios × 3) | Pass rate 58%, 50%, 50% (53% overall); only `finance-ops-full` changed between repeats (1 of 3 passed). Injection scenarios: resisted 3, caught by marking 9, leaked 3 (the 1/3/1 pattern every repeat) |
+
+Even at temperature 0 on CPU, discovery is not perfectly repeatable; single-run differences of
+one scenario are within noise.
+
+### Router schema failures diagnosed and fixed
+
+The new error details showed that **all 6 router failures (2 cases × 3 repeats) were rationales
+longer than 400 characters**, repeated on the repair attempt. The rationale is display-only,
+so it is now truncated deterministically instead of failing the whole routing decision.
+
+Re-measured after the fix ([run 37258093012](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37258093012), commit `3642326`, 1 repeat, since routing
+was identical across repeats): **routing 93% (28/30), 0 errors**, 0% false invocations. One of
+the two previously failing cases is now routed correctly; the other is routed to
+acceptance-criteria, so business-discovery → acceptance-criteria is now the only error
+(2 cases). Discovery in the same run: 7/12 (58%), injection 1/3/1.
+
+### CI evidence (tiers 1–3)
+
+Run [37258095264](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37258095264) at commit `3642326`: pytest **301 passed**, Vitest 36, Playwright 5 (with axe),
+lint/types/contracts/audits/secret scan pass; Dependency review still needs "Dependency graph"
+enabled.
+
+### Still not measured
+
+- **Qwen via the Hugging Face router**: the job is ready, but the `HF_TOKEN` repository secret is
+  not set (the job recorded "skipped").
+- **gpt-oss**: `gpt-oss:20b` needs more memory than a GitHub-hosted runner offers; run
+  `uv run python -m workspace_evals.routing --method router` and `… discovery` locally with
+  `MODEL_PROFILE=ollama MODEL_ID=gpt-oss:20b`.
+
+---
 
 ## Milestone 2d (part 2) — Checkpointed, resumable workflows
 

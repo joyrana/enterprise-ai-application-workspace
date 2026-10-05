@@ -5,7 +5,7 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 2d (prompt-injection hardening, checkpointed workflows).** Projects, the canonical specification, revision
+> **Status: Milestone 2d complete; Milestone 3 (design systems) next.** Projects, the canonical specification, revision
 > history, audit trail and the workspace UI exist, plus three AI discovery skills with routing
 > and human review, routing, and checkpointed multi-step workflows. Design-system adapters and
 > code generation are **not implemented yet**; see the roadmap below.
@@ -138,7 +138,7 @@ uv run python -m workspace_evals.injection                  # detector precision
 | 2a | Model gateway (Qwen / gpt-oss), skill SDK, business discovery with human review, discovery evals | Done |
 | 2b | Acceptance-criteria and conflict-detection skills, two-stage routing, routing evals | Done |
 | 2c | Real-model evaluation (Ollama + Qwen in CI), Playwright E2E with axe | Done |
-| 2d | Prompt-injection hardening (done); checkpointed workflows (in review); more model baselines (open) | In progress |
+| 2d | Prompt-injection hardening, checkpointed workflows, eval diagnostics and variance | Done (HF-router and gpt-oss baselines need a token / local run) |
 | 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Planned |
 | 4 | React generation, isolated builds, preview, diff review | Planned |
 | 5 | Incremental changes, edit preservation, resilience | Planned |
