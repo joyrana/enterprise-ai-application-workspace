@@ -52,6 +52,8 @@ class Prediction(BaseModel):
     predicted: str | None  # None = the method failed (error), distinct from the label "none"
     stage: str
     error_kind: str | None = None
+    #: The gateway's diagnostic (e.g. which field failed validation). Eval data is synthetic, so it may be shown.
+    error_detail: str | None = None
     model_calls: int = 0
     latency_ms: float = 0.0
     total_tokens: int = 0
@@ -92,6 +94,7 @@ def predict(
             predicted=None,
             stage="error",
             error_kind=exc.kind.value,
+            error_detail=(exc.detail or "")[:240] or None,
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
         )
     model = decision.model or {}
@@ -144,12 +147,35 @@ def metrics(predictions: list[Prediction]) -> dict[str, Any]:
         "model_routed_cases": len(routed),
         "latency_ms_mean_model_routed": round(statistics.fmean(p.latency_ms for p in routed), 1) if routed else 0.0,
         "per_label": per_label,
+        "error_details": [
+            {"case_id": p.case_id, "repeat": p.repeat, "kind": p.error_kind, "detail": p.error_detail}
+            for p in predictions
+            if p.error_kind
+        ],
+        **_variance(predictions),
         "confusion": {
             f"{expected} -> {predicted}": n
             for (expected, predicted), n in sorted(
                 Counter((p.expected, str(p.predicted)) for p in predictions if p.predicted != p.expected).items()
             )
         },
+    }
+
+
+def _variance(predictions: list[Prediction]) -> dict[str, Any]:
+    """Accuracy per repeat and cases whose prediction changed between repeats."""
+    repeats = sorted({p.repeat for p in predictions})
+    by_repeat = []
+    for r in repeats:
+        group = [p for p in predictions if p.repeat == r]
+        by_repeat.append(round(sum(p.predicted == p.expected for p in group) / len(group), 3))
+    outcomes: dict[str, set[str]] = {}
+    for p in predictions:
+        outcomes.setdefault(p.case_id, set()).add(str(p.predicted))
+    return {
+        "accuracy_by_repeat": by_repeat,
+        "accuracy_stdev": round(statistics.pstdev(by_repeat), 3) if len(by_repeat) > 1 else 0.0,
+        "unstable_cases": sorted(cid for cid, seen in outcomes.items() if len(seen) > 1),
     }
 
 
@@ -198,6 +224,19 @@ def markdown(report: dict[str, Any]) -> str:
         lines += ["", f"Errors (method failed, counted as wrong): {errors}"]
     if m["confusion"]:
         lines += ["", "Misroutes: " + ", ".join(f"{k} x{v}" for k, v in m["confusion"].items())]
+    if len(m["accuracy_by_repeat"]) > 1:
+        per = ", ".join(f"{a:.0%}" for a in m["accuracy_by_repeat"])
+        lines += [
+            "",
+            f"Accuracy by repeat: {per} (population stdev {m['accuracy_stdev']:.3f}); "
+            f"cases that changed between repeats: {', '.join(m['unstable_cases']) or 'none'}",
+        ]
+    if m["error_details"]:
+        lines += ["", "Error details:"]
+        lines += [
+            f"- `{e['case_id']}` (repeat {e['repeat']}): {e['kind']}: {e['detail'] or 'no detail'}"
+            for e in m["error_details"]
+        ]
     lines.append("")
     return "\n".join(lines)
 

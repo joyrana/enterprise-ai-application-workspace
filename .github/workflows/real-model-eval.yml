@@ -1,12 +1,16 @@
-name: Real-model evaluation (Ollama)
+name: Real-model evaluation
 
-# Runs the discovery and routing evaluations against a REAL open-weight model served by
-# Ollama inside the CI runner (CPU only, no secrets, prompts never leave the runner).
+# Runs the discovery and routing evaluations against REAL models:
+#   * `ollama` job: an open-weight model served by Ollama inside the CI runner (CPU only, no
+#     secrets, prompts never leave the runner).
+#   * `hf-router` job: Qwen through Hugging Face Inference Providers. Runs only when the
+#     repository secret HF_TOKEN exists; otherwise it records that it was skipped. Prompts go
+#     to a third-party provider: the datasets are synthetic, never project data.
 #
-# Opt-in, because it is slow (tens of minutes) and its results describe a small model on
-# CPU, not a production deployment:
-#   * Actions → "Real-model evaluation (Ollama)" → Run workflow (choose a model), or
-#   * push a commit to a non-main branch whose message contains "[real-eval]".
+# Opt-in, because it is slow (tens of minutes) and its results describe specific models:
+#   * Actions → "Real-model evaluation" → Run workflow, or
+#   * push a commit to a non-main branch whose message contains "[real-eval]"
+#     ("[real-eval x3]" for 3 repeats; add "[hf]" to also run the hf-router job).
 #
 # Results are published as run notices and as the `real-model-eval-reports` artifact.
 # Quality thresholds are not enforced yet (ADR-0009/0010): this collects baselines.
@@ -22,6 +26,14 @@ on:
         description: "Repeats per case (1-3)"
         default: "1"
         required: true
+      hf_model:
+        description: "Hugging Face router model id for the hf-router job (needs the HF_TOKEN secret)"
+        default: "Qwen/Qwen3-8B"
+        required: true
+      run_hf:
+        description: "Also run the hf-router job"
+        type: boolean
+        default: false
   push:
     branches-ignore: [main]
 
@@ -34,7 +46,8 @@ concurrency:
 
 jobs:
   evaluate:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[real-eval]')
+    name: ollama
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[real-eval')
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     services:
@@ -48,7 +61,7 @@ jobs:
       MODEL_PROFILE: ollama
       MODEL_BASE_URL: http://localhost:11434/v1
       MODEL_ID: ${{ inputs.model || 'qwen3:4b-instruct' }}
-      REPEATS: ${{ inputs.repeats || '1' }}
+      REPEATS: ${{ inputs.repeats || (contains(github.event.head_commit.message, '[real-eval x3]') && '3') || '1' }}
       MODEL_TIMEOUT_SECONDS: "600"
       MODEL_MAX_OUTPUT_TOKENS: "2048"
       MODEL_TEMPERATURE: "0"
@@ -112,3 +125,76 @@ jobs:
           name: real-model-eval-reports
           path: reports/evals/
           retention-days: 30
+
+  hf-router:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.run_hf) ||
+      (contains(github.event.head_commit.message, '[real-eval') && contains(github.event.head_commit.message, '[hf]'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      MODEL_PROFILE: hf-router
+      MODEL_ID: ${{ inputs.hf_model || 'Qwen/Qwen3-8B' }}
+      REPEATS: ${{ inputs.repeats || (contains(github.event.head_commit.message, '[real-eval x3]') && '3') || '1' }}
+      MODEL_TIMEOUT_SECONDS: "120"
+      MODEL_MAX_OUTPUT_TOKENS: "2048"
+      MODEL_TEMPERATURE: "0"
+      MODEL_SEED: "7"
+    steps:
+      - name: Check for the HF_TOKEN secret
+        id: secret
+        env:
+          # The token is passed only to the steps that call the model, never to dependency installs.
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [[ -z "${HF_TOKEN}" ]]; then
+            echo "::notice title=hf-router skipped::The HF_TOKEN repository secret is not set, so Qwen via the Hugging Face router was not evaluated."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate inputs
+        if: steps.secret.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+          [[ "$MODEL_ID" =~ ^[A-Za-z0-9._/:-]{1,96}$ ]] || { echo "::error::invalid model id"; exit 1; }
+          [[ "$REPEATS" =~ ^[1-3]$ ]] || { echo "::error::repeats must be 1-3"; exit 1; }
+          echo "::notice title=model under test::${MODEL_ID} via Hugging Face Inference Providers (router.huggingface.co), temperature 0, seed 7 (providers may ignore the seed)"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.secret.outputs.present == 'true'
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        if: steps.secret.outputs.present == 'true'
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install (locked)
+        if: steps.secret.outputs.present == 'true'
+        run: uv sync --locked
+      - name: Routing evaluation (model router)
+        if: steps.secret.outputs.present == 'true'
+        env:
+          SUMMARY_PATTERN: "^routing\\["
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: >-
+          $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "routing eval"
+          uv run python -m workspace_evals.routing --method router --repeats "$REPEATS"
+          --deadline-s 120 --out reports/evals
+      - name: Discovery evaluation
+        if: always() && steps.secret.outputs.present == 'true'
+        env:
+          SUMMARY_PATTERN: "^discovery\\["
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: >-
+          $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "discovery eval"
+          uv run python -m workspace_evals.discovery --repeats "$REPEATS"
+          --deadline-s 300 --out reports/evals
+      - name: Publish reports as notices
+        if: always() && steps.secret.outputs.present == 'true'
+        run: |
+          shopt -s nullglob
+          for f in reports/evals/*.md; do
+            body=$(sed -e 's/%/%25/g' "$f" | awk 'BEGIN{ORS="%0A"} {print}')
+            echo "::notice title=$(basename "$f")::${body}"
+          done
