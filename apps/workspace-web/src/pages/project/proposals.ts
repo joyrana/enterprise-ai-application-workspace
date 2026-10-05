@@ -1,6 +1,14 @@
 import type { Proposal } from "../../api/client";
 
-export type ProposalGroup = "facts" | "personas" | "requirements" | "criteria" | "assumptions" | "questions" | "other";
+export type ProposalGroup =
+  | "facts"
+  | "personas"
+  | "requirements"
+  | "criteria"
+  | "screens"
+  | "assumptions"
+  | "questions"
+  | "other";
 
 export interface ProposalView {
   id: string;
@@ -16,6 +24,7 @@ export const GROUP_LABELS: Record<ProposalGroup, string> = {
   personas: "Personas",
   requirements: "Functional requirements",
   criteria: "Acceptance criteria",
+  screens: "Screens",
   assumptions: "Assumptions",
   questions: "Open questions",
   other: "Other",
@@ -85,6 +94,29 @@ export function viewProposal(proposal: Proposal): ProposalView {
           detail: `For requirement ${str(item.requirement_id)}`,
           badges: [],
         };
+      case "screens": {
+        const components = Array.isArray(item.components) ? (item.components as Record<string, unknown>[]) : [];
+        const parts = components.map((c) => {
+          const label = str(c.label);
+          const entity = str(c.entity_id);
+          return `${str(c.kind)}${label ? ` "${label}"` : ""}${entity ? ` of ${entity}` : ""}`;
+        });
+        const serves = Array.isArray(item.requirement_ids) ? (item.requirement_ids as string[]) : [];
+        return {
+          id,
+          group: "screens",
+          label: "Screen",
+          text: str(item.name),
+          detail: [
+            str(item.purpose),
+            parts.length ? `Components: ${parts.join(", ")}` : "",
+            serves.length ? `Serves: ${serves.join(", ")}` : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          badges: [],
+        };
+      }
       case "assumptions":
         return { id, group: "assumptions", label: "Assumption", text: str(item.statement), badges: [] };
       default:

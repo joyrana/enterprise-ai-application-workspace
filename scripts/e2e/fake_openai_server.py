@@ -17,6 +17,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 _REQ_ID = re.compile(r"- id: ([a-z][a-z0-9-]*) \|")
+_REQ = re.compile(r'- id: ([a-z][a-z0-9-]*) \| title: "([^"]+)"')
+_ENTITY = re.compile(r'- id: ([a-z][a-z0-9-]*) \| name: "([^"]+)" \| fields:')
 
 
 def _user_message(text: str) -> str:
@@ -31,6 +33,8 @@ def answer(system: str, user: str) -> dict[str, Any]:
             skill = "acceptance-criteria"
         elif any(w in message for w in ("conflict", "contradict", "duplicate")):
             skill = "requirements-conflict-detection"
+        elif any(w in message for w in ("screen", "page", "layout", "interface")):
+            skill = "screen-design"
         elif any(w in message for w in ("weather", "poem")):
             skill = "none"
         else:
@@ -77,6 +81,26 @@ def answer(system: str, user: str) -> dict[str, Any]:
                 for rid in ids
             ]
         }
+    if "You design the screens" in system:
+        requirements = _REQ.findall(user.split("<requirements>")[1].split("</requirements>")[0])
+        entities = _ENTITY.findall(user.split("<entities>")[1].split("</entities>")[0])
+        screens = []
+        for rid, title in requirements:
+            components: list[dict[str, Any]] = (
+                [{"kind": "table", "label": f"{entities[0][1]} list", "entity_id": entities[0][0]}]
+                if entities
+                else [{"kind": "text", "label": f"Work area for: {title}"}]
+            )
+            screens.append(
+                {
+                    "name": f"{title} screen",
+                    "purpose": f"Lets people {title.lower()}.",
+                    "requirement_ids": [rid],
+                    "components": components,
+                    "states": ["loading", "empty"],
+                }
+            )
+        return {"screens": screens}
     if "for conflicts" in system:
         return {"conflicts": []}
     return {"error": "unrecognised prompt"}

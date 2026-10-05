@@ -34,15 +34,15 @@ def ctx(spec: ApplicationSpec, *replies: Any) -> tuple[SkillContext, FakeProvide
     return SkillContext(spec=spec, provider=provider, budget=Budget()), provider
 
 
-def test_registry_contains_three_discovery_skills() -> None:
+def test_registry_contains_the_built_in_skills() -> None:
     ids = [m.id for m in default_registry().manifests()]
-    assert ids == ["acceptance-criteria", "business-discovery", "requirements-conflict-detection"]
+    assert ids == ["acceptance-criteria", "business-discovery", "requirements-conflict-detection", "screen-design"]
 
 
 def test_preconditions_gate_skills_on_an_empty_spec(finance: ApplicationSpec) -> None:
     registry = default_registry()
     assert [m.id for m in registry.applicable(ApplicationSpec.empty("x"))] == ["business-discovery"]
-    assert len(registry.applicable(finance)) == 3
+    assert len(registry.applicable(finance)) == 4
 
 
 # --------------------------------------------------------------------------- acceptance criteria
