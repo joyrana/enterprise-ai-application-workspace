@@ -1,14 +1,7 @@
 import type { Proposal } from "../../api/client";
 
 export type ProposalGroup =
-  | "facts"
-  | "personas"
-  | "requirements"
-  | "criteria"
-  | "screens"
-  | "assumptions"
-  | "questions"
-  | "other";
+  "facts" | "personas" | "requirements" | "criteria" | "screens" | "assumptions" | "questions" | "other";
 
 export interface ProposalView {
   id: string;

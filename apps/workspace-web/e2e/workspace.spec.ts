@@ -279,7 +279,10 @@ test("screens are derived from the spec and previewed accessibly with Fluent 2",
 
 test("screen-design proposals are reviewed, applied and appear in the Screens tab", async ({ page }) => {
   const example = JSON.parse(
-    readFileSync(new URL("../../../packages/application-spec/examples/finance-operations.json", import.meta.url), "utf-8"),
+    readFileSync(
+      new URL("../../../packages/application-spec/examples/finance-operations.json", import.meta.url),
+      "utf-8",
+    ),
   ) as Record<string, unknown>;
   await page.goto("/projects");
   await page.getByRole("button", { name: "New project" }).click();
@@ -309,6 +312,8 @@ test("screen-design proposals are reviewed, applied and appear in the Screens ta
   const screenTabs = page.getByRole("tablist", { name: "Screens" });
   await expect(screenTabs.getByRole("tab")).toHaveCount(4); // the specified screen plus three proposed
   await screenTabs.getByRole("tab", { name: /Validate uploaded source files screen/i }).click();
-  await expect(page.getByRole("region", { name: /Preview of Validate uploaded source files screen/i }).getByRole("table")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: /Preview of Validate uploaded source files screen/i }).getByRole("table"),
+  ).toBeVisible();
   await expectNoSeriousA11yViolations(page, "proposed screen preview");
 });
