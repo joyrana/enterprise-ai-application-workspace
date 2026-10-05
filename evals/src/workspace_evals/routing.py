@@ -33,7 +33,7 @@ from workspace_skills import default_registry
 
 from .discovery import REPO_ROOT, starting_spec
 
-DEFAULT_DATASET = REPO_ROOT / "evals" / "datasets" / "routing" / "v1.jsonl"
+DEFAULT_DATASET = REPO_ROOT / "evals" / "datasets" / "routing" / "v2.jsonl"
 Method = Literal["lexical", "router"]
 
 

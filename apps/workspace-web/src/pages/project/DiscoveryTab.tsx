@@ -43,6 +43,7 @@ const GROUP_ORDER: ProposalGroup[] = [
   "personas",
   "requirements",
   "criteria",
+  "screens",
   "assumptions",
   "questions",
   "other",

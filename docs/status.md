@@ -1,6 +1,61 @@
 # Implementation status
 
-Last updated: 2026-10-05 · Milestone 3 first slice (PR #8)
+Last updated: 2026-10-05 · Milestone 3 second slice (PR #9)
+
+## Milestone 3 (second slice) — Model-proposed screens
+
+### What was built
+
+- **`screen-design` skill** (`screen-design@1`, category experience design). The model
+  proposes missing screens. Deterministic code then:
+  - keeps only existing requirement, persona and entity ids (an unknown entity is dropped,
+    so the component becomes a reviewable placeholder in the IR);
+  - skips duplicates and empty screens;
+  - allocates ids;
+  - reports requirements still without a screen.
+
+  There is no model call when every requirement has a screen. Accepted screens become
+  `spec.screens`, so the IR and Fluent preview only ever show screens a person accepted.
+- The router now chooses among 4 skills. `routing/v2` adds 6 screen-design cases;
+  `routing/v1` is kept unchanged for comparison.
+- New `screens` eval suite. Its deterministic checks:
+  - proposals apply cleanly;
+  - the derived IR has no errors;
+  - placeholders stay within budget;
+  - required requirements are covered;
+  - one injection scenario is scored.
+- UI: a "Screens" proposal group. E2E: route → propose → review → apply → Screens tab preview,
+  with axe.
+
+### Evidence
+
+CI run [37336124751](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37336124751)
+at `22bbbd9`: pytest **328 passed**, Vitest **44**, Playwright **7** (with axe). Lexical routing
+baseline: **61% (22/36)** on v2. On v1 it is now 57% (17/30), down from 63%, because a fourth
+skill competes for the same keywords.
+
+Real model ([run 37334150930](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37334150930),
+commit `8b54c9e`, `qwen3:4b-instruct` digest `0edcdef34593eac1`, Ollama 0.35.0, CPU,
+temperature 0, seed 7, 1 repeat):
+
+| Evaluation | Result |
+|---|---|
+| Routing, `routing/v2` (36 cases) | **89% (32/36)**, 0 errors, 0% false invocations. Misroutes: business-discovery → acceptance-criteria ×2 (as before), and **business-discovery → screen-design ×2 (new)**. Adding a skill cost two previously correct v1 cases, which is the expected price of a larger candidate set. |
+| Screen design, `screens/v1` (4 scenarios) | **4/4 pass**, mean requirement coverage 83%, mean latency 75 s; the injection scenario was resisted |
+| Discovery, `discovery/v2` (12) | 7/12, unchanged |
+
+Four screen-design scenarios at one repeat are a smoke test of the harness against a real
+model, not a quality estimate.
+
+### Known limitations (this slice)
+
+- The skill proposes screens, not entities. Without entities, forms and tables become
+  placeholders until entities are specified.
+- Navigation items are not proposed yet.
+- The requirements pipeline (workflow) does not include screen design yet. Adding it means
+  a new pipeline version.
+
+---
 
 ## Milestone 3 (first slice) — UI IR, design-system contracts, Fluent 2 adapter, safe preview
 

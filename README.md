@@ -31,7 +31,8 @@ security policies.
   model provenance. Confirmed facts are never overwritten by later runs.
 - **More skills and routing**: `acceptance-criteria` (Given/When/Then for requirements
   without criteria) and `requirements-conflict-detection` (contradictions and duplicates
-  raised as blocking questions). Requests are routed by preconditions first; the model only
+  raised as blocking questions), and `screen-design` (proposes the screens the spec still
+  needs; accepted screens feed the design preview). Requests are routed by preconditions first; the model only
   chooses when several skills apply, and you can always pick a skill yourself (ADR-0009).
 - **Screens and design systems** (ADR-0013): the spec's screens (or, when none exist, its data
   entities) are turned into a typed UI intermediate representation, checked for
@@ -104,7 +105,7 @@ packages/application-spec/   Canonical spec library (no web/DB dependencies)
 packages/model-gateway/      Model providers (HF router, self-hosted, Ollama), validation, budgets
 packages/skill-sdk/          Skill manifests, registry, commands, router, safety, workflows
 packages/design-system/      UI IR, design-system contracts, Fluent 2 adapter
-skills/                      Built-in skills (business discovery, acceptance criteria, conflict check)
+skills/                      Built-in skills (discovery, acceptance criteria, conflict check, screen design)
 evals/                       Evaluation datasets and runners
 contracts/                   Generated OpenAPI + JSON Schema (drift-checked in CI)
 docs/                        Assessment, architecture, ADRs, threat model

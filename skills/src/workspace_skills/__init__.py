@@ -3,6 +3,7 @@
 from skill_sdk import SkillRegistry
 
 from .discovery import AcceptanceCriteria, BusinessDiscovery, ConflictDetection
+from .experience import ScreenDesign
 
 
 def default_registry() -> SkillRegistry:
@@ -10,7 +11,8 @@ def default_registry() -> SkillRegistry:
     registry.register(BusinessDiscovery())
     registry.register(AcceptanceCriteria())
     registry.register(ConflictDetection())
+    registry.register(ScreenDesign())
     return registry
 
 
-__all__ = ["AcceptanceCriteria", "BusinessDiscovery", "ConflictDetection", "default_registry"]
+__all__ = ["AcceptanceCriteria", "BusinessDiscovery", "ConflictDetection", "ScreenDesign", "default_registry"]

@@ -38,7 +38,12 @@ def test_model_chooses_among_candidates(router: SkillRouter, finance: Applicatio
     assert decision.skill_id == "acceptance-criteria"
     assert decision.method == "model"
     assert decision.confidence == 0.9
-    assert decision.candidates == ["acceptance-criteria", "business-discovery", "requirements-conflict-detection"]
+    assert decision.candidates == [
+        "acceptance-criteria",
+        "business-discovery",
+        "requirements-conflict-detection",
+        "screen-design",
+    ]
     assert decision.model is not None
     assert decision.model["prompt_version"] == "router@1"
     prompt = provider.requests[0][1].content
@@ -97,7 +102,12 @@ def test_explicit_choice_is_validated(router: SkillRouter, finance: ApplicationS
 def test_lexical_baseline(message: str, expected: str | None, finance: ApplicationSpec) -> None:
     choice, scores = lexical_choice(message, default_registry().applicable(finance))
     assert choice == expected
-    assert set(scores) == {"acceptance-criteria", "business-discovery", "requirements-conflict-detection"}
+    assert set(scores) == {
+        "acceptance-criteria",
+        "business-discovery",
+        "requirements-conflict-detection",
+        "screen-design",
+    }
 
 
 def test_lexical_ties_choose_nothing() -> None:

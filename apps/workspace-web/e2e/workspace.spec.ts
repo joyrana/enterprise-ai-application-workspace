@@ -276,3 +276,44 @@ test("screens are derived from the spec and previewed accessibly with Fluent 2",
   await expectNoSeriousA11yViolations(page, "derived form screen preview");
   await expect(page.getByText(/No issues/)).toBeVisible();
 });
+
+test("screen-design proposals are reviewed, applied and appear in the Screens tab", async ({ page }) => {
+  const example = JSON.parse(
+    readFileSync(
+      new URL("../../../packages/application-spec/examples/finance-operations.json", import.meta.url),
+      "utf-8",
+    ),
+  ) as Record<string, unknown>;
+  await page.goto("/projects");
+  await page.getByRole("button", { name: "New project" }).click();
+  await page.getByRole("textbox", { name: /Name/ }).fill(`E2E screen design ${Date.now()}`);
+  await page.getByRole("button", { name: "Create project" }).click();
+  await expect(page.getByRole("tab", { name: "Discovery" })).toBeVisible();
+  const projectId = new URL(page.url()).pathname.split("/")[2];
+  const saved = await page.request.put(`/api/v1/projects/${projectId}/spec`, {
+    headers: { ...DEV_HEADERS, "If-Match": '"r1"' },
+    data: { spec: example },
+  });
+  expect(saved.ok(), await saved.text()).toBe(true);
+
+  await page.goto(`/projects/${projectId}/discovery`);
+  await page.getByRole("textbox", { name: /What do you need/ }).fill("Which screens and pages does the app need?");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect(page.getByText("Skill: Screen design (chosen by the model, 90% confident)")).toBeVisible({
+    timeout: 45_000,
+  });
+  await expect(page.getByRole("heading", { name: "Screens", level: 3 })).toBeVisible();
+  await expect(page.getByText("Validate uploaded source files screen", { exact: false }).first()).toBeVisible();
+  await expectNoSeriousA11yViolations(page, "screen proposals");
+  await page.getByRole("button", { name: "Apply decisions" }).click();
+  await expect(page.getByText("Applied to revision r3")).toBeVisible();
+
+  await page.getByRole("tab", { name: "Screens" }).click();
+  const screenTabs = page.getByRole("tablist", { name: "Screens" });
+  await expect(screenTabs.getByRole("tab")).toHaveCount(4); // the specified screen plus three proposed
+  await screenTabs.getByRole("tab", { name: /Validate uploaded source files screen/i }).click();
+  await expect(
+    page.getByRole("region", { name: /Preview of Validate uploaded source files screen/i }).getByRole("table"),
+  ).toBeVisible();
+  await expectNoSeriousA11yViolations(page, "proposed screen preview");
+});

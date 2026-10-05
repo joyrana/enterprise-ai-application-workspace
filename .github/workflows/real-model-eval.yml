@@ -111,6 +111,14 @@ jobs:
           $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "discovery eval"
           uv run python -m workspace_evals.discovery --repeats "$REPEATS"
           --deadline-s 1200 --out reports/evals
+      - name: Screen-design evaluation
+        if: always()
+        env:
+          SUMMARY_PATTERN: "^screens\\["
+        run: >-
+          $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "screens eval"
+          uv run python -m workspace_evals.screens --repeats "$REPEATS"
+          --deadline-s 1200 --out reports/evals
       - name: Publish reports as notices
         if: always()
         run: |
@@ -189,6 +197,15 @@ jobs:
         run: >-
           $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "discovery eval"
           uv run python -m workspace_evals.discovery --repeats "$REPEATS"
+          --deadline-s 300 --out reports/evals
+      - name: Screen-design evaluation
+        if: always() && steps.secret.outputs.present == 'true'
+        env:
+          SUMMARY_PATTERN: "^screens\\["
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: >-
+          $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "screens eval"
+          uv run python -m workspace_evals.screens --repeats "$REPEATS"
           --deadline-s 300 --out reports/evals
       - name: Publish reports as notices
         if: always() && steps.secret.outputs.present == 'true'

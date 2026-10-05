@@ -11,7 +11,13 @@ def test_dataset_is_balanced_and_valid() -> None:
     assert len(cases) >= 30
     assert len({c.id for c in cases}) == len(cases)
     labels = {c.expected for c in cases}
-    assert labels == {"business-discovery", "acceptance-criteria", "requirements-conflict-detection", "none"}
+    assert labels == {
+        "business-discovery",
+        "acceptance-criteria",
+        "requirements-conflict-detection",
+        "screen-design",
+        "none",
+    }
     assert sum(c.expected == "none" for c in cases) >= 8
 
 
