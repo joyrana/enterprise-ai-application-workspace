@@ -102,7 +102,8 @@ apps/workspace-web/          React + Fluent UI v9 workspace
 services/api/                FastAPI service, Alembic migrations, tests
 packages/application-spec/   Canonical spec library (no web/DB dependencies)
 packages/model-gateway/      Model providers (HF router, self-hosted, Ollama), validation, budgets
-packages/skill-sdk/          Skill manifests, registry, typed spec commands
+packages/skill-sdk/          Skill manifests, registry, commands, router, safety, workflows
+packages/design-system/      UI IR, design-system contracts, Fluent 2 adapter
 skills/                      Built-in skills (business discovery, acceptance criteria, conflict check)
 evals/                       Evaluation datasets and runners
 contracts/                   Generated OpenAPI + JSON Schema (drift-checked in CI)
@@ -145,7 +146,7 @@ uv run python -m workspace_evals.injection                  # detector precision
 | 2b | Acceptance-criteria and conflict-detection skills, two-stage routing, routing evals | Done |
 | 2c | Real-model evaluation (Ollama + Qwen in CI), Playwright E2E with axe | Done |
 | 2d | Prompt-injection hardening, checkpointed workflows, eval diagnostics and variance | Done (HF-router and gpt-oss baselines need a token / local run) |
-| 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Planned |
+| 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | In progress (first slice in review) |
 | 4 | React generation, isolated builds, preview, diff review | Planned |
 | 5 | Incremental changes, edit preservation, resilience | Planned |
 | 6 | Angular + Material 3 | Planned |
