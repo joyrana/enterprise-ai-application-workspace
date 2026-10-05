@@ -46,14 +46,14 @@ jobs:
       - name: Lint
         run: uv run ruff check --output-format github .
       - name: Type check
-        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy packages/application-spec/src packages/model-gateway/src packages/skill-sdk/src skills/src evals/src services/api/src
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy packages/application-spec/src packages/design-system/src packages/model-gateway/src packages/skill-sdk/src skills/src evals/src services/api/src
       - name: Tests (unit + integration against PostgreSQL)
         env:
           SUMMARY_PATTERN: "[0-9]+ passed"
         run: >-
           $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "pytest"
           uv run pytest --tb=short
-          --cov=appspec --cov=model_gateway --cov=skill_sdk --cov=workspace_skills --cov=workspace_evals --cov=workspace_api --cov-report=term-missing
+          --cov=appspec --cov=design_system --cov=model_gateway --cov=skill_sdk --cov=workspace_skills --cov=workspace_evals --cov=workspace_api --cov-report=term-missing
           --junitxml=reports/pytest.xml
       - name: Routing eval baseline (lexical, deterministic; no thresholds yet)
         env:

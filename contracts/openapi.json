@@ -88,6 +88,66 @@
         "title": "AccessibilityRequirements",
         "type": "object"
       },
+      "Action": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "default": "custom",
+            "enum": [
+              "submit",
+              "cancel",
+              "navigate",
+              "custom"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "intent": {
+            "default": "secondary",
+            "enum": [
+              "primary",
+              "secondary",
+              "danger"
+            ],
+            "title": "Intent",
+            "type": "string"
+          },
+          "kind": {
+            "const": "action",
+            "default": "action",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "target_screen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Screen"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "Action",
+        "type": "object"
+      },
       "AddItem": {
         "additionalProperties": false,
         "properties": {
@@ -407,7 +467,7 @@
           },
           "screens": {
             "items": {
-              "$ref": "#/components/schemas/Screen"
+              "$ref": "#/components/schemas/Screen-Input"
             },
             "title": "Screens",
             "type": "array"
@@ -570,7 +630,7 @@
           },
           "screens": {
             "items": {
-              "$ref": "#/components/schemas/Screen"
+              "$ref": "#/components/schemas/appspec__model__Screen-Output"
             },
             "title": "Screens",
             "type": "array"
@@ -981,6 +1041,42 @@
         "title": "CollectionSummary",
         "type": "object"
       },
+      "Column": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 96,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "type": {
+            "default": "text",
+            "enum": [
+              "text",
+              "number",
+              "money",
+              "date",
+              "boolean",
+              "reference"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "Column",
+        "type": "object"
+      },
       "CommandResult": {
         "additionalProperties": false,
         "properties": {
@@ -1008,6 +1104,40 @@
           "outcome"
         ],
         "title": "CommandResult",
+        "type": "object"
+      },
+      "ComponentMapping": {
+        "additionalProperties": false,
+        "properties": {
+          "components": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Components",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "package": {
+            "title": "Package",
+            "type": "string"
+          }
+        },
+        "required": [
+          "components",
+          "package"
+        ],
+        "title": "ComponentMapping",
         "type": "object"
       },
       "ComponentSpec": {
@@ -1262,6 +1392,134 @@
         "title": "DesignConstraint",
         "type": "object"
       },
+      "DesignSystemChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "selected_by": {
+            "description": "spec | default",
+            "title": "Selected By",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "selected_by",
+          "note"
+        ],
+        "title": "DesignSystemChoice",
+        "type": "object"
+      },
+      "DesignSystemContract": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "framework": {
+            "enum": [
+              "react",
+              "angular"
+            ],
+            "title": "Framework",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{1,40}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "library": {
+            "$ref": "#/components/schemas/LibraryRef"
+          },
+          "mappings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ComponentMapping"
+            },
+            "title": "Mappings",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rules": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "tokens": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Tokens",
+            "type": "object"
+          },
+          "unsupported": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Unsupported",
+            "type": "object"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "framework",
+          "library",
+          "mappings"
+        ],
+        "title": "DesignSystemContract",
+        "type": "object"
+      },
+      "DesignSystemList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DesignSystemSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DesignSystemList",
+        "type": "object"
+      },
       "DesignSystemSelection": {
         "additionalProperties": false,
         "properties": {
@@ -1273,6 +1531,51 @@
           }
         },
         "title": "DesignSystemSelection",
+        "type": "object"
+      },
+      "DesignSystemSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "has_adapter": {
+            "title": "Has Adapter",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "library_package": {
+            "title": "Library Package",
+            "type": "string"
+          },
+          "library_version": {
+            "description": "The library version the contract was checked against.",
+            "title": "Library Version",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "framework",
+          "library_package",
+          "library_version",
+          "has_adapter"
+        ],
+        "title": "DesignSystemSummary",
         "type": "object"
       },
       "EntityField": {
@@ -1412,6 +1715,55 @@
         "title": "FieldType",
         "type": "string"
       },
+      "FieldValidation": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "required",
+              "min",
+              "max",
+              "min-length",
+              "max-length",
+              "pattern",
+              "custom"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "FieldValidation",
+        "type": "object"
+      },
       "FlaggedProposal": {
         "additionalProperties": false,
         "properties": {
@@ -1432,7 +1784,62 @@
         "title": "FlaggedProposal",
         "type": "object"
       },
-      "FormField": {
+      "Form": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "maxItems": 6,
+            "title": "Actions",
+            "type": "array"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/design_system__ir__FormField"
+            },
+            "maxItems": 60,
+            "title": "Fields",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "form",
+            "default": "form",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "Form",
+        "type": "object"
+      },
+      "FormField-Input": {
         "additionalProperties": false,
         "properties": {
           "help_text": {
@@ -1581,6 +1988,41 @@
         "title": "FunctionalRequirement",
         "type": "object"
       },
+      "Heading": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "heading",
+            "default": "heading",
+            "title": "Kind",
+            "type": "string"
+          },
+          "level": {
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Level",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "level"
+        ],
+        "title": "Heading",
+        "type": "object"
+      },
       "Health": {
         "additionalProperties": false,
         "properties": {
@@ -1722,6 +2164,81 @@
           "description"
         ],
         "title": "JourneyStep",
+        "type": "object"
+      },
+      "LibraryRef": {
+        "additionalProperties": false,
+        "properties": {
+          "docs_url": {
+            "title": "Docs Url",
+            "type": "string"
+          },
+          "package": {
+            "title": "Package",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "package",
+          "version",
+          "docs_url"
+        ],
+        "title": "LibraryRef",
+        "type": "object"
+      },
+      "Message": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "intent": {
+            "default": "info",
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "success"
+            ],
+            "title": "Intent",
+            "type": "string"
+          },
+          "kind": {
+            "const": "message",
+            "default": "message",
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "Message",
         "type": "object"
       },
       "ModelUsage": {
@@ -2042,6 +2559,52 @@
           "name"
         ],
         "title": "Persona",
+        "type": "object"
+      },
+      "Placeholder": {
+        "additionalProperties": false,
+        "description": "Something the spec asks for that the IR cannot express yet. Never silently dropped.",
+        "properties": {
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "placeholder",
+            "default": "placeholder",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "reason": {
+            "maxLength": 300,
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_kind": {
+            "maxLength": 40,
+            "title": "Requested Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "requested_kind",
+          "reason"
+        ],
+        "title": "Placeholder",
         "type": "object"
       },
       "Priority": {
@@ -2415,6 +2978,96 @@
           "kind"
         ],
         "title": "Relationship",
+        "type": "object"
+      },
+      "RenderNode": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/RenderNode"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "ir_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ir Id"
+          },
+          "props": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "title": "Props",
+            "type": "object"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "component"
+        ],
+        "title": "RenderNode",
+        "type": "object"
+      },
+      "RenderedScreen": {
+        "properties": {
+          "root": {
+            "items": {
+              "$ref": "#/components/schemas/RenderNode"
+            },
+            "title": "Root",
+            "type": "array"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "screen_id": {
+            "title": "Screen Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "screen_id",
+          "title",
+          "route",
+          "root"
+        ],
+        "title": "RenderedScreen",
         "type": "object"
       },
       "ResponsiveRule": {
@@ -3130,7 +3783,7 @@
         "title": "SafetySignal",
         "type": "object"
       },
-      "Screen": {
+      "Screen-Input": {
         "additionalProperties": false,
         "properties": {
           "components": {
@@ -3155,7 +3808,7 @@
           },
           "fields": {
             "items": {
-              "$ref": "#/components/schemas/FormField"
+              "$ref": "#/components/schemas/FormField-Input"
             },
             "title": "Fields",
             "type": "array"
@@ -3227,6 +3880,114 @@
           "name"
         ],
         "title": "Screen",
+        "type": "object"
+      },
+      "ScreenSource": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "spec-screen",
+              "entity-list",
+              "entity-form"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ref"
+        ],
+        "title": "ScreenSource",
+        "type": "object"
+      },
+      "Section": {
+        "additionalProperties": false,
+        "properties": {
+          "children": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "form": "#/components/schemas/Form",
+                  "heading": "#/components/schemas/Heading",
+                  "message": "#/components/schemas/Message",
+                  "placeholder": "#/components/schemas/Placeholder",
+                  "section": "#/components/schemas/Section",
+                  "stat": "#/components/schemas/Stat",
+                  "table": "#/components/schemas/Table",
+                  "text": "#/components/schemas/Text",
+                  "toolbar": "#/components/schemas/Toolbar"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Heading"
+                },
+                {
+                  "$ref": "#/components/schemas/Text"
+                },
+                {
+                  "$ref": "#/components/schemas/Form"
+                },
+                {
+                  "$ref": "#/components/schemas/Table"
+                },
+                {
+                  "$ref": "#/components/schemas/Stat"
+                },
+                {
+                  "$ref": "#/components/schemas/Message"
+                },
+                {
+                  "$ref": "#/components/schemas/Toolbar"
+                },
+                {
+                  "$ref": "#/components/schemas/Placeholder"
+                },
+                {
+                  "$ref": "#/components/schemas/Section"
+                }
+              ]
+            },
+            "maxItems": 40,
+            "title": "Children",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "section",
+            "default": "section",
+            "title": "Kind",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "Section",
         "type": "object"
       },
       "SecurityProfile": {
@@ -3625,6 +4386,175 @@
         "title": "SpecValidationResult",
         "type": "object"
       },
+      "Stat": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "stat",
+            "default": "stat",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "value_hint": {
+            "default": "\u2014",
+            "maxLength": 60,
+            "title": "Value Hint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "Stat",
+        "type": "object"
+      },
+      "Table": {
+        "additionalProperties": false,
+        "properties": {
+          "caption": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Caption",
+            "type": "string"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/Column"
+            },
+            "maxItems": 30,
+            "title": "Columns",
+            "type": "array"
+          },
+          "empty_text": {
+            "default": "Nothing here yet.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Empty Text",
+            "type": "string"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "table",
+            "default": "table",
+            "title": "Kind",
+            "type": "string"
+          },
+          "row_actions": {
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "maxItems": 4,
+            "title": "Row Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "caption"
+        ],
+        "title": "Table",
+        "type": "object"
+      },
+      "Text": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "text",
+            "default": "text",
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "tone": {
+            "default": "default",
+            "enum": [
+              "default",
+              "subtle"
+            ],
+            "title": "Tone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "Text",
+        "type": "object"
+      },
+      "Toolbar": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "maxItems": 8,
+            "title": "Actions",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "toolbar",
+            "default": "toolbar",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "Toolbar",
+        "type": "object"
+      },
       "Tracked_Annotated_str__StringConstraints__FieldInfo_annotation_NoneType__required_True__description__Stable__human-readable_identifier__lowercase_kebab-case_____": {
         "additionalProperties": false,
         "properties": {
@@ -3867,6 +4797,108 @@
           }
         },
         "title": "Tracked[RiskLevel]",
+        "type": "object"
+      },
+      "UiDocument": {
+        "additionalProperties": false,
+        "properties": {
+          "ir_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Ir Version",
+            "type": "string"
+          },
+          "screens": {
+            "items": {
+              "$ref": "#/components/schemas/design_system__ir__Screen"
+            },
+            "maxItems": 100,
+            "title": "Screens",
+            "type": "array"
+          },
+          "spec_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spec Revision"
+          }
+        },
+        "title": "UiDocument",
+        "type": "object"
+      },
+      "UiIssue": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "code",
+          "severity",
+          "message"
+        ],
+        "title": "UiIssue",
+        "type": "object"
+      },
+      "UiPreview": {
+        "additionalProperties": false,
+        "properties": {
+          "design_system": {
+            "$ref": "#/components/schemas/DesignSystemChoice"
+          },
+          "document": {
+            "$ref": "#/components/schemas/UiDocument"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/UiIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "rendered": {
+            "items": {
+              "$ref": "#/components/schemas/RenderedScreen"
+            },
+            "title": "Rendered",
+            "type": "array"
+          },
+          "spec_revision": {
+            "title": "Spec Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "spec_revision",
+          "design_system",
+          "document",
+          "issues",
+          "rendered"
+        ],
+        "title": "UiPreview",
         "type": "object"
       },
       "UiState": {
@@ -4483,6 +5515,349 @@
         "title": "Decision",
         "type": "object"
       },
+      "appspec__model__FormField": {
+        "additionalProperties": false,
+        "properties": {
+          "help_text": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Help Text"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "validation": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationRule"
+            },
+            "title": "Validation",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "type"
+        ],
+        "title": "FormField",
+        "type": "object"
+      },
+      "appspec__model__Screen-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ComponentSpec"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "confirmed_by": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed By"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/appspec__model__FormField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "id": {
+            "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "persona_ids": {
+            "items": {
+              "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            "title": "Persona Ids",
+            "type": "array"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "requirement_ids": {
+            "items": {
+              "description": "Stable, human-readable identifier (lowercase kebab-case, max 64 chars).",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "type": "string"
+            },
+            "title": "Requirement Ids",
+            "type": "array"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionMeta"
+          },
+          "states": {
+            "items": {
+              "$ref": "#/components/schemas/UiState"
+            },
+            "title": "States",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ItemStatus",
+            "default": "proposed"
+          }
+        },
+        "required": [
+          "id",
+          "provenance",
+          "name"
+        ],
+        "title": "Screen",
+        "type": "object"
+      },
+      "design_system__ir__FormField": {
+        "additionalProperties": false,
+        "properties": {
+          "help_text": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Help Text"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "input": {
+            "enum": [
+              "text",
+              "textarea",
+              "number",
+              "date",
+              "datetime",
+              "select",
+              "checkbox",
+              "file"
+            ],
+            "title": "Input",
+            "type": "string"
+          },
+          "kind": {
+            "const": "field",
+            "default": "field",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 96,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Options",
+            "type": "array"
+          },
+          "options_from_entity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options From Entity"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "validation": {
+            "items": {
+              "$ref": "#/components/schemas/FieldValidation"
+            },
+            "title": "Validation",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "label",
+          "input"
+        ],
+        "title": "FormField",
+        "type": "object"
+      },
+      "design_system__ir__Screen": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "form": "#/components/schemas/Form",
+                  "heading": "#/components/schemas/Heading",
+                  "message": "#/components/schemas/Message",
+                  "placeholder": "#/components/schemas/Placeholder",
+                  "section": "#/components/schemas/Section",
+                  "stat": "#/components/schemas/Stat",
+                  "table": "#/components/schemas/Table",
+                  "text": "#/components/schemas/Text",
+                  "toolbar": "#/components/schemas/Toolbar"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Heading"
+                },
+                {
+                  "$ref": "#/components/schemas/Text"
+                },
+                {
+                  "$ref": "#/components/schemas/Form"
+                },
+                {
+                  "$ref": "#/components/schemas/Table"
+                },
+                {
+                  "$ref": "#/components/schemas/Stat"
+                },
+                {
+                  "$ref": "#/components/schemas/Message"
+                },
+                {
+                  "$ref": "#/components/schemas/Toolbar"
+                },
+                {
+                  "$ref": "#/components/schemas/Placeholder"
+                },
+                {
+                  "$ref": "#/components/schemas/Section"
+                }
+              ]
+            },
+            "maxItems": 60,
+            "title": "Body",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{0,95}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "persona_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Persona Ids",
+            "type": "array"
+          },
+          "requirement_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requirement Ids",
+            "type": "array"
+          },
+          "route": {
+            "maxLength": 200,
+            "pattern": "^/[a-z0-9/-]*$",
+            "title": "Route",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ScreenSource"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "route",
+          "source"
+        ],
+        "title": "Screen",
+        "type": "object"
+      },
       "skill_sdk__commands__Decision": {
         "enum": [
           "accept",
@@ -4612,6 +5987,244 @@
         "summary": "Which model (if any) is configured",
         "tags": [
           "ai"
+        ]
+      }
+    },
+    "/api/v1/design-systems": {
+      "get": {
+        "operationId": "list_design_systems_api_v1_design_systems_get",
+        "parameters": [
+          {
+            "description": "Development only: tenant identifier.",
+            "in": "header",
+            "name": "x-dev-tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: tenant identifier.",
+              "title": "X-Dev-Tenant"
+            }
+          },
+          {
+            "description": "Development only: user identifier.",
+            "in": "header",
+            "name": "x-dev-user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: user identifier.",
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignSystemList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Built-in design-system contracts",
+        "tags": [
+          "design"
+        ]
+      }
+    },
+    "/api/v1/design-systems/{design_system_id}": {
+      "get": {
+        "operationId": "get_design_system_api_v1_design_systems__design_system_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "design_system_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Design System Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Development only: tenant identifier.",
+            "in": "header",
+            "name": "x-dev-tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: tenant identifier.",
+              "title": "X-Dev-Tenant"
+            }
+          },
+          {
+            "description": "Development only: user identifier.",
+            "in": "header",
+            "name": "x-dev-user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: user identifier.",
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignSystemContract"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "One design-system contract: component mappings, tokens and rules",
+        "tags": [
+          "design"
         ]
       }
     },
@@ -6723,6 +8336,151 @@
         "summary": "Validate a candidate specification without saving it",
         "tags": [
           "specification"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/ui": {
+      "get": {
+        "operationId": "get_project_ui_api_v1_projects__project_id__ui_get",
+        "parameters": [
+          {
+            "description": "Project identifier.",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "description": "Project identifier.",
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Spec revision; defaults to the current one.",
+            "in": "query",
+            "name": "revision",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Spec revision; defaults to the current one.",
+              "title": "Revision"
+            }
+          },
+          {
+            "description": "Development only: tenant identifier.",
+            "in": "header",
+            "name": "x-dev-tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: tenant identifier.",
+              "title": "X-Dev-Tenant"
+            }
+          },
+          {
+            "description": "Development only: user identifier.",
+            "in": "header",
+            "name": "x-dev-user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: user identifier.",
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UiPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "UI IR derived from a spec revision, its issues, and its rendering with the project's design system",
+        "tags": [
+          "design"
         ]
       }
     },

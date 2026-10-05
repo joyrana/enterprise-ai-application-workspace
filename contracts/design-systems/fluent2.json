@@ -1,0 +1,229 @@
+{
+  "contract_version": "1",
+  "framework": "react",
+  "id": "fluent2",
+  "library": {
+    "docs_url": "https://react.fluentui.dev/",
+    "package": "@fluentui/react-components",
+    "version": "9.74.9"
+  },
+  "mappings": {
+    "action:danger": {
+      "components": [
+        "Button"
+      ],
+      "notes": "Fluent 2 has no destructive button appearance: appearance=secondary; generated code must confirm destructive actions in a dialog (Milestone 4).",
+      "package": "@fluentui/react-components"
+    },
+    "action:primary": {
+      "components": [
+        "Button"
+      ],
+      "notes": "appearance=primary; at most one per form.",
+      "package": "@fluentui/react-components"
+    },
+    "action:secondary": {
+      "components": [
+        "Button"
+      ],
+      "notes": "appearance=secondary.",
+      "package": "@fluentui/react-components"
+    },
+    "field:checkbox": {
+      "components": [
+        "Checkbox"
+      ],
+      "notes": "Checkbox carries its own label.",
+      "package": "@fluentui/react-components"
+    },
+    "field:date": {
+      "components": [
+        "Field",
+        "Input"
+      ],
+      "notes": "Input type=date. The Fluent DatePicker lives in a separate package (@fluentui/react-datepicker-compat) and is not used yet.",
+      "package": "@fluentui/react-components"
+    },
+    "field:datetime": {
+      "components": [
+        "Field",
+        "Input"
+      ],
+      "notes": "Input type=datetime-local.",
+      "package": "@fluentui/react-components"
+    },
+    "field:file": {
+      "components": [
+        "Field",
+        "input"
+      ],
+      "notes": "Fluent 2 (v9) has no file-input component; a native input type=file inside Field keeps the label association.",
+      "package": "html"
+    },
+    "field:number": {
+      "components": [
+        "Field",
+        "Input"
+      ],
+      "notes": "Input type=number.",
+      "package": "@fluentui/react-components"
+    },
+    "field:select": {
+      "components": [
+        "Field",
+        "Select",
+        "option"
+      ],
+      "notes": "Native-backed Select for accessibility on all platforms; Dropdown/Combobox are for richer cases.",
+      "package": "@fluentui/react-components"
+    },
+    "field:text": {
+      "components": [
+        "Field",
+        "Input"
+      ],
+      "notes": "Field supplies the label, required marker, hint and validation message.",
+      "package": "@fluentui/react-components"
+    },
+    "field:textarea": {
+      "components": [
+        "Field",
+        "Textarea"
+      ],
+      "notes": null,
+      "package": "@fluentui/react-components"
+    },
+    "form": {
+      "components": [
+        "form"
+      ],
+      "notes": "Labelled with aria-label; fields stacked, actions in one row after the fields.",
+      "package": "html"
+    },
+    "heading:1": {
+      "components": [
+        "Title2"
+      ],
+      "notes": "Rendered as <h1>. Title2 keeps page titles proportionate inside an app shell.",
+      "package": "@fluentui/react-components"
+    },
+    "heading:2": {
+      "components": [
+        "Subtitle1"
+      ],
+      "notes": "Rendered as <h2>.",
+      "package": "@fluentui/react-components"
+    },
+    "heading:3": {
+      "components": [
+        "Subtitle2"
+      ],
+      "notes": "Rendered as <h3>.",
+      "package": "@fluentui/react-components"
+    },
+    "heading:4": {
+      "components": [
+        "Body1Strong"
+      ],
+      "notes": "Rendered as <h4>.",
+      "package": "@fluentui/react-components"
+    },
+    "message": {
+      "components": [
+        "MessageBar",
+        "MessageBarBody",
+        "MessageBarTitle"
+      ],
+      "notes": "intent = info | warning | error | success.",
+      "package": "@fluentui/react-components"
+    },
+    "section": {
+      "components": [
+        "section"
+      ],
+      "notes": "A labelled region (aria-label = section title).",
+      "package": "html"
+    },
+    "stat": {
+      "components": [
+        "Card",
+        "Caption1",
+        "Title3"
+      ],
+      "notes": "Label above value.",
+      "package": "@fluentui/react-components"
+    },
+    "table": {
+      "components": [
+        "Table",
+        "TableHeader",
+        "TableRow",
+        "TableHeaderCell",
+        "TableBody",
+        "TableCell"
+      ],
+      "notes": "aria-label = caption; an empty-state row when there is no data.",
+      "package": "@fluentui/react-components"
+    },
+    "text:default": {
+      "components": [
+        "Body1"
+      ],
+      "notes": "Rendered as <p>.",
+      "package": "@fluentui/react-components"
+    },
+    "text:subtle": {
+      "components": [
+        "Caption1"
+      ],
+      "notes": "Rendered as <p>.",
+      "package": "@fluentui/react-components"
+    },
+    "toolbar": {
+      "components": [
+        "Toolbar",
+        "ToolbarButton"
+      ],
+      "notes": "aria-label = toolbar label.",
+      "package": "@fluentui/react-components"
+    }
+  },
+  "name": "Fluent 2 (React)",
+  "rules": [
+    "Colors, spacing, radii and type come from tokens; generated code never hard-codes them.",
+    "Every input is wrapped in Field (or carries its own label) so its label is programmatically associated.",
+    "At most one primary button per form.",
+    "Page titles are level-1 headings; heading levels are not skipped.",
+    "Tables are labelled (aria-label from the caption) and show an empty state."
+  ],
+  "tokens": {
+    "color.background.brand": "colorBrandBackground",
+    "color.background.default": "colorNeutralBackground1",
+    "color.background.subtle": "colorNeutralBackground2",
+    "color.border.default": "colorNeutralStroke1",
+    "color.border.subtle": "colorNeutralStroke2",
+    "color.foreground.brand": "colorBrandForeground1",
+    "color.foreground.danger": "colorStatusDangerForeground1",
+    "color.foreground.default": "colorNeutralForeground1",
+    "color.foreground.secondary": "colorNeutralForeground2",
+    "color.foreground.subtle": "colorNeutralForeground3",
+    "color.foreground.success": "colorStatusSuccessForeground1",
+    "color.foreground.warning": "colorStatusWarningForeground1",
+    "font.family.base": "fontFamilyBase",
+    "font.size.body": "fontSizeBase300",
+    "font.size.subtitle": "fontSizeBase400",
+    "font.weight.semibold": "fontWeightSemibold",
+    "radius.large": "borderRadiusLarge",
+    "radius.medium": "borderRadiusMedium",
+    "shadow.card": "shadow4",
+    "space.horizontal.l": "spacingHorizontalL",
+    "space.horizontal.m": "spacingHorizontalM",
+    "space.horizontal.s": "spacingHorizontalS",
+    "space.vertical.l": "spacingVerticalL",
+    "space.vertical.m": "spacingVerticalM",
+    "space.vertical.s": "spacingVerticalS",
+    "stroke.thin": "strokeWidthThin"
+  },
+  "unsupported": {},
+  "version": "1.0.0"
+}

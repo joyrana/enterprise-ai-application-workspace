@@ -1,0 +1,847 @@
+{
+  "$defs": {
+    "Action": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "default": "custom",
+          "enum": [
+            "submit",
+            "cancel",
+            "navigate",
+            "custom"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "intent": {
+          "default": "secondary",
+          "enum": [
+            "primary",
+            "secondary",
+            "danger"
+          ],
+          "title": "Intent",
+          "type": "string"
+        },
+        "kind": {
+          "const": "action",
+          "default": "action",
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "target_screen": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Screen"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Action",
+      "type": "object"
+    },
+    "Column": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "maxLength": 96,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "type": {
+          "default": "text",
+          "enum": [
+            "text",
+            "number",
+            "money",
+            "date",
+            "boolean",
+            "reference"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "label"
+      ],
+      "title": "Column",
+      "type": "object"
+    },
+    "FieldValidation": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "required",
+            "min",
+            "max",
+            "min-length",
+            "max-length",
+            "pattern",
+            "custom"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "FieldValidation",
+      "type": "object"
+    },
+    "Form": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/Action"
+          },
+          "maxItems": 6,
+          "title": "Actions",
+          "type": "array"
+        },
+        "entity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entity Id"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/FormField"
+          },
+          "maxItems": 60,
+          "title": "Fields",
+          "type": "array"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "form",
+          "default": "form",
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Form",
+      "type": "object"
+    },
+    "FormField": {
+      "additionalProperties": false,
+      "properties": {
+        "help_text": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Help Text"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "input": {
+          "enum": [
+            "text",
+            "textarea",
+            "number",
+            "date",
+            "datetime",
+            "select",
+            "checkbox",
+            "file"
+          ],
+          "title": "Input",
+          "type": "string"
+        },
+        "kind": {
+          "const": "field",
+          "default": "field",
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 96,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Options",
+          "type": "array"
+        },
+        "options_from_entity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Options From Entity"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "validation": {
+          "items": {
+            "$ref": "#/$defs/FieldValidation"
+          },
+          "title": "Validation",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "label",
+        "input"
+      ],
+      "title": "FormField",
+      "type": "object"
+    },
+    "Heading": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "heading",
+          "default": "heading",
+          "title": "Kind",
+          "type": "string"
+        },
+        "level": {
+          "maximum": 4,
+          "minimum": 1,
+          "title": "Level",
+          "type": "integer"
+        },
+        "text": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text",
+        "level"
+      ],
+      "title": "Heading",
+      "type": "object"
+    },
+    "Message": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "intent": {
+          "default": "info",
+          "enum": [
+            "info",
+            "warning",
+            "error",
+            "success"
+          ],
+          "title": "Intent",
+          "type": "string"
+        },
+        "kind": {
+          "const": "message",
+          "default": "message",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "title": "Message",
+      "type": "object"
+    },
+    "Placeholder": {
+      "additionalProperties": false,
+      "description": "Something the spec asks for that the IR cannot express yet. Never silently dropped.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "placeholder",
+          "default": "placeholder",
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "reason": {
+          "maxLength": 300,
+          "title": "Reason",
+          "type": "string"
+        },
+        "requested_kind": {
+          "maxLength": 40,
+          "title": "Requested Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "requested_kind",
+        "reason"
+      ],
+      "title": "Placeholder",
+      "type": "object"
+    },
+    "Screen": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "form": "#/$defs/Form",
+                "heading": "#/$defs/Heading",
+                "message": "#/$defs/Message",
+                "placeholder": "#/$defs/Placeholder",
+                "section": "#/$defs/Section",
+                "stat": "#/$defs/Stat",
+                "table": "#/$defs/Table",
+                "text": "#/$defs/Text",
+                "toolbar": "#/$defs/Toolbar"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Heading"
+              },
+              {
+                "$ref": "#/$defs/Text"
+              },
+              {
+                "$ref": "#/$defs/Form"
+              },
+              {
+                "$ref": "#/$defs/Table"
+              },
+              {
+                "$ref": "#/$defs/Stat"
+              },
+              {
+                "$ref": "#/$defs/Message"
+              },
+              {
+                "$ref": "#/$defs/Toolbar"
+              },
+              {
+                "$ref": "#/$defs/Placeholder"
+              },
+              {
+                "$ref": "#/$defs/Section"
+              }
+            ]
+          },
+          "maxItems": 60,
+          "title": "Body",
+          "type": "array"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "persona_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Persona Ids",
+          "type": "array"
+        },
+        "requirement_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Requirement Ids",
+          "type": "array"
+        },
+        "route": {
+          "maxLength": 200,
+          "pattern": "^/[a-z0-9/-]*$",
+          "title": "Route",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/ScreenSource"
+        },
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "route",
+        "source"
+      ],
+      "title": "Screen",
+      "type": "object"
+    },
+    "ScreenSource": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "spec-screen",
+            "entity-list",
+            "entity-form"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "ref": {
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "title": "ScreenSource",
+      "type": "object"
+    },
+    "Section": {
+      "additionalProperties": false,
+      "properties": {
+        "children": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "form": "#/$defs/Form",
+                "heading": "#/$defs/Heading",
+                "message": "#/$defs/Message",
+                "placeholder": "#/$defs/Placeholder",
+                "section": "#/$defs/Section",
+                "stat": "#/$defs/Stat",
+                "table": "#/$defs/Table",
+                "text": "#/$defs/Text",
+                "toolbar": "#/$defs/Toolbar"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Heading"
+              },
+              {
+                "$ref": "#/$defs/Text"
+              },
+              {
+                "$ref": "#/$defs/Form"
+              },
+              {
+                "$ref": "#/$defs/Table"
+              },
+              {
+                "$ref": "#/$defs/Stat"
+              },
+              {
+                "$ref": "#/$defs/Message"
+              },
+              {
+                "$ref": "#/$defs/Toolbar"
+              },
+              {
+                "$ref": "#/$defs/Placeholder"
+              },
+              {
+                "$ref": "#/$defs/Section"
+              }
+            ]
+          },
+          "maxItems": 40,
+          "title": "Children",
+          "type": "array"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "section",
+          "default": "section",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Section",
+      "type": "object"
+    },
+    "Stat": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "stat",
+          "default": "stat",
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "value_hint": {
+          "default": "\u2014",
+          "maxLength": 60,
+          "title": "Value Hint",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Stat",
+      "type": "object"
+    },
+    "Table": {
+      "additionalProperties": false,
+      "properties": {
+        "caption": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Caption",
+          "type": "string"
+        },
+        "columns": {
+          "items": {
+            "$ref": "#/$defs/Column"
+          },
+          "maxItems": 30,
+          "title": "Columns",
+          "type": "array"
+        },
+        "empty_text": {
+          "default": "Nothing here yet.",
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Empty Text",
+          "type": "string"
+        },
+        "entity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entity Id"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "table",
+          "default": "table",
+          "title": "Kind",
+          "type": "string"
+        },
+        "row_actions": {
+          "items": {
+            "$ref": "#/$defs/Action"
+          },
+          "maxItems": 4,
+          "title": "Row Actions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "caption"
+      ],
+      "title": "Table",
+      "type": "object"
+    },
+    "Text": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "text",
+          "default": "text",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "tone": {
+          "default": "default",
+          "enum": [
+            "default",
+            "subtle"
+          ],
+          "title": "Tone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "title": "Text",
+      "type": "object"
+    },
+    "Toolbar": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/Action"
+          },
+          "maxItems": 8,
+          "title": "Actions",
+          "type": "array"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "toolbar",
+          "default": "toolbar",
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Toolbar",
+      "type": "object"
+    }
+  },
+  "$id": "urn:workspace:ui-ir:1",
+  "additionalProperties": false,
+  "properties": {
+    "ir_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "screens": {
+      "items": {
+        "$ref": "#/$defs/Screen"
+      },
+      "maxItems": 100,
+      "title": "Screens",
+      "type": "array"
+    },
+    "spec_revision": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Spec Revision"
+    }
+  },
+  "title": "UI intermediate representation v1",
+  "type": "object"
+}

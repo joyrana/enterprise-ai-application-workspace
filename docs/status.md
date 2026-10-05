@@ -1,6 +1,68 @@
 # Implementation status
 
-Last updated: 2026-10-05 · Milestone 2d part 3 (PR #7)
+Last updated: 2026-10-05 · Milestone 3 first slice (PR #8)
+
+## Milestone 3 (first slice) — UI IR, design-system contracts, Fluent 2 adapter, safe preview
+
+Decision record: [ADR-0013](adr/0013-ui-ir-and-design-system-contracts.md).
+
+### What was built
+
+- `packages/design-system`:
+  - **UI IR v1**: strict, versioned, JSON Schema in `contracts/ui-ir.schema.json`.
+  - **Deterministic derivation** from spec screens, or from data entities (list and form
+    screens) when none are specified. Unexpressible components become placeholders with
+    a reason.
+  - **Checks** with paths and rule codes:
+    - exactly one level-1 heading and no skipped levels;
+    - labelled fields, select options, at most one primary action per form;
+    - table captions and columns;
+    - unique ids and routes;
+    - references to entities, requirements, personas and screens.
+- **Fluent 2 contract**, pinned to the locked `@fluentui/react-components` 9.74.9, and an
+  adapter that turns the IR into a render tree whose component names come only from the
+  contract. Gaps are stated, not invented: Fluent v9 has no file input and no destructive
+  button appearance.
+- **API**: `GET /design-systems`, `GET /design-systems/{id}`, and
+  `GET /projects/{id}/ui?revision=N` (IR, issues and rendering for any revision; nothing is
+  stored). Design-system selection follows the spec: a missing contract or a framework
+  mismatch returns 422; Angular waits for Milestone 6.
+- **Screens tab**: renders the render tree with real Fluent components through an allowlisting
+  interpreter (known components and validated props only, no handlers from data, forms never
+  submit, nothing executed), plus a list of design checks.
+
+### CI evidence (tiers 1–3)
+
+Run [37265586687](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37265586687)
+at commit `c8dbba9`:
+
+| Check | Result |
+|---|---|
+| pytest. New: 13 design-system unit tests (derivation, checks, contract completeness, version pin against `package-lock.json`, adapter output) and 5 API tests (preview of current and older revisions, unsupported components, design-system selection and mismatch, tenancy) | **319 passed** |
+| Vitest. New: label association in the preview, hostile input (script/iframe/handler/password props dropped), **contract accuracy against the installed Fluent** (every named component and token exists), Screens tab | **43 passed** |
+| Playwright + axe. New: entity-derived list and form screens previewed with **no serious or critical WCAG 2.1 A/AA violations** | **6 passed** |
+| Lint, strict typing, contracts (incl. new IR/contract schemas), audits, secret scan | Pass. Dependency review still needs "Dependency graph" enabled |
+
+During this PR, CI also exposed a timing race in an older E2E test: it could read the previous
+run before the new one existed. The test now waits for the run carrying its own message.
+
+### Known limitations (Milestone 3 so far)
+
+- IR v1 has no charts, dialogs, tabs, or loading/error state variants; they become
+  placeholders with warnings.
+- The preview is a design preview: it renders static structure, with no data, navigation
+  or behaviour. Running applications come with code generation in Milestone 4.
+- No model proposes screens yet; screens come from the spec (or its entities).
+- Token values (brand theming) are not customizable yet; organization design systems are
+  Milestone 7.
+
+### Next slice
+
+Model-assisted screen proposals (typed spec commands for `screens`, reviewed like other
+proposals), and IR additions where specs need them (state variants, dialogs). Then Milestone 4:
+React code generation from the render tree, isolated builds and diff review.
+
+---
 
 ## Milestone 2d (part 3) — Better real-model evidence
 

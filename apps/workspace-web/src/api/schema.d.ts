@@ -21,6 +21,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/design-systems": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Built-in design-system contracts */
+        get: operations["list_design_systems_api_v1_design_systems_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/design-systems/{design_system_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One design-system contract: component mappings, tokens and rules */
+        get: operations["get_design_system_api_v1_design_systems__design_system_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects": {
         parameters: {
             query?: never;
@@ -205,6 +239,23 @@ export interface paths {
         put?: never;
         /** Validate a candidate specification without saving it */
         post: operations["validate_spec_api_v1_projects__project_id__spec_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/ui": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** UI IR derived from a spec revision, its issues, and its rendering with the project's design system */
+        get: operations["get_project_ui_api_v1_projects__project_id__ui_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -400,6 +451,33 @@ export interface components {
             notes?: string[];
             standard?: components["schemas"]["Tracked_Literal_1_AA__2_AA__2_AAA___"];
         };
+        /** Action */
+        Action: {
+            /**
+             * Action
+             * @default custom
+             * @enum {string}
+             */
+            action: "submit" | "cancel" | "navigate" | "custom";
+            /** Id */
+            id: string;
+            /**
+             * Intent
+             * @default secondary
+             * @enum {string}
+             */
+            intent: "primary" | "secondary" | "danger";
+            /**
+             * Kind
+             * @default action
+             * @constant
+             */
+            kind: "action";
+            /** Label */
+            label: string;
+            /** Target Screen */
+            target_screen?: string | null;
+        };
         /** AddItem */
         AddItem: {
             /**
@@ -519,7 +597,7 @@ export interface components {
              */
             schema_version: "1.0.0";
             /** Screens */
-            screens?: components["schemas"]["Screen"][];
+            screens?: components["schemas"]["Screen-Input"][];
             security?: components["schemas"]["SecurityProfile"];
         };
         /** ApplicationSpec */
@@ -571,7 +649,7 @@ export interface components {
              */
             schema_version: "1.0.0";
             /** Screens */
-            screens?: components["schemas"]["Screen"][];
+            screens?: components["schemas"]["appspec__model__Screen-Output"][];
             security?: components["schemas"]["SecurityProfile"];
         };
         /** ApplyRunRequest */
@@ -711,6 +789,19 @@ export interface components {
             /** Proposed */
             proposed: number;
         };
+        /** Column */
+        Column: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Type
+             * @default text
+             * @enum {string}
+             */
+            type: "text" | "number" | "money" | "date" | "boolean" | "reference";
+        };
         /** CommandResult */
         CommandResult: {
             /** Detail */
@@ -718,6 +809,15 @@ export interface components {
             outcome: components["schemas"]["Outcome"];
             /** Proposal Id */
             proposal_id: string;
+        };
+        /** ComponentMapping */
+        ComponentMapping: {
+            /** Components */
+            components: string[];
+            /** Notes */
+            notes?: string | null;
+            /** Package */
+            package: string;
         };
         /**
          * ComponentSpec
@@ -797,10 +897,87 @@ export interface components {
             /** @default proposed */
             status: components["schemas"]["ItemStatus"];
         };
+        /** DesignSystemChoice */
+        DesignSystemChoice: {
+            /** Id */
+            id: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Selected By
+             * @description spec | default
+             */
+            selected_by: string;
+            /** Version */
+            version: string;
+        };
+        /** DesignSystemContract */
+        DesignSystemContract: {
+            /**
+             * Contract Version
+             * @default 1
+             * @constant
+             */
+            contract_version: "1";
+            /**
+             * Framework
+             * @enum {string}
+             */
+            framework: "react" | "angular";
+            /** Id */
+            id: string;
+            library: components["schemas"]["LibraryRef"];
+            /** Mappings */
+            mappings: {
+                [key: string]: components["schemas"]["ComponentMapping"];
+            };
+            /** Name */
+            name: string;
+            /**
+             * Rules
+             * @default []
+             */
+            rules: string[];
+            /** Tokens */
+            tokens?: {
+                [key: string]: string;
+            };
+            /** Unsupported */
+            unsupported?: {
+                [key: string]: string;
+            };
+            /** Version */
+            version: string;
+        };
+        /** DesignSystemList */
+        DesignSystemList: {
+            /** Items */
+            items: components["schemas"]["DesignSystemSummary"][];
+        };
         /** DesignSystemSelection */
         DesignSystemSelection: {
             id?: components["schemas"]["Tracked_Annotated_str__StringConstraints__FieldInfo_annotation_NoneType__required_True__description__Stable__human-readable_identifier__lowercase_kebab-case_____"];
             version?: components["schemas"]["appspec__common__Tracked_Annotated_str__StringConstraints____2"];
+        };
+        /** DesignSystemSummary */
+        DesignSystemSummary: {
+            /** Framework */
+            framework: string;
+            /** Has Adapter */
+            has_adapter: boolean;
+            /** Id */
+            id: string;
+            /** Library Package */
+            library_package: string;
+            /**
+             * Library Version
+             * @description The library version the contract was checked against.
+             */
+            library_version: string;
+            /** Name */
+            name: string;
+            /** Version */
+            version: string;
         };
         /** EntityField */
         EntityField: {
@@ -849,6 +1026,18 @@ export interface components {
          * @enum {string}
          */
         FieldType: "string" | "text" | "integer" | "decimal" | "money" | "boolean" | "date" | "datetime" | "enum" | "file" | "reference";
+        /** FieldValidation */
+        FieldValidation: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "required" | "min" | "max" | "min-length" | "max-length" | "pattern" | "custom";
+            /** Message */
+            message?: string | null;
+            /** Value */
+            value?: string | number | null;
+        };
         /** FlaggedProposal */
         FlaggedProposal: {
             /**
@@ -859,8 +1048,26 @@ export interface components {
             /** Proposal Id */
             proposal_id: string;
         };
+        /** Form */
+        Form: {
+            /** Actions */
+            actions?: components["schemas"]["Action"][];
+            /** Entity Id */
+            entity_id?: string | null;
+            /** Fields */
+            fields?: components["schemas"]["design_system__ir__FormField"][];
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "form";
+            /** Label */
+            label: string;
+        };
         /** FormField */
-        FormField: {
+        "FormField-Input": {
             /** Help Text */
             help_text?: string | null;
             /** Label */
@@ -916,6 +1123,20 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** Heading */
+        Heading: {
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "heading";
+            /** Level */
+            level: number;
+            /** Text */
+            text: string;
+        };
         /** Health */
         Health: {
             /** Status */
@@ -962,6 +1183,35 @@ export interface components {
             description: string;
             /** Screen Id */
             screen_id?: string | null;
+        };
+        /** LibraryRef */
+        LibraryRef: {
+            /** Docs Url */
+            docs_url: string;
+            /** Package */
+            package: string;
+            /** Version */
+            version: string;
+        };
+        /** Message */
+        Message: {
+            /** Id */
+            id: string;
+            /**
+             * Intent
+             * @default info
+             * @enum {string}
+             */
+            intent: "info" | "warning" | "error" | "success";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "message";
+            /** Text */
+            text?: string | null;
+            /** Title */
+            title: string;
         };
         /** ModelUsage */
         ModelUsage: {
@@ -1070,6 +1320,25 @@ export interface components {
             role_ids?: string[];
             /** @default proposed */
             status: components["schemas"]["ItemStatus"];
+        };
+        /**
+         * Placeholder
+         * @description Something the spec asks for that the IR cannot express yet. Never silently dropped.
+         */
+        Placeholder: {
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "placeholder";
+            /** Label */
+            label?: string | null;
+            /** Reason */
+            reason: string;
+            /** Requested Kind */
+            requested_kind: string;
         };
         /**
          * Priority
@@ -1192,6 +1461,32 @@ export interface components {
              * @description Stable, human-readable identifier (lowercase kebab-case, max 64 chars).
              */
             target_entity_id: string;
+        };
+        /** RenderNode */
+        RenderNode: {
+            /** Children */
+            children?: components["schemas"]["RenderNode"][];
+            /** Component */
+            component: string;
+            /** Ir Id */
+            ir_id?: string | null;
+            /** Props */
+            props?: {
+                [key: string]: string | number | boolean;
+            };
+            /** Text */
+            text?: string | null;
+        };
+        /** RenderedScreen */
+        RenderedScreen: {
+            /** Root */
+            root: components["schemas"]["RenderNode"][];
+            /** Route */
+            route: string;
+            /** Screen Id */
+            screen_id: string;
+            /** Title */
+            title: string;
         };
         /** ResponsiveRule */
         ResponsiveRule: {
@@ -1426,13 +1721,13 @@ export interface components {
             start: number;
         };
         /** Screen */
-        Screen: {
+        "Screen-Input": {
             /** Components */
             components?: components["schemas"]["ComponentSpec"][];
             /** Confirmed By */
             confirmed_by?: string | null;
             /** Fields */
-            fields?: components["schemas"]["FormField"][];
+            fields?: components["schemas"]["FormField-Input"][];
             /**
              * Id
              * @description Stable, human-readable identifier (lowercase kebab-case, max 64 chars).
@@ -1452,6 +1747,30 @@ export interface components {
             states?: components["schemas"]["UiState"][];
             /** @default proposed */
             status: components["schemas"]["ItemStatus"];
+        };
+        /** ScreenSource */
+        ScreenSource: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "spec-screen" | "entity-list" | "entity-form";
+            /** Ref */
+            ref: string;
+        };
+        /** Section */
+        Section: {
+            /** Children */
+            children?: (components["schemas"]["Heading"] | components["schemas"]["Text"] | components["schemas"]["Form"] | components["schemas"]["Table"] | components["schemas"]["Stat"] | components["schemas"]["Message"] | components["schemas"]["Toolbar"] | components["schemas"]["Placeholder"] | components["schemas"]["Section"])[];
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "section";
+            /** Title */
+            title?: string | null;
         };
         /** SecurityProfile */
         SecurityProfile: {
@@ -1598,6 +1917,78 @@ export interface components {
             /** Valid */
             valid: boolean;
         };
+        /** Stat */
+        Stat: {
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "stat";
+            /** Label */
+            label: string;
+            /**
+             * Value Hint
+             * @default —
+             */
+            value_hint: string;
+        };
+        /** Table */
+        Table: {
+            /** Caption */
+            caption: string;
+            /** Columns */
+            columns?: components["schemas"]["Column"][];
+            /**
+             * Empty Text
+             * @default Nothing here yet.
+             */
+            empty_text: string;
+            /** Entity Id */
+            entity_id?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "table";
+            /** Row Actions */
+            row_actions?: components["schemas"]["Action"][];
+        };
+        /** Text */
+        Text: {
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "text";
+            /** Text */
+            text: string;
+            /**
+             * Tone
+             * @default default
+             * @enum {string}
+             */
+            tone: "default" | "subtle";
+        };
+        /** Toolbar */
+        Toolbar: {
+            /** Actions */
+            actions?: components["schemas"]["Action"][];
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "toolbar";
+            /** Label */
+            label: string;
+        };
         /** Tracked[Annotated[str, StringConstraints, FieldInfo(annotation=NoneType, required=True, description='Stable, human-readable identifier (lowercase kebab-case, max 64 chars).')]] */
         "Tracked_Annotated_str__StringConstraints__FieldInfo_annotation_NoneType__required_True__description__Stable__human-readable_identifier__lowercase_kebab-case_____": {
             /** Confirmed By */
@@ -1649,6 +2040,44 @@ export interface components {
             /** @default unknown */
             status: components["schemas"]["FactStatus"];
             value?: components["schemas"]["RiskLevel"] | null;
+        };
+        /** UiDocument */
+        UiDocument: {
+            /**
+             * Ir Version
+             * @default 1
+             * @constant
+             */
+            ir_version: "1";
+            /** Screens */
+            screens?: components["schemas"]["design_system__ir__Screen"][];
+            /** Spec Revision */
+            spec_revision?: number | null;
+        };
+        /** UiIssue */
+        UiIssue: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Path */
+            path: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "error" | "warning";
+        };
+        /** UiPreview */
+        UiPreview: {
+            design_system: components["schemas"]["DesignSystemChoice"];
+            document: components["schemas"]["UiDocument"];
+            /** Issues */
+            issues: components["schemas"]["UiIssue"][];
+            /** Rendered */
+            rendered: components["schemas"]["RenderedScreen"][];
+            /** Spec Revision */
+            spec_revision: number;
         };
         /**
          * UiState
@@ -1851,6 +2280,103 @@ export interface components {
             /** Summary */
             summary: string;
         };
+        /** FormField */
+        appspec__model__FormField: {
+            /** Help Text */
+            help_text?: string | null;
+            /** Label */
+            label: string;
+            /**
+             * Name
+             * @description Stable, human-readable identifier (lowercase kebab-case, max 64 chars).
+             */
+            name: string;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            type: components["schemas"]["FieldType"];
+            /** Validation */
+            validation?: components["schemas"]["ValidationRule"][];
+        };
+        /** Screen */
+        "appspec__model__Screen-Output": {
+            /** Components */
+            components?: components["schemas"]["ComponentSpec"][];
+            /** Confirmed By */
+            confirmed_by?: string | null;
+            /** Fields */
+            fields?: components["schemas"]["appspec__model__FormField"][];
+            /**
+             * Id
+             * @description Stable, human-readable identifier (lowercase kebab-case, max 64 chars).
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Persona Ids */
+            persona_ids?: string[];
+            provenance: components["schemas"]["Provenance"];
+            /** Purpose */
+            purpose?: string | null;
+            /** Requirement Ids */
+            requirement_ids?: string[];
+            revision?: components["schemas"]["RevisionMeta"];
+            /** States */
+            states?: components["schemas"]["UiState"][];
+            /** @default proposed */
+            status: components["schemas"]["ItemStatus"];
+        };
+        /** FormField */
+        design_system__ir__FormField: {
+            /** Help Text */
+            help_text?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * Input
+             * @enum {string}
+             */
+            input: "text" | "textarea" | "number" | "date" | "datetime" | "select" | "checkbox" | "file";
+            /**
+             * Kind
+             * @default field
+             * @constant
+             */
+            kind: "field";
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Options */
+            options?: string[];
+            /** Options From Entity */
+            options_from_entity?: string | null;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /** Validation */
+            validation?: components["schemas"]["FieldValidation"][];
+        };
+        /** Screen */
+        design_system__ir__Screen: {
+            /** Body */
+            body?: (components["schemas"]["Heading"] | components["schemas"]["Text"] | components["schemas"]["Form"] | components["schemas"]["Table"] | components["schemas"]["Stat"] | components["schemas"]["Message"] | components["schemas"]["Toolbar"] | components["schemas"]["Placeholder"] | components["schemas"]["Section"])[];
+            /** Id */
+            id: string;
+            /** Persona Ids */
+            persona_ids?: string[];
+            /** Requirement Ids */
+            requirement_ids?: string[];
+            /** Route */
+            route: string;
+            source: components["schemas"]["ScreenSource"];
+            /** Title */
+            title: string;
+        };
         /**
          * Decision
          * @enum {string}
@@ -1886,6 +2412,158 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiStatus"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    list_design_systems_api_v1_design_systems_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DesignSystemList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    get_design_system_api_v1_design_systems__design_system_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                design_system_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DesignSystemContract"];
                 };
             };
             /** @description Bad Request */
@@ -3134,6 +3812,87 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SpecValidationResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    get_project_ui_api_v1_projects__project_id__ui_get: {
+        parameters: {
+            query?: {
+                /** @description Spec revision; defaults to the current one. */
+                revision?: number | null;
+            };
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UiPreview"];
                 };
             };
             /** @description Bad Request */

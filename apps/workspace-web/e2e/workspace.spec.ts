@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
 
 /** Fails on serious or critical WCAG 2.1 A/AA violations reported by axe-core. */
 async function expectNoSeriousA11yViolations(page: Page, where: string): Promise<void> {
@@ -25,6 +26,7 @@ async function expectNoSeriousA11yViolations(page: Page, where: string): Promise
 const DEV_HEADERS = { "X-Dev-Tenant": "demo", "X-Dev-User": "demo-user" };
 
 interface RunRecord {
+  message: string;
   status: string;
   skill_id: string | null;
   routing: { method: string; chosen: string | null; candidates: string[] } | null;
@@ -96,7 +98,17 @@ test("create a project, discover requirements, add acceptance criteria, review h
     .getByRole("textbox", { name: /What do you need/ })
     .fill("Write acceptance criteria so QA can test the requirements.");
   await page.getByRole("button", { name: "Run" }).click();
-  await expect.poll(async () => (await latestRun(page)).status, { timeout: 45_000 }).toMatch(/succeeded|failed/);
+  // Wait for *this* run (matched by its message): right after clicking, the latest run can still be the previous one.
+  const criteriaRequest = "Write acceptance criteria so QA can test the requirements.";
+  await expect
+    .poll(
+      async () => {
+        const run = await latestRun(page);
+        return run.message === criteriaRequest ? run.status : "not created yet";
+      },
+      { timeout: 45_000 },
+    )
+    .toMatch(/succeeded|failed/);
   const second = await latestRun(page);
   expect(second.routing?.chosen, JSON.stringify(second)).toBe("acceptance-criteria");
   expect(second.routing?.method, JSON.stringify(second)).toBe("model");
@@ -223,4 +235,44 @@ test("the requirements pipeline pauses for review after each step and completes"
   const body = (await spec.json()) as { revision: number; spec: { acceptance_criteria: unknown[] } };
   expect(body.revision).toBe(3);
   expect(body.spec.acceptance_criteria).toHaveLength(2);
+});
+
+test("screens are derived from the spec and previewed accessibly with Fluent 2", async ({ page }) => {
+  const example = JSON.parse(
+    readFileSync(
+      new URL("../../../packages/application-spec/examples/finance-operations.json", import.meta.url),
+      "utf-8",
+    ),
+  ) as Record<string, unknown> & { screens: unknown[]; navigation: unknown[] };
+
+  await page.goto("/projects");
+  await page.getByRole("button", { name: "New project" }).click();
+  await page.getByRole("textbox", { name: /Name/ }).fill(`E2E screens ${Date.now()}`);
+  await page.getByRole("button", { name: "Create project" }).click();
+  await expect(page.getByRole("tab", { name: "Screens" })).toBeVisible();
+  const projectId = new URL(page.url()).pathname.split("/")[2];
+
+  // No screens specified: list and form screens are derived from the data entities.
+  const derived = { ...example, screens: [], navigation: [] };
+  const saved = await page.request.put(`/api/v1/projects/${projectId}/spec`, {
+    headers: { ...DEV_HEADERS, "If-Match": '"r1"' },
+    data: { spec: derived },
+  });
+  expect(saved.ok(), await saved.text()).toBe(true);
+  await page.goto(`/projects/${projectId}/screens`);
+
+  const preview = page.getByRole("region", { name: "Preview of Adjustment" });
+  await expect(preview.getByRole("table", { name: "Adjustment" })).toBeVisible();
+  await expect(preview.getByRole("button", { name: "New adjustment" })).toBeVisible();
+  await expectNoSeriousA11yViolations(page, "derived list screen preview");
+
+  await page.getByRole("tab", { name: "New adjustment" }).click();
+  const form = page
+    .getByRole("region", { name: "Preview of New adjustment" })
+    .getByRole("form", { name: "New adjustment" });
+  await expect(form.getByRole("spinbutton", { name: /Amount/ })).toBeVisible();
+  await expect(form.getByRole("combobox", { name: /Kind/ })).toBeVisible();
+  await expect(form.getByRole("button", { name: "Save" })).toBeVisible();
+  await expectNoSeriousA11yViolations(page, "derived form screen preview");
+  await expect(page.getByText(/No issues/)).toBeVisible();
 });

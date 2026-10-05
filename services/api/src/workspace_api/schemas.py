@@ -13,6 +13,7 @@ from typing import Annotated, Any
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from appspec import ApplicationSpec, SpecSummary, ValidationIssue
+from design_system import RenderedScreen, UiDocument, UiIssue
 from skill_sdk import CommandResult, Decision, SpecCommand
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
@@ -299,3 +300,32 @@ class WorkflowOut(ApiModel):
 
 class WorkflowPage(ApiModel):
     items: list[WorkflowOut]
+
+
+class DesignSystemSummary(ApiModel):
+    id: str
+    name: str
+    version: str
+    framework: str
+    library_package: str
+    library_version: str = Field(description="The library version the contract was checked against.")
+    has_adapter: bool
+
+
+class DesignSystemList(ApiModel):
+    items: list[DesignSystemSummary]
+
+
+class DesignSystemChoice(ApiModel):
+    id: str
+    version: str
+    selected_by: str = Field(description="spec | default")
+    note: str | None
+
+
+class UiPreview(ApiModel):
+    spec_revision: int
+    design_system: DesignSystemChoice
+    document: UiDocument
+    issues: list[UiIssue]
+    rendered: list[RenderedScreen]

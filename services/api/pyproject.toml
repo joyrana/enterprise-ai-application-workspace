@@ -5,6 +5,7 @@ description = "Backend API for the Enterprise AI Application Workspace (projects
 requires-python = ">=3.12"
 dependencies = [
   "appspec",
+  "design-system",
   "model-gateway",
   "skill-sdk",
   "workspace-skills",
@@ -27,6 +28,7 @@ packages = ["src/workspace_api"]
 
 [tool.uv.sources]
 appspec = { workspace = true }
+design-system = { workspace = true }
 model-gateway = { workspace = true }
 skill-sdk = { workspace = true }
 workspace-skills = { workspace = true }

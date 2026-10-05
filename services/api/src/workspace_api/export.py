@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 
 from appspec import json_schema_text
+from design_system import builtin_contracts, contract_json_schema
+from design_system import json_schema as ui_ir_json_schema
 
 from .app import create_app
 from .config import Settings
@@ -25,6 +27,10 @@ def openapi_text() -> str:
     return json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n"
 
 
+def _json(data: object) -> str:
+    return json.dumps(data, indent=2, sort_keys=True) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", default="contracts", type=Path)
@@ -33,7 +39,11 @@ def main(argv: list[str] | None = None) -> int:
     outputs = {
         args.out / "openapi.json": openapi_text(),
         args.out / "application-spec.schema.json": json_schema_text(),
+        args.out / "ui-ir.schema.json": _json(ui_ir_json_schema()),
+        args.out / "design-system-contract.schema.json": _json(contract_json_schema()),
     }
+    for contract in builtin_contracts().values():
+        outputs[args.out / "design-systems" / f"{contract.id}.json"] = _json(contract.model_dump(mode="json"))
     stale = []
     for path, content in outputs.items():
         if args.check:

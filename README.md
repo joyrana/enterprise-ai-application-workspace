@@ -5,10 +5,11 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 2d complete; Milestone 3 (design systems) next.** Projects, the canonical specification, revision
+> **Status: Milestone 3 in progress (UI IR, design-system contracts, Fluent 2 preview).** Projects, the canonical specification, revision
 > history, audit trail and the workspace UI exist, plus three AI discovery skills with routing
-> and human review, routing, and checkpointed multi-step workflows. Design-system adapters and
-> code generation are **not implemented yet**; see the roadmap below.
+> and human review, routing, checkpointed multi-step workflows, and a design preview of the
+> screens the spec describes, rendered with Fluent 2. Code generation is **not implemented
+> yet**; see the roadmap below.
 > Development authentication only: do not expose this build to untrusted users.
 
 ## What works today
@@ -32,6 +33,11 @@ security policies.
   without criteria) and `requirements-conflict-detection` (contradictions and duplicates
   raised as blocking questions). Requests are routed by preconditions first; the model only
   chooses when several skills apply, and you can always pick a skill yourself (ADR-0009).
+- **Screens and design systems** (ADR-0013): the spec's screens (or, when none exist, its data
+  entities) are turned into a typed UI intermediate representation, checked for
+  accessibility rules and references, and mapped to Fluent 2 components through a contract
+  pinned to the installed Fluent version. The Screens tab previews them with real Fluent
+  components; nothing is executed.
 - **Multi-step workflows** (ADR-0012): the requirements pipeline runs discovery, then
   acceptance criteria, then a conflict check, pausing for your review after each step. Its
   progress is checkpointed in PostgreSQL, so a crash never loses or repeats an applied step.
@@ -96,7 +102,8 @@ apps/workspace-web/          React + Fluent UI v9 workspace
 services/api/                FastAPI service, Alembic migrations, tests
 packages/application-spec/   Canonical spec library (no web/DB dependencies)
 packages/model-gateway/      Model providers (HF router, self-hosted, Ollama), validation, budgets
-packages/skill-sdk/          Skill manifests, registry, typed spec commands
+packages/skill-sdk/          Skill manifests, registry, commands, router, safety, workflows
+packages/design-system/      UI IR, design-system contracts, Fluent 2 adapter
 skills/                      Built-in skills (business discovery, acceptance criteria, conflict check)
 evals/                       Evaluation datasets and runners
 contracts/                   Generated OpenAPI + JSON Schema (drift-checked in CI)
@@ -139,7 +146,7 @@ uv run python -m workspace_evals.injection                  # detector precision
 | 2b | Acceptance-criteria and conflict-detection skills, two-stage routing, routing evals | Done |
 | 2c | Real-model evaluation (Ollama + Qwen in CI), Playwright E2E with axe | Done |
 | 2d | Prompt-injection hardening, checkpointed workflows, eval diagnostics and variance | Done (HF-router and gpt-oss baselines need a token / local run) |
-| 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Planned |
+| 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | In progress (first slice in review) |
 | 4 | React generation, isolated builds, preview, diff review | Planned |
 | 5 | Incremental changes, edit preservation, resilience | Planned |
 | 6 | Angular + Material 3 | Planned |
