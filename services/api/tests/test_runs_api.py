@@ -423,11 +423,18 @@ def _put_example(client: TestClient, pid: str, spec: dict[str, Any]) -> None:
 
 def test_skills_report_applicability(client: TestClient, project: dict[str, Any]) -> None:
     items = {s["id"]: s for s in client.get(f"/api/v1/projects/{project['id']}/skills").json()["items"]}
-    assert set(items) == {"business-discovery", "acceptance-criteria", "requirements-conflict-detection"}
+    assert set(items) == {
+        "business-discovery",
+        "acceptance-criteria",
+        "requirements-conflict-detection",
+        "screen-design",
+    }
     assert items["business-discovery"]["applicable"] is True
     assert items["business-discovery"]["message_required"] is True
     assert items["acceptance-criteria"]["applicable"] is False
     assert items["acceptance-criteria"]["unmet_preconditions"] == ["/functional_requirements"]
+    assert items["screen-design"]["applicable"] is False
+    assert items["screen-design"]["category"] == "experience-design"
 
 
 def test_single_candidate_routing_skips_the_model(
