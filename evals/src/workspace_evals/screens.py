@@ -29,7 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from appspec import ApplicationSpec, Provenance, Source, load_spec
 from design_system import derive_document, validate_document
 from model_gateway import Budget, ModelError, ModelProvider, ModelSettings
-from skill_sdk import Decision, Outcome, SkillContext, apply_commands, flag_echoes, scan_text
+from skill_sdk import AddItem, Decision, Outcome, SkillContext, apply_commands, flag_echoes, scan_text
 from workspace_skills import ScreenDesign
 
 from .discovery import FINANCE_EXAMPLE, REPO_ROOT, CheckResult
@@ -134,7 +134,10 @@ def run_trial(scenario: Scenario, repeat: int, provider: ModelProvider, *, deadl
         checks.append(
             CheckResult(name=f"covers:{rid}", passed=rid in served, detail="served" if rid in served else "not served")
         )
-    texts = {p.proposal_id: json.dumps(p.item).lower() for p in proposals}
+    texts = {
+        p.proposal_id: json.dumps(p.item if isinstance(p, AddItem) else p.model_dump(mode="json")).lower()
+        for p in proposals
+    }
     for forbidden in scenario.checks.forbidden_substrings:
         found = any(forbidden.lower() in t for t in texts.values())
         checks.append(
