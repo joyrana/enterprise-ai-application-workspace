@@ -228,7 +228,10 @@ test("the requirements pipeline pauses for review after each step and completes"
 
 test("screens are derived from the spec and previewed accessibly with Fluent 2", async ({ page }) => {
   const example = JSON.parse(
-    readFileSync(new URL("../../../packages/application-spec/examples/finance-operations.json", import.meta.url), "utf-8"),
+    readFileSync(
+      new URL("../../../packages/application-spec/examples/finance-operations.json", import.meta.url),
+      "utf-8",
+    ),
   ) as Record<string, unknown> & { screens: unknown[]; navigation: unknown[] };
 
   await page.goto("/projects");
@@ -253,7 +256,9 @@ test("screens are derived from the spec and previewed accessibly with Fluent 2",
   await expectNoSeriousA11yViolations(page, "derived list screen preview");
 
   await page.getByRole("tab", { name: "New adjustment" }).click();
-  const form = page.getByRole("region", { name: "Preview of New adjustment" }).getByRole("form", { name: "New adjustment" });
+  const form = page
+    .getByRole("region", { name: "Preview of New adjustment" })
+    .getByRole("form", { name: "New adjustment" });
   await expect(form.getByRole("spinbutton", { name: /Amount/ })).toBeVisible();
   await expect(form.getByRole("combobox", { name: /Kind/ })).toBeVisible();
   await expect(form.getByRole("button", { name: "Save" })).toBeVisible();

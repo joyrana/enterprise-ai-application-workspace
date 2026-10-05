@@ -1,0 +1,136 @@
+{
+  "$defs": {
+    "ComponentMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "components": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Components",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "package": {
+          "title": "Package",
+          "type": "string"
+        }
+      },
+      "required": [
+        "components",
+        "package"
+      ],
+      "title": "ComponentMapping",
+      "type": "object"
+    },
+    "LibraryRef": {
+      "additionalProperties": false,
+      "properties": {
+        "docs_url": {
+          "title": "Docs Url",
+          "type": "string"
+        },
+        "package": {
+          "title": "Package",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "package",
+        "version",
+        "docs_url"
+      ],
+      "title": "LibraryRef",
+      "type": "object"
+    }
+  },
+  "$id": "urn:workspace:design-system-contract:1",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "framework": {
+      "enum": [
+        "react",
+        "angular"
+      ],
+      "title": "Framework",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[a-z][a-z0-9-]{1,40}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "library": {
+      "$ref": "#/$defs/LibraryRef"
+    },
+    "mappings": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ComponentMapping"
+      },
+      "title": "Mappings",
+      "type": "object"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "rules": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Rules",
+      "type": "array"
+    },
+    "tokens": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Tokens",
+      "type": "object"
+    },
+    "unsupported": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Unsupported",
+      "type": "object"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "version",
+    "framework",
+    "library",
+    "mappings"
+  ],
+  "title": "Design-system contract v1",
+  "type": "object"
+}

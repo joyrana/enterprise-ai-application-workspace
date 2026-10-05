@@ -15,7 +15,10 @@ const FORM: RenderNode[] = [
   n("form", { "aria-label": "New adjustment" }, [
     n("Field", { label: "Amount", required: true, hint: "In EUR" }, [n("Input", { name: "amount", type: "number" })]),
     n("Field", { label: "Kind" }, [
-      n("Select", { name: "kind" }, [n("option", { value: "accrual" }, [], "accrual"), n("option", { value: "reclass" }, [], "reclass")]),
+      n("Select", { name: "kind" }, [
+        n("option", { value: "accrual" }, [], "accrual"),
+        n("option", { value: "reclass" }, [], "reclass"),
+      ]),
     ]),
     n("Checkbox", { label: "Approved", name: "approved" }),
     n("Field", { label: "Evidence" }, [n("input", { type: "file", name: "evidence" })]),
@@ -30,7 +33,11 @@ describe("RenderTree", () => {
     const form = screen.getByRole("form", { name: "New adjustment" });
     expect(within(form).getByRole("spinbutton", { name: /Amount/ })).toHaveAttribute("name", "amount");
     const kind = within(form).getByRole("combobox", { name: "Kind" });
-    expect(within(kind).getAllByRole("option").map((o) => o.textContent)).toEqual(["accrual", "reclass"]);
+    expect(
+      within(kind)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["accrual", "reclass"]);
     expect(within(form).getByRole("checkbox", { name: "Approved" })).toBeInTheDocument();
     expect(within(form).getByLabelText("Evidence")).toHaveAttribute("type", "file");
     expect(within(form).getByRole("button", { name: "Save" })).toHaveAttribute("type", "submit");
@@ -38,7 +45,12 @@ describe("RenderTree", () => {
 
   it("drops props and components that are not allowlisted", () => {
     const hostile = [
-      n("Body1", { as: "script", onClick: "alert(1)", dangerouslySetInnerHTML: { __html: "<b>x</b>" }, style: "x" }, [], "plain"),
+      n(
+        "Body1",
+        { as: "script", onClick: "alert(1)", dangerouslySetInnerHTML: { __html: "<b>x</b>" }, style: "x" },
+        [],
+        "plain",
+      ),
       n("iframe", { src: "https://example.com" }),
       n("Input", { name: "x", type: "password" }),
     ];

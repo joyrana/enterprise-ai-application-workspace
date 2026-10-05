@@ -18,17 +18,43 @@ function preview(extra: Record<string, unknown> = {}) {
   });
   return {
     spec_revision: 2,
-    design_system: { id: "fluent2", version: "1.0.0", selected_by: "default", note: "Fluent 2 is the default for React." },
+    design_system: {
+      id: "fluent2",
+      version: "1.0.0",
+      selected_by: "default",
+      note: "Fluent 2 is the default for React.",
+    },
     document: {
       ir_version: "1",
       spec_revision: 2,
       screens: [
-        { id: "rules", title: "Rules", route: "/rules", source: { kind: "spec-screen", ref: "rules" }, requirement_ids: [], persona_ids: [], body: [] },
-        { id: "other", title: "Other", route: "/other", source: { kind: "entity-list", ref: "x" }, requirement_ids: [], persona_ids: [], body: [] },
+        {
+          id: "rules",
+          title: "Rules",
+          route: "/rules",
+          source: { kind: "spec-screen", ref: "rules" },
+          requirement_ids: [],
+          persona_ids: [],
+          body: [],
+        },
+        {
+          id: "other",
+          title: "Other",
+          route: "/other",
+          source: { kind: "entity-list", ref: "x" },
+          requirement_ids: [],
+          persona_ids: [],
+          body: [],
+        },
       ],
     },
     issues: [
-      { path: "/screens/0/body/1", code: "unsupported-component", severity: "warning", message: "'chart' cannot be expressed in the IR yet." },
+      {
+        path: "/screens/0/body/1",
+        code: "unsupported-component",
+        severity: "warning",
+        message: "'chart' cannot be expressed in the IR yet.",
+      },
     ],
     rendered: [
       { screen_id: "rules", title: "Rules", route: "/rules", root: [heading("rules-title", "Rules")] },

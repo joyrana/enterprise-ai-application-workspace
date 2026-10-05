@@ -134,11 +134,7 @@ function RenderOne({ node, depth }: { node: RenderNode; depth: number }) {
   const onlyChild = childNodes.length === 1 ? childNodes[0] : undefined;
   if (node.component === "Field" && onlyChild?.component === "input") {
     const inputProps = safeProps(REGISTRY.input as Entry, onlyChild.props as Record<string, unknown>);
-    return (
-      <Field {...props}>
-        {(fieldProps) => <input {...fieldProps} {...inputProps} />}
-      </Field>
-    );
+    return <Field {...props}>{(fieldProps) => <input {...fieldProps} {...inputProps} />}</Field>;
   }
 
   const children: ReactNode[] = [];
