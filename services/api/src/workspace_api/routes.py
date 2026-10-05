@@ -11,9 +11,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from appspec import ApplicationSpec, json_schema
+from design_system import DesignSystemContract
 from skill_sdk import SkillRegistry
 
-from . import runs, service, workflows
+from . import runs, service, ui, workflows
 from .ai import ModelRuntime
 from .auth import CurrentPrincipal
 from .errors import Problem
@@ -22,6 +23,7 @@ from .schemas import (
     ApplyRunRequest,
     ApplyRunResult,
     AuditPage,
+    DesignSystemList,
     Health,
     ProjectCreate,
     ProjectOut,
@@ -36,6 +38,7 @@ from .schemas import (
     SpecRevisionPage,
     SpecUpdate,
     SpecValidationResult,
+    UiPreview,
     WorkflowCreate,
     WorkflowDefinitionList,
     WorkflowOut,
@@ -477,3 +480,43 @@ def cancel_project_workflow(
     project_id: ProjectId, workflow_id: WorkflowId, principal: CurrentPrincipal, session: DbSession
 ) -> WorkflowOut:
     return workflows.cancel_workflow(session, principal, project_id, workflow_id)
+
+
+# --------------------------------------------------------------------------- design systems and UI preview
+
+
+@api.get(
+    "/design-systems",
+    response_model=DesignSystemList,
+    tags=["design"],
+    summary="Built-in design-system contracts",
+)
+def list_design_systems(principal: CurrentPrincipal) -> DesignSystemList:
+    return ui.list_design_systems()
+
+
+@api.get(
+    "/design-systems/{design_system_id}",
+    response_model=DesignSystemContract,
+    tags=["design"],
+    summary="One design-system contract: component mappings, tokens and rules",
+)
+def get_design_system(
+    design_system_id: Annotated[str, Path(max_length=64)], principal: CurrentPrincipal
+) -> DesignSystemContract:
+    return ui.get_design_system(design_system_id)
+
+
+@api.get(
+    "/projects/{project_id}/ui",
+    response_model=UiPreview,
+    tags=["design"],
+    summary="UI IR derived from a spec revision, its issues, and its rendering with the project's design system",
+)
+def get_project_ui(
+    project_id: ProjectId,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    revision: Annotated[int | None, Query(ge=1, description="Spec revision; defaults to the current one.")] = None,
+) -> UiPreview:
+    return ui.preview(session, principal, project_id, revision)

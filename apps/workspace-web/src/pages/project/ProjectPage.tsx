@@ -9,12 +9,14 @@ import { AuditTab } from "./AuditTab";
 import { DiscoveryTab } from "./DiscoveryTab";
 import { HistoryTab } from "./HistoryTab";
 import { OverviewTab } from "./OverviewTab";
+import { ScreensTab } from "./ScreensTab";
 import { SpecEditorTab } from "./SpecEditorTab";
 
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "discovery", label: "Discovery" },
   { id: "specification", label: "Specification" },
+  { id: "screens", label: "Screens" },
   { id: "history", label: "History" },
   { id: "audit", label: "Audit" },
 ] as const;
@@ -106,6 +108,7 @@ export function ProjectPage() {
             onReload={reload}
           />
         )}
+        {selected === "screens" && <ScreensTab projectId={projectId} revision={revision.revision} />}
         {selected === "history" && <HistoryTab key={historyKey} projectId={projectId} />}
         {selected === "audit" && <AuditTab key={historyKey} projectId={projectId} />}
       </section>

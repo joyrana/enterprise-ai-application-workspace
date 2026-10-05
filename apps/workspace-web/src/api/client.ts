@@ -39,6 +39,10 @@ export type Workflow = Json<WorkflowPath["get"]["responses"][200]>;
 export type WorkflowPage = Json<paths["/api/v1/projects/{project_id}/workflows"]["get"]["responses"][200]>;
 export type WorkflowDefinitionList = Json<paths["/api/v1/workflow-definitions"]["get"]["responses"][200]>;
 export type WorkflowDefinition = WorkflowDefinitionList["items"][number];
+export type UiPreview = Json<paths["/api/v1/projects/{project_id}/ui"]["get"]["responses"][200]>;
+export type RenderedScreen = UiPreview["rendered"][number];
+export type RenderNode = RenderedScreen["root"][number];
+export type UiIssue = UiPreview["issues"][number];
 
 export interface ProblemDetails {
   type: string;
@@ -269,6 +273,10 @@ export const api = {
         method: "POST",
       })
     ).data;
+  },
+
+  async getUiPreview(projectId: string, signal?: AbortSignal): Promise<UiPreview> {
+    return (await request<UiPreview>(`/api/v1/projects/${enc(projectId)}/ui`, { signal })).data;
   },
 
   async scanText(text: string, signal?: AbortSignal): Promise<SafetyScan> {
