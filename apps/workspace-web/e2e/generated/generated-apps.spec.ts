@@ -105,7 +105,10 @@ test("generated app finance-entities: records are created, listed, referenced an
   await page.getByRole("button", { name: "Edit 125.5" }).click();
   await expect(page).toHaveURL(new RegExp(`^${base}/adjustment/new\\?id=`));
   await expectEditing(page);
-  await page.getByRole("form", { name: "New adjustment" }).getByRole("combobox", { name: /Kind/ }).selectOption("write-off");
+  await page
+    .getByRole("form", { name: "New adjustment" })
+    .getByRole("combobox", { name: /Kind/ })
+    .selectOption("write-off");
   await page.getByRole("form", { name: "New adjustment" }).getByRole("button", { name: "Save" }).click();
   await expect(page).toHaveURL(`${base}/adjustment`);
   const rows = page.getByRole("table", { name: "Adjustment" }).getByRole("row");
@@ -149,7 +152,10 @@ test("generated app finance-entities-http: records are created, edited and delet
   await page.goto(`${base}/transaction`);
   await expect(page.getByText("No transaction records yet.")).toBeVisible();
   await page.getByRole("button", { name: "New transaction" }).click();
-  await page.getByRole("form", { name: "New transaction" }).getByRole("spinbutton", { name: /Risk score/ }).fill("0.8");
+  await page
+    .getByRole("form", { name: "New transaction" })
+    .getByRole("spinbutton", { name: /Risk score/ })
+    .fill("0.8");
   await page.getByRole("form", { name: "New transaction" }).getByRole("button", { name: "Save" }).click();
   await expect(page).toHaveURL(`${base}/transaction`);
   const [transaction] = await server("transaction");
@@ -174,13 +180,19 @@ test("generated app finance-entities-http: records are created, edited and delet
   // Opening the edit URL directly: the record and the reference options load, then the form shows them.
   await page.goto(`${base}/adjustment/new?id=${encodeURIComponent(String(saved?.id))}`);
   await expectEditing(page);
-  await page.getByRole("form", { name: "New adjustment" }).getByRole("combobox", { name: /Kind/ }).selectOption("accrual");
+  await page
+    .getByRole("form", { name: "New adjustment" })
+    .getByRole("combobox", { name: /Kind/ })
+    .selectOption("accrual");
   await page.getByRole("form", { name: "New adjustment" }).getByRole("button", { name: "Save" }).click();
   await expect(page).toHaveURL(`${base}/adjustment`);
   expect(await server("adjustment")).toEqual([{ ...saved, kind: "accrual" }]);
 
   await page.getByRole("button", { name: "Delete 125.5" }).click();
-  await page.getByRole("dialog", { name: "Delete 125.5?" }).getByRole("button", { name: "Delete", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Delete 125.5?" })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
   await expect(page.getByText("No adjustment records yet.")).toBeVisible();
   expect(await server("adjustment")).toEqual([]);
   expect(errors).toEqual([]);
