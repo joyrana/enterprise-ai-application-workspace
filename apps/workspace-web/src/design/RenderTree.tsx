@@ -45,6 +45,9 @@ type Check = (value: unknown) => boolean;
 const str: Check = (v) => typeof v === "string" && v.length <= 300;
 const bool: Check = (v) => typeof v === "boolean";
 const smallInt: Check = (v) => typeof v === "number" && Number.isInteger(v) && v > 0 && v < 100;
+const length: Check = (v) => typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 100_000;
+const short: Check = (v) => typeof v === "string" && v.length > 0 && v.length <= 200;
+const route: Check = (v) => typeof v === "string" && /^\/[a-z0-9/-]{0,199}$/.test(v);
 const oneOf =
   (...values: string[]): Check =>
   (v) =>
@@ -67,11 +70,27 @@ export const REGISTRY: Record<string, Entry> = {
   Body1Strong: { render: Body1Strong, props: TYPOGRAPHY },
   Caption1: { render: Caption1, props: TYPOGRAPHY },
   Field: { render: Field, props: { label: str, required: bool, hint: str } },
-  Input: { render: Input, props: { name: str, type: oneOf("text", "number", "date", "datetime-local") } },
-  Textarea: { render: Textarea, props: { name: str } },
-  Select: { render: Select, props: { name: str } },
+  Input: {
+    render: Input,
+    props: {
+      name: str,
+      type: oneOf("text", "number", "date", "datetime-local"),
+      required: bool,
+      min: short,
+      max: short,
+      minLength: length,
+      maxLength: length,
+      pattern: short,
+      step: oneOf("any"),
+    },
+  },
+  Textarea: { render: Textarea, props: { name: str, required: bool, minLength: length, maxLength: length } },
+  Select: { render: Select, props: { name: str, required: bool } },
   Checkbox: { render: Checkbox, props: { label: str, name: str, required: bool } },
-  Button: { render: Button, props: { appearance: oneOf("primary", "secondary"), type: oneOf("button", "submit") } },
+  Button: {
+    render: Button,
+    props: { appearance: oneOf("primary", "secondary"), type: oneOf("button", "submit"), navigateTo: route },
+  },
   Table: { render: Table, props: { "aria-label": str } },
   TableHeader: { render: TableHeader, props: {} },
   TableRow: { render: TableRow, props: {} },
@@ -83,7 +102,7 @@ export const REGISTRY: Record<string, Entry> = {
   MessageBarBody: { render: MessageBarBody, props: {} },
   MessageBarTitle: { render: MessageBarTitle, props: {} },
   Toolbar: { render: Toolbar, props: { "aria-label": str } },
-  ToolbarButton: { render: ToolbarButton, props: { appearance: oneOf("primary", "subtle") } },
+  ToolbarButton: { render: ToolbarButton, props: { appearance: oneOf("primary", "subtle"), navigateTo: route } },
   form: { render: "form", props: { "aria-label": str } },
   section: { render: "section", props: { "aria-label": str } },
   div: { render: "div", props: { "data-unsupported": str, "data-role": oneOf("actions") } },
@@ -128,6 +147,8 @@ function RenderOne({ node, depth }: { node: RenderNode; depth: number }) {
     );
   }
   const props = safeProps(entry, node.props as Record<string, unknown>);
+  // The preview shows the design only: navigation targets are for generated code, not DOM attributes.
+  delete props.navigateTo;
   const childNodes = node.children ?? [];
 
   // A native control inside Field needs the render-function form to receive the label wiring.

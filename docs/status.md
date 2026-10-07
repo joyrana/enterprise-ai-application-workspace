@@ -1,6 +1,33 @@
 # Implementation status
 
-Last updated: 2026-10-07 · Milestone 4 first slice (PR #10)
+Last updated: 2026-10-07 · Milestone 4 second slice (PR #11)
+
+## Milestone 4 (second slice) — Behaviour in generated apps (generator 0.2.0)
+
+- **Navigation actions** route to their target screen. The route is validated before it is
+  printed.
+- **Form validation**: spec rules become native constraints (`required`, `min`/`max`, lengths,
+  `pattern`). The generated `useFormState` hook (`src/forms.ts`) runs constraint validation
+  on submit. Fluent `Field` shows each message (`aria-invalid`), a summary names the fields
+  by label, and a valid submit states that saving is not connected yet.
+- **Bug found while writing the browser test**: money and decimal fields were plain number
+  inputs with the default step of 1, so `125.50` was invalid. IR v1 gains an optional
+  `number_kind`, and decimals get `step="any"`.
+
+Evidence: run [37564995556](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37564995556)
+at `e9684a0`:
+
+- pytest **346 passed**, Vitest 46, workspace Playwright 7.
+- **Generated apps: 3 passed**. The new test, in a real browser:
+  - navigates from the list to the form;
+  - submits it empty: the field is marked invalid, the summary names it, and axe passes
+    in the error state;
+  - fills it in and submits: the "Validated" message appears;
+  - cancels back to the list, with no browser errors.
+
+Still static: there is no data access yet.
+
+---
 
 ## Milestone 4 (first slice) — Deterministic React + Fluent 2 code generation
 

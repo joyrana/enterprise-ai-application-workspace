@@ -45,9 +45,16 @@ There is also the brief's demand for verifiable output and traceability.
   - An on-demand, isolated build runner for users' own projects (container, no network
     except a package mirror, no credentials, resource limits) is a separate, later slice
     with its own threat-model entry.
-- **Static first.** This version generates the UI layer only. Forms prevent submission and
-  tables show their empty state. Data access, navigation actions, validation behaviour and
-  edit preservation come in later slices (Milestones 4–5).
+- **UI first, behaviour in steps.**
+  - Version 0.1.0 generated the UI layer only.
+  - Version 0.2.0 adds navigation actions (router navigation to the target screen) and form
+    validation:
+    - spec rules become native constraints (`required`, `min`/`max`, lengths, `pattern`,
+      `step` for decimals);
+    - on submit, invalid fields show their message in Fluent `Field` and in a summary;
+    - a valid submit states that saving is not connected yet.
+  - Behaviour lives in a small generated hook (`src/forms.ts`), not in values from the spec.
+  - Data access and edit preservation come later (Milestones 4–5).
 
 ## Consequences
 

@@ -35,7 +35,8 @@ security policies.
   needs; accepted screens feed the design preview). Requests are routed by preconditions first; the model only
   chooses when several skills apply, and you can always pick a skill yourself (ADR-0009).
 - **Code generation** (ADR-0014): each spec revision yields a complete, static
-  Vite + React + TypeScript + Fluent 2 project (screens, forms, tables, navigation) with
+  Vite + React + TypeScript + Fluent 2 project (screens, forms with validation, tables,
+  navigation actions) with
   provenance headers, exact dependency pins and a SHA-256 manifest. Browse the files, diff
   any two revisions and download a zip in the Code tab. CI builds generated example apps and
   checks every route with axe. The workspace never runs generated code.

@@ -5888,6 +5888,21 @@
             "title": "Name",
             "type": "string"
           },
+          "number_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "integer",
+                  "decimal"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number Kind"
+          },
           "options": {
             "items": {
               "maxLength": 200,

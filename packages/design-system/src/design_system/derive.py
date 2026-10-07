@@ -13,6 +13,8 @@ any revision and diffed.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from appspec import ApplicationSpec
 from appspec.model import DataEntity, EntityField, FieldType
 from appspec.model import FormField as SpecFormField
@@ -80,6 +82,14 @@ def humanize(name: str) -> str:
     return text[:1].upper() + text[1:] if text else name
 
 
+def _number_kind(field_type: FieldType) -> Literal["integer", "decimal"] | None:
+    if field_type is FieldType.INTEGER:
+        return "integer"
+    if field_type in (FieldType.DECIMAL, FieldType.MONEY):
+        return "decimal"
+    return None
+
+
 def _entity_field(prefix: str, field: EntityField) -> FormField:
     return FormField(
         id=_id(prefix, field.name),
@@ -90,6 +100,7 @@ def _entity_field(prefix: str, field: EntityField) -> FormField:
         help_text=field.description,
         options=list(field.enum_values) if field.type is FieldType.ENUM else [],
         options_from_entity=field.reference_entity_id if field.type is FieldType.REFERENCE else None,
+        number_kind=_number_kind(field.type),
     )
 
 
@@ -102,6 +113,7 @@ def _spec_field(prefix: str, field: SpecFormField) -> FormField:
         required=field.required,
         help_text=field.help_text,
         validation=[FieldValidation(kind=v.kind, value=v.value, message=v.message) for v in field.validation],
+        number_kind=_number_kind(field.type),
     )
 
 
