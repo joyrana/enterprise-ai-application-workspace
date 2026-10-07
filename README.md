@@ -5,7 +5,7 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 3 in progress (UI IR, design-system contracts, Fluent 2 preview).** Projects, the canonical specification, revision
+> **Status: Milestone 4 in progress (deterministic React + Fluent 2 code generation).** Projects, the canonical specification, revision
 > history, audit trail and the workspace UI exist, plus three AI discovery skills with routing
 > and human review, routing, checkpointed multi-step workflows, and a design preview of the
 > screens the spec describes, rendered with Fluent 2. Code generation is **not implemented
@@ -34,6 +34,11 @@ security policies.
   raised as blocking questions), and `screen-design` (proposes the screens the spec still
   needs; accepted screens feed the design preview). Requests are routed by preconditions first; the model only
   chooses when several skills apply, and you can always pick a skill yourself (ADR-0009).
+- **Code generation** (ADR-0014): each spec revision yields a complete, static
+  Vite + React + TypeScript + Fluent 2 project (screens, forms, tables, navigation) with
+  provenance headers, exact dependency pins and a SHA-256 manifest. Browse the files, diff
+  any two revisions and download a zip in the Code tab. CI builds generated example apps and
+  checks every route with axe. The workspace never runs generated code.
 - **Screens and design systems** (ADR-0013): the spec's screens (or, when none exist, its data
   entities) are turned into a typed UI intermediate representation, checked for
   accessibility rules and references, and mapped to Fluent 2 components through a contract
@@ -105,6 +110,7 @@ packages/application-spec/   Canonical spec library (no web/DB dependencies)
 packages/model-gateway/      Model providers (HF router, self-hosted, Ollama), validation, budgets
 packages/skill-sdk/          Skill manifests, registry, commands, router, safety, workflows
 packages/design-system/      UI IR, design-system contracts, Fluent 2 adapter
+packages/codegen-react/       Deterministic React + Fluent 2 code generator
 skills/                      Built-in skills (discovery, acceptance criteria, conflict check, screen design)
 evals/                       Evaluation datasets and runners
 contracts/                   Generated OpenAPI + JSON Schema (drift-checked in CI)
@@ -147,8 +153,8 @@ uv run python -m workspace_evals.injection                  # detector precision
 | 2b | Acceptance-criteria and conflict-detection skills, two-stage routing, routing evals | Done |
 | 2c | Real-model evaluation (Ollama + Qwen in CI), Playwright E2E with axe | Done |
 | 2d | Prompt-injection hardening, checkpointed workflows, eval diagnostics and variance | Done (HF-router and gpt-oss baselines need a token / local run) |
-| 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | In progress (first slice in review) |
-| 4 | React generation, isolated builds, preview, diff review | Planned |
+| 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Done (entity/navigation proposals open) |
+| 4 | React generation, isolated builds, preview, diff review | In progress (generation, diff, CI builds in review) |
 | 5 | Incremental changes, edit preservation, resilience | Planned |
 | 6 | Angular + Material 3 | Planned |
 | 7 | Organization design systems and policies | Planned |

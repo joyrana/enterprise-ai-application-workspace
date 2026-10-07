@@ -43,6 +43,9 @@ export type UiPreview = Json<paths["/api/v1/projects/{project_id}/ui"]["get"]["r
 export type RenderedScreen = UiPreview["rendered"][number];
 export type RenderNode = RenderedScreen["root"][number];
 export type UiIssue = UiPreview["issues"][number];
+export type CodeManifest = Json<paths["/api/v1/projects/{project_id}/code"]["get"]["responses"][200]>;
+export type CodeFile = Json<paths["/api/v1/projects/{project_id}/code/file"]["get"]["responses"][200]>;
+export type CodeDiff = Json<paths["/api/v1/projects/{project_id}/code/diff"]["get"]["responses"][200]>;
 
 export interface ProblemDetails {
   type: string;
@@ -277,6 +280,39 @@ export const api = {
 
   async getUiPreview(projectId: string, signal?: AbortSignal): Promise<UiPreview> {
     return (await request<UiPreview>(`/api/v1/projects/${enc(projectId)}/ui`, { signal })).data;
+  },
+
+  async getCode(projectId: string, signal?: AbortSignal): Promise<CodeManifest> {
+    return (await request<CodeManifest>(`/api/v1/projects/${enc(projectId)}/code`, { signal })).data;
+  },
+
+  async getCodeFile(projectId: string, path: string, revision: number, signal?: AbortSignal): Promise<CodeFile> {
+    return (
+      await request<CodeFile>(`/api/v1/projects/${enc(projectId)}/code/file${query({ path, revision })}`, { signal })
+    ).data;
+  },
+
+  async getCodeDiff(projectId: string, from: number, to: number, signal?: AbortSignal): Promise<CodeDiff> {
+    return (await request<CodeDiff>(`/api/v1/projects/${enc(projectId)}/code/diff${query({ from, to })}`, { signal }))
+      .data;
+  },
+
+  /** The zip needs the dev identity headers, so it is fetched rather than linked. */
+  async downloadCode(projectId: string, revision: number): Promise<{ blob: Blob; filename: string }> {
+    const response = await fetch(`${BASE}/api/v1/projects/${enc(projectId)}/code.zip${query({ revision })}`, {
+      headers: { "X-Dev-Tenant": devIdentity.tenant, "X-Dev-User": devIdentity.user },
+    });
+    if (!response.ok) {
+      const payload: unknown = await response.json().catch(() => undefined);
+      throw new ApiError(
+        isProblem(payload)
+          ? payload
+          : { type: `urn:workspace:error:http-${response.status}`, title: "Download failed", status: response.status },
+      );
+    }
+    const disposition = response.headers.get("Content-Disposition") ?? "";
+    const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? "generated-app.zip";
+    return { blob: await response.blob(), filename };
   },
 
   async scanText(text: string, signal?: AbortSignal): Promise<SafetyScan> {

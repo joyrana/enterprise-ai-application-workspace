@@ -15,6 +15,7 @@ dist/
 # Node
 node_modules/
 apps/workspace-web/dist/
+apps/workspace-web/.generated/
 apps/workspace-web/src/api/schema.check.d.ts
 
 # Environment and secrets: never commit real values

@@ -14,7 +14,7 @@ from appspec import ApplicationSpec, json_schema
 from design_system import DesignSystemContract
 from skill_sdk import SkillRegistry
 
-from . import runs, service, ui, workflows
+from . import code, runs, service, ui, workflows
 from .ai import ModelRuntime
 from .auth import CurrentPrincipal
 from .errors import Problem
@@ -23,6 +23,9 @@ from .schemas import (
     ApplyRunRequest,
     ApplyRunResult,
     AuditPage,
+    CodeDiff,
+    CodeFile,
+    CodeManifest,
     DesignSystemList,
     Health,
     ProjectCreate,
@@ -520,3 +523,70 @@ def get_project_ui(
     revision: Annotated[int | None, Query(ge=1, description="Spec revision; defaults to the current one.")] = None,
 ) -> UiPreview:
     return ui.preview(session, principal, project_id, revision)
+
+
+# --------------------------------------------------------------------------- generated code
+
+Revision = Annotated[int | None, Query(ge=1, description="Spec revision; defaults to the current one.")]
+
+
+@api.get(
+    "/projects/{project_id}/code",
+    response_model=CodeManifest,
+    tags=["code"],
+    summary="Generated React + Fluent 2 project for a spec revision: file list, hashes and warnings",
+)
+def get_project_code(
+    project_id: ProjectId, principal: CurrentPrincipal, session: DbSession, revision: Revision = None
+) -> CodeManifest:
+    return code.manifest(session, principal, project_id, revision)
+
+
+@api.get(
+    "/projects/{project_id}/code/file",
+    response_model=CodeFile,
+    tags=["code"],
+    summary="One generated file",
+)
+def get_project_code_file(
+    project_id: ProjectId,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    path: Annotated[str, Query(min_length=1, max_length=200)],
+    revision: Revision = None,
+) -> CodeFile:
+    return code.file(session, principal, project_id, path, revision)
+
+
+@api.get(
+    "/projects/{project_id}/code/diff",
+    response_model=CodeDiff,
+    tags=["code"],
+    summary="Unified diff of the generated code between two spec revisions",
+)
+def get_project_code_diff(
+    project_id: ProjectId,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    base: Annotated[int, Query(ge=1, alias="from", description="Older spec revision.")],
+    head: Annotated[int | None, Query(ge=1, alias="to", description="Newer revision; defaults to current.")] = None,
+) -> CodeDiff:
+    return code.diff(session, principal, project_id, base, head)
+
+
+@api.get(
+    "/projects/{project_id}/code.zip",
+    tags=["code"],
+    summary="Download the generated project as a zip archive",
+    response_class=Response,
+    responses={200: {"content": {"application/zip": {}}, "description": "Deterministic zip of the generated project."}},
+)
+def download_project_code(
+    project_id: ProjectId, principal: CurrentPrincipal, session: DbSession, revision: Revision = None
+) -> Response:
+    filename, data = code.archive(session, principal, project_id, revision)
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

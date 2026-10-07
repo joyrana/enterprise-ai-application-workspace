@@ -6,6 +6,7 @@ import { ProblemMessage } from "../../components/ProblemMessage";
 import { RouterLink } from "../../components/RouterLink";
 import { useAsync } from "../../hooks/useAsync";
 import { AuditTab } from "./AuditTab";
+import { CodeTab } from "./CodeTab";
 import { DiscoveryTab } from "./DiscoveryTab";
 import { HistoryTab } from "./HistoryTab";
 import { OverviewTab } from "./OverviewTab";
@@ -17,6 +18,7 @@ const TABS = [
   { id: "discovery", label: "Discovery" },
   { id: "specification", label: "Specification" },
   { id: "screens", label: "Screens" },
+  { id: "code", label: "Code" },
   { id: "history", label: "History" },
   { id: "audit", label: "Audit" },
 ] as const;
@@ -109,6 +111,7 @@ export function ProjectPage() {
           />
         )}
         {selected === "screens" && <ScreensTab projectId={projectId} revision={revision.revision} />}
+        {selected === "code" && <CodeTab projectId={projectId} revision={revision.revision} />}
         {selected === "history" && <HistoryTab key={historyKey} projectId={projectId} />}
         {selected === "audit" && <AuditTab key={historyKey} projectId={projectId} />}
       </section>

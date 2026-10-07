@@ -46,14 +46,14 @@ jobs:
       - name: Lint
         run: uv run ruff check --output-format github .
       - name: Type check
-        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy packages/application-spec/src packages/design-system/src packages/model-gateway/src packages/skill-sdk/src skills/src evals/src services/api/src
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy packages/application-spec/src packages/codegen-react/src packages/design-system/src packages/model-gateway/src packages/skill-sdk/src skills/src evals/src services/api/src
       - name: Tests (unit + integration against PostgreSQL)
         env:
           SUMMARY_PATTERN: "[0-9]+ passed"
         run: >-
           $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "pytest"
           uv run pytest --tb=short
-          --cov=appspec --cov=design_system --cov=model_gateway --cov=skill_sdk --cov=workspace_skills --cov=workspace_evals --cov=workspace_api --cov-report=term-missing
+          --cov=appspec --cov=codegen_react --cov=design_system --cov=model_gateway --cov=skill_sdk --cov=workspace_skills --cov=workspace_evals --cov=workspace_api --cov-report=term-missing
           --junitxml=reports/pytest.xml
       - name: Routing eval baseline (lexical, deterministic; no thresholds yet)
         env:
@@ -190,6 +190,51 @@ jobs:
             api.log
             fake-model.log
           retention-days: 14
+
+  generated-apps:
+    name: Generated apps (build + Playwright + axe)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/workspace-web/package-lock.json
+      - name: Install (locked)
+        run: |
+          uv sync --locked
+          (cd apps/workspace-web && npm ci)
+      - name: Generate example apps
+        run: |
+          set -euo pipefail
+          spec=packages/application-spec/examples/finance-operations.json
+          uv run python -m codegen_react --spec "$spec" --revision 2 --out apps/workspace-web/.generated/finance-screens
+          uv run python -m codegen_react --spec "$spec" --revision 2 --without-screens --out apps/workspace-web/.generated/finance-entities
+      - name: Type-check and build generated apps (strict TypeScript, locked toolchain)
+        working-directory: apps/workspace-web
+        run: |
+          set -euo pipefail
+          for app in finance-screens finance-entities; do
+            $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "tsc $app" npx tsc -p ".generated/$app/tsconfig.json"
+            $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "vite build $app" npx vite build ".generated/$app" --logLevel warn
+          done
+          echo "::notice title=generated apps::finance-screens and finance-entities type-check and build"
+      - name: Install Chromium for Playwright
+        working-directory: apps/workspace-web
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests with axe on every generated route
+        working-directory: apps/workspace-web
+        env:
+          SUMMARY_PATTERN: "[0-9]+ (passed|failed)"
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "generated apps" npx playwright test -c playwright.generated.config.ts
 
   secrets:
     name: Secret scan
