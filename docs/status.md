@@ -1,6 +1,58 @@
 # Implementation status
 
-Last updated: 2026-10-05 · Milestone 3 second slice (PR #9)
+Last updated: 2026-10-07 · Milestone 4 first slice (PR #10)
+
+## Milestone 4 (first slice) — Deterministic React + Fluent 2 code generation
+
+Decision record: [ADR-0014](adr/0014-deterministic-code-generation.md).
+
+### What was built
+
+- `packages/codegen-react` prints the design adapter's render tree as TSX and emits a complete
+  Vite + React 18 + strict TypeScript + Fluent 2 project: screens, shared token-based layout
+  styles, an app shell with labelled navigation and routes, configuration and a README.
+- **Injection-safe output**:
+  - every spec value is an ASCII-escaped JSON string literal;
+  - component and prop names come from an allowlist that is tested identical to the
+    preview's;
+  - prop values are checked;
+  - anything else is a generation error.
+- **Deterministic and traceable**:
+  - the same revision produces byte-identical files;
+  - every source file carries a provenance header;
+  - `workspace-manifest.json` records each file's SHA-256;
+  - the zip is deterministic.
+- **Pinned toolchain**: exact versions, tested equal to the workspace lockfile.
+- **Generation is refused while the UI IR has errors** (422 `code-generation-blocked` with the
+  errors).
+- API: `/code`, `/code/file`, `/code/diff`, `/code.zip`. **Code tab**: file browser, diff
+  between revisions, zip download.
+- **Execution boundary**: the API never installs, builds or runs generated code.
+
+### Evidence
+
+Run [37560164736](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37560164736)
+at `6848361`:
+
+| Check | Result |
+|---|---|
+| pytest. New: 10 generator tests (layout and provenance, determinism, lockfile pinning, hostile spec text, blocked generation, printer allowlist, file input wiring, revision diff, preview/generator allowlist equality) and 6 API tests | **344 passed** |
+| Vitest. New: Code tab (file browsing, diff, blocked generation) | **46 passed** |
+| **Generated apps** (new CI job): two example apps (specified screens; entity-derived list and form screens) type-check with strict TypeScript and build with Vite 6.4.3 on the locked toolchain | **Pass** |
+| Generated apps in Chromium: every route renders, no browser errors, **no serious or critical axe WCAG 2.1 A/AA violations** | **2 passed** (all routes) |
+| Workspace E2E (Playwright + axe) | 7 passed |
+| Lint, strict typing, contracts, audits, secret scan | Pass. Dependency review still needs "Dependency graph" enabled |
+
+### Known limitations (Milestone 4 so far)
+
+- **Static apps**: forms prevent submission, tables show their empty state, toolbar and
+  cancel actions do not navigate, and there is no data access.
+- No isolated on-demand build runner: CI proves the generator on example specs; users build
+  their own downloads.
+- Edit preservation (regenerating without losing hand edits) is Milestone 5; generated
+  files say so.
+
+---
 
 ## Milestone 3 (second slice) — Model-proposed screens
 
