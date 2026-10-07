@@ -1,6 +1,35 @@
 # Implementation status
 
-Last updated: 2026-10-07 · Milestone 4 second slice (PR #11)
+Last updated: 2026-10-07 · Milestone 4 third slice (PR #12)
+
+## Milestone 4 (third slice) — Data in generated apps (generator 0.3.0)
+
+- `src/data/entities.ts`: a TypeScript type per entity, one store per entity, typed conversion
+  of submitted form data, and display helpers. `src/data/store.ts`: a `Store` interface whose
+  default implementation keeps records in the browser (localStorage, memory fallback), and
+  `useEntityList` (`useSyncExternalStore`, stable snapshots).
+- Bound screens: tables list their entity's records, with an empty state otherwise; bound forms
+  save and return to the entity's list; reference fields list the referenced records.
+- `api/openapi.json` (OpenAPI 3.1): the backend contract derived from the same entities.
+
+Evidence: run [37572456412](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37572456412)
+at `1d4dab5`:
+
+- pytest **349 passed**, Vitest 46, workspace Playwright 7.
+- **Generated apps: 3 passed** (strict `tsc`, Vite build, Chromium). The new end-to-end test
+  inside a generated app:
+  1. creates a transaction;
+  2. creates an adjustment with a decimal amount, an enum value and a reference to it;
+  3. finds it listed with the reference resolved;
+  4. reloads, and the data persists;
+  5. cancels, and no extra row appears;
+  6. checks axe in the validation-error state, with no browser errors.
+- Passed on the first CI run.
+
+Not yet: an HTTP `Store` implementation against the contract, update and delete, edit
+preservation (Milestone 5), and the isolated build runner.
+
+---
 
 ## Milestone 4 (second slice) — Behaviour in generated apps (generator 0.2.0)
 

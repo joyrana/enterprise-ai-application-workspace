@@ -37,13 +37,27 @@ for (const app of GENERATED_APPS) {
   });
 }
 
-test("generated app finance-entities: navigation actions work and forms validate before saving", async ({ page }) => {
+test("generated app finance-entities: records are created, listed, referenced and kept across reloads", async ({
+  page,
+}) => {
   const app = GENERATED_APPS.find((a) => a.name === "finance-entities");
   if (!app) throw new Error("finance-entities is not configured");
   const base = `http://127.0.0.1:${app.port}`;
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
 
+  // A transaction first, so an adjustment can reference it.
+  await page.goto(`${base}/transaction`);
+  await expect(page.getByText("No transaction records yet.")).toBeVisible();
+  await page.getByRole("button", { name: "New transaction" }).click();
+  await expect(page).toHaveURL(`${base}/transaction/new`);
+  const txForm = page.getByRole("form", { name: "New transaction" });
+  await txForm.getByRole("spinbutton", { name: /Risk score/ }).fill("0.8");
+  await txForm.getByRole("button", { name: "Save" }).click();
+  await expect(page).toHaveURL(`${base}/transaction`);
+  await expect(page.getByRole("table", { name: "Transaction" }).getByRole("cell", { name: "0.8" })).toBeVisible();
+
+  // Navigation action from the list to the form.
   await page.goto(`${base}/adjustment`);
   await page
     .getByRole("toolbar", { name: "Adjustment actions" })
@@ -52,12 +66,10 @@ test("generated app finance-entities: navigation actions work and forms validate
   await expect(page).toHaveURL(`${base}/adjustment/new`);
   const form = page.getByRole("form", { name: "New adjustment" });
 
-  // Submitting empty: the required amount is reported by the field and in the summary.
+  // Submitting empty: the required amount is reported by the field and in the summary; nothing is saved.
   await form.getByRole("button", { name: "Save" }).click();
   const amount = form.getByRole("spinbutton", { name: /Amount/ });
   await expect(amount).toHaveAttribute("aria-invalid", "true");
-  await expect(form.getByText("Fix 1 field(s)")).toBeVisible();
-  // The summary names the field by its label.
   await expect(form.getByText("Fix 1 field(s)").locator("..")).toContainText("Amount");
   const invalid = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -68,15 +80,25 @@ test("generated app finance-entities: navigation actions work and forms validate
     "axe with validation errors shown",
   ).toEqual([]);
 
-  // Valid input: validation passes and the app says plainly that saving is not connected.
+  // Valid input, including a decimal amount and a reference to the transaction.
   await amount.fill("125.50");
+  await form.getByRole("combobox", { name: /Kind/ }).selectOption("reclass");
+  await form.getByRole("combobox", { name: /Transaction/ }).selectOption({ label: "0.8" });
   await form.getByRole("button", { name: "Save" }).click();
-  await expect(amount).not.toHaveAttribute("aria-invalid", "true");
-  await expect(form.getByText("Validated")).toBeVisible();
-  await expect(form.getByText("Saving is not connected to a backend yet.")).toBeVisible();
-
-  await form.getByRole("button", { name: "Cancel" }).click();
   await expect(page).toHaveURL(`${base}/adjustment`);
-  await expect(page.getByRole("heading", { level: 1, name: "Adjustment" })).toBeVisible();
+  const row = page.getByRole("table", { name: "Adjustment" }).getByRole("row").nth(1);
+  await expect(row).toContainText("125.5");
+  await expect(row).toContainText("reclass");
+  await expect(row).toContainText("0.8");
+
+  // Records live in the browser store and survive a reload.
+  await page.reload();
+  await expect(page.getByRole("table", { name: "Adjustment" }).getByRole("row").nth(1)).toContainText("reclass");
+
+  // Cancel goes back without saving.
+  await page.getByRole("button", { name: "New adjustment" }).click();
+  await page.getByRole("form", { name: "New adjustment" }).getByRole("button", { name: "Cancel" }).click();
+  await expect(page).toHaveURL(`${base}/adjustment`);
+  await expect(page.getByRole("table", { name: "Adjustment" }).getByRole("row")).toHaveCount(2);
   expect(errors).toEqual([]);
 });

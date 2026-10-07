@@ -15,8 +15,12 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
+from dataclasses import dataclass, field
 
 from design_system import RenderNode
+from design_system.ir import Form as IrForm
+from design_system.ir import FormField as IrField
+from design_system.ir import Table as IrTable
 
 
 class GenerationError(Exception):
@@ -165,10 +169,32 @@ def _control_name(field: RenderNode) -> str | None:
     return None
 
 
+@dataclass
+class DataBindings:
+    """What the printer needs to bind tables, forms and reference fields to entity stores."""
+
+    #: IR node id -> IR node (tables, forms, fields), to find entity bindings for render nodes.
+    ir_nodes: dict[str, object] = field(default_factory=dict)
+    #: Entities that have a generated store.
+    entities: set[str] = field(default_factory=set)
+    #: (entity id, field name) -> referenced entity id.
+    references: dict[tuple[str, str], str] = field(default_factory=dict)
+    #: entity id -> route of its list screen, where a bound form returns after saving.
+    list_routes: dict[str, str] = field(default_factory=dict)
+    #: Route of the screen being printed (a form never "returns" to its own screen).
+    current_route: str = ""
+
+
 class Printer:
     """Prints one screen's render tree; records which hooks and components the output needs."""
 
-    def __init__(self) -> None:
+    def __init__(self, bindings: DataBindings | None = None) -> None:
+        self.bindings = bindings or DataBindings()
+        self.form_args: dict[str, str] = {}
+        self.bound_forms: set[str] = set()
+        self.data_hooks: list[str] = []
+        self.data_imports: set[str] = set()
+        self.store_imports: set[str] = set()
         self.forms: list[str] = []
         #: form variable -> field name -> label, for the error summary.
         self.labels: dict[str, dict[str, str]] = {}
@@ -185,6 +211,7 @@ class Printer:
             var = f"form{len(self.forms) + 1}"
             self.forms.append(var)
             out += f" noValidate onSubmit={{{var}.onSubmit}}"
+            self._bind_form(node, var)
         if node.component == "Checkbox" and form_var is not None:
             name, label = node.props.get("name"), node.props.get("label")
             if isinstance(name, str) and isinstance(label, str):
@@ -197,6 +224,92 @@ class Printer:
             if name is not None:
                 key = f"{form_var}.errors[{literal(name)}]"
                 out += f' validationMessage={{{key}}} validationState={{{key} ? "error" : "none"}}'
+        return out
+
+    def _ir(self, node: RenderNode) -> object | None:
+        return self.bindings.ir_nodes.get(node.ir_id) if node.ir_id else None
+
+    def _bind_form(self, node: RenderNode, var: str) -> None:
+        ir = self._ir(node)
+        if not isinstance(ir, IrForm) or ir.entity_id not in self.bindings.entities:
+            return
+        entity = literal(ir.entity_id)
+        self.bound_forms.add(var)
+        self.data_imports.add("saveRecord")
+        route = self.bindings.list_routes.get(ir.entity_id)
+        if route and route != self.bindings.current_route:
+            self.uses_navigate = True
+            self.form_args[var] = f"{{ save: (data) => {{ saveRecord({entity}, data); navigate({literal(route)}); }} }}"
+        else:
+            self.form_args[var] = f"{{ save: (data) => saveRecord({entity}, data) }}"
+
+    def _hook(self, kind: str, entity: str) -> str:
+        var = f"{kind}{len(self.data_hooks) + 1}"
+        self.data_hooks.append(f"const {var} = useEntityList(stores[{literal(entity)}]);")
+        self.store_imports.add("useEntityList")
+        self.data_imports.add("stores")
+        return var
+
+    def _bound_table(self, node: RenderNode, ir: IrTable, pad: str, attrs: str, depth: int) -> list[str]:
+        assert ir.entity_id is not None
+        header, body = node.children[0], node.children[1]
+        row_c = body.children[0].component
+        empty_cell = body.children[0].children[0]
+        cell_c = empty_cell.component
+        rows = self._hook("rows", ir.entity_id)
+        self.data_imports.add("formatValue")
+        cells = []
+        for column in ir.columns:
+            key = literal(column.key)
+            ref = self.bindings.references.get((ir.entity_id, column.key))
+            if column.type == "reference" and ref in self.bindings.entities:
+                self.data_imports.add("displayRef")
+                cells.append(f"<{cell_c}>{{displayRef({literal(ref)}, row[{key}])}}</{cell_c}>")
+            else:
+                cells.append(f"<{cell_c}>{{formatValue(row[{key}])}}</{cell_c}>")
+        lines = [f"{pad}<{node.component}{attrs}>"]
+        lines.extend(self.nodes([header], len(pad) // 2 + 1, depth + 1))
+        p = pad + "  "
+        lines += [
+            f"{p}<{body.component}>",
+            f"{p}  {{{rows}.length === 0 ? (",
+            f"{p}    <{row_c}>",
+            *[f"{p}      {line.strip()}" for line in self.nodes([empty_cell], 0, depth + 1)],
+            f"{p}    </{row_c}>",
+            f"{p}  ) : (",
+            f"{p}    {rows}.map((row) => (",
+            f"{p}      <{row_c} key={{row.id}}>",
+            *[f"{p}        {c}" for c in cells],
+            f"{p}      </{row_c}>",
+            f"{p}    ))",
+            f"{p}  )}}",
+            f"{p}</{body.component}>",
+            f"{pad}</{node.component}>",
+        ]
+        return lines
+
+    def _reference_field(self, node: RenderNode, ref: str, pad: str, attrs: str) -> list[str]:
+        select = node.children[0]
+        option_c = "option"
+        options = self._hook("options", ref)
+        self.data_imports.add("displayName")
+        return [
+            f"{pad}<{node.component}{attrs}>",
+            f"{pad}  <{select.component}{_props(select)}>",
+            f'{pad}    <{option_c} value="">{{{literal("Select…")}}}</{option_c}>',
+            f"{pad}    {{{options}.map((record) => (",
+            f"{pad}      <{option_c} key={{record.id}} value={{record.id}}>",
+            f"{pad}        {{displayName({literal(ref)}, record)}}",
+            f"{pad}      </{option_c}>",
+            f"{pad}    ))}}",
+            f"{pad}  </{select.component}>",
+            f"{pad}</{node.component}>",
+        ]
+
+    def declarations(self) -> list[str]:
+        out = ["const navigate = useNavigate();"] if self.uses_navigate else []
+        out += self.data_hooks
+        out += [f"const {var} = useFormState({self.form_args.get(var, '')});" for var in self.forms]
         return out
 
     def _form_feedback(self, var: str, pad: str) -> list[str]:
@@ -215,8 +328,17 @@ class Printer:
             f"{pad}{{{var}.submitted && (",
             f'{pad}  <MessageBar intent="success">',
             f"{pad}    <MessageBarBody>",
-            f"{pad}      <MessageBarTitle>Validated</MessageBarTitle>",
-            f"{pad}      Saving is not connected to a backend yet.",
+            *(
+                [
+                    f"{pad}      <MessageBarTitle>Saved</MessageBarTitle>",
+                    f"{pad}      The record was saved in this browser.",
+                ]
+                if var in self.bound_forms
+                else [
+                    f"{pad}      <MessageBarTitle>Validated</MessageBarTitle>",
+                    f"{pad}      Saving is not connected to a backend yet.",
+                ]
+            ),
             f"{pad}    </MessageBarBody>",
             f"{pad}  </MessageBar>",
             f"{pad})}}",
@@ -238,6 +360,23 @@ class Printer:
             tag = node.component
             attrs = _props(node) + _classes(node) + self._behaviour(node, form_var)
             inner_form = self.forms[-1] if tag == "form" else form_var
+            ir = self._ir(node)
+            if (
+                tag == "Table"
+                and isinstance(ir, IrTable)
+                and ir.entity_id in self.bindings.entities
+                and len(node.children) == 2
+            ):
+                lines.extend(self._bound_table(node, ir, pad, attrs, depth))
+                continue
+            if (
+                tag == "Field"
+                and isinstance(ir, IrField)
+                and ir.options_from_entity in self.bindings.entities
+                and len(node.children) == 1
+            ):
+                lines.extend(self._reference_field(node, str(ir.options_from_entity), pad, attrs))
+                continue
             only = node.children[0] if len(node.children) == 1 else None
             if tag == "Field" and only is not None and only.component == "input":
                 lines.append(f"{pad}<Field{attrs}>")

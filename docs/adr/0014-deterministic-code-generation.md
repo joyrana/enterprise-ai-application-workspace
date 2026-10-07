@@ -54,7 +54,17 @@ There is also the brief's demand for verifiable output and traceability.
     - on submit, invalid fields show their message in Fluent `Field` and in a summary;
     - a valid submit states that saving is not connected yet.
   - Behaviour lives in a small generated hook (`src/forms.ts`), not in values from the spec.
-  - Data access and edit preservation come later (Milestones 4–5).
+  - Version 0.3.0 adds a data layer:
+    - a TypeScript type per entity;
+    - a `Store` interface whose default implementation keeps records in the browser
+      (localStorage, with a memory fallback);
+    - tables bound to their entity, with an empty state;
+    - bound forms that convert values to the right types, save them and return to the list;
+    - reference fields that list the referenced entity's records.
+
+    `api/openapi.json` states the backend contract derived from the same entities, so a real
+    backend can replace the browser store behind the same interface. Edit preservation comes
+    in Milestone 5.
 
 ## Consequences
 

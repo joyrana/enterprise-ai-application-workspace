@@ -13,6 +13,7 @@ import hashlib
 import html
 import json
 import re
+from dataclasses import replace
 from importlib import resources
 from typing import Any
 
@@ -28,11 +29,15 @@ from design_system import (
     render_screens,
     validate_document,
 )
+from design_system.ir import Form as IrForm
+from design_system.ir import Table as IrTable
+from design_system.ir import walk
 
-from .jsx import GenerationError, Printer, components_in, is_library_component, literal, needs_layout
+from .data import STORE_TS, entities_ts, openapi_json
+from .jsx import DataBindings, GenerationError, Printer, components_in, is_library_component, literal, needs_layout
 
 GENERATOR = "codegen-react"
-GENERATOR_VERSION = "0.2.0"
+GENERATOR_VERSION = "0.3.0"
 MANIFEST = "workspace-manifest.json"
 
 
@@ -80,12 +85,12 @@ def _header(spec_revision: int | None, contract: DesignSystemContract) -> str:
     )
 
 
-def _screen_file(screen: RenderedScreen, header: str, contract: DesignSystemContract) -> str:
+def _screen_file(screen: RenderedScreen, header: str, contract: DesignSystemContract, bindings: DataBindings) -> str:
     packages = {m.package for m in contract.mappings.values()} - {"html"}
     if len(packages) != 1:
         raise GenerationError("expected exactly one component package in the contract")
     [package] = packages
-    printer = Printer()
+    printer = Printer(replace(bindings, current_route=screen.route))
     body = printer.nodes(screen.root, 3)
     used = components_in(screen.root) | printer.extra_components
     library = sorted(c for c in used if is_library_component(c))
@@ -97,6 +102,10 @@ def _screen_file(screen: RenderedScreen, header: str, contract: DesignSystemCont
         lines.append('import { useNavigate } from "react-router-dom";')
     if printer.forms:
         lines.append('import { useFormState } from "../forms";')
+    if printer.data_imports:
+        lines.append(f'import {{ {", ".join(sorted(printer.data_imports))} }} from "../data/entities";')
+    if printer.store_imports:
+        lines.append(f'import {{ {", ".join(sorted(printer.store_imports))} }} from "../data/store";')
     if has_layout:
         lines.append('import { useLayoutStyles } from "../layout";')
     lines.append("")
@@ -108,10 +117,7 @@ def _screen_file(screen: RenderedScreen, header: str, contract: DesignSystemCont
     lines.append(f"export function {name}() {{")
     if has_layout:
         lines.append("  const layout = useLayoutStyles();")
-    if printer.uses_navigate:
-        lines.append("  const navigate = useNavigate();")
-    for var in printer.forms:
-        lines.append(f"  const {var} = useFormState();")
+    lines.extend(f"  {declaration}" for declaration in printer.declarations())
     lines.append("  return (")
     lines.append("    <>")
     lines.extend(body)
@@ -126,9 +132,9 @@ _FORMS = """import { useState, type FormEvent } from "react";
 /**
  * Form state for a generated form: the browser checks the constraints from the specification
  * (required, min, max, lengths, pattern); invalid fields get their message shown by Fluent Field.
- * Saving is not connected to a backend yet.
+ * Forms bound to an entity pass `save`, which stores the record (see src/data).
  */
-export function useFormState() {
+export function useFormState(options: { save?: (data: FormData) => void } = {}) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
 
@@ -147,7 +153,9 @@ export function useFormState() {
       }
     }
     setErrors(next);
-    setSubmitted(Object.keys(next).length === 0);
+    const valid = Object.keys(next).length === 0;
+    if (valid && options.save) options.save(new FormData(event.currentTarget));
+    setSubmitted(valid);
   };
 
   return { errors, submitted, onSubmit };
@@ -336,6 +344,27 @@ def _readme(
     )
 
 
+def _bindings(spec: ApplicationSpec, document: UiDocument) -> DataBindings:
+    ir_nodes: dict[str, object] = {}
+    list_routes: dict[str, str] = {}
+    for screen in document.screens:
+        for _, node in walk(screen.body, ""):
+            ir_nodes[node.id] = node
+            if isinstance(node, IrForm):
+                for f in node.fields:
+                    ir_nodes[f.id] = f
+            if isinstance(node, IrTable) and node.entity_id and node.entity_id not in list_routes:
+                list_routes[node.entity_id] = screen.route
+    return DataBindings(
+        ir_nodes=ir_nodes,
+        entities={e.id for e in spec.entities if e.fields},
+        references={
+            (e.id, f.name): f.reference_entity_id for e in spec.entities for f in e.fields if f.reference_entity_id
+        },
+        list_routes=list_routes,
+    )
+
+
 def generate_project(
     spec: ApplicationSpec,
     contract: DesignSystemContract,
@@ -355,8 +384,12 @@ def generate_project(
     files.update(_static_files(package_name(title), title, header))
     files["README.md"] = _readme(title, spec_revision, contract, rendered)
     files["src/App.tsx"] = _app_file(rendered, header, title)
+    bindings = _bindings(spec, document)
+    files["src/data/store.ts"] = header + "\n" + STORE_TS
+    files["src/data/entities.ts"] = entities_ts(spec, header)
+    files["api/openapi.json"] = openapi_json(spec, f"{GENERATOR}@{GENERATOR_VERSION}", spec_revision)
     for screen in rendered:
-        files[f"src/screens/{pascal(screen.screen_id)}Screen.tsx"] = _screen_file(screen, header, contract)
+        files[f"src/screens/{pascal(screen.screen_id)}Screen.tsx"] = _screen_file(screen, header, contract, bindings)
     project = GeneratedProject(
         generator=f"{GENERATOR}@{GENERATOR_VERSION}",
         spec_revision=spec_revision,
