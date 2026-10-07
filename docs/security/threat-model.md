@@ -18,7 +18,7 @@ execution) adds the next major trust boundary.
 4. API ↔ model provider. With the Hugging Face router, prompts leave the network and reach
    third-party inference providers; with Ollama or self-hosted models they do not.
 5. Model output → workspace (untrusted text that must never act as instructions or state).
-6. *Future:* API ↔ build runner (untrusted generated code).
+6. Generated code → users (downloads). *Future:* API ↔ isolated build runner.
 
 ## Threats and mitigations
 
@@ -45,7 +45,8 @@ execution) adds the next major trust boundary.
 | Misrouting to an unintended skill | Precondition filter first; the model may only pick listed candidate ids (schema-enforced) or none; routing decision and rationale stored and shown; every skill only proposes, so a misroute costs a review, not a change | Wrong-skill proposals still need a human to notice |
 | Runaway or duplicated workflow steps | Control flow is deterministic code, not model output (ADR-0012); one step run at a time per workflow; each step is retried at most `max_attempts_per_step` times; the checkpoint is written in the same transaction as each event, so a replayed event is ignored; steps only propose, so every spec change still needs a person; cancel stops further steps | A step's run that is already executing finishes after a cancel (its proposals still need a decision) |
 | Duplicate or replayed AI actions | Idempotent run creation; atomic `queued → running` claim; decisions applicable once per run; `If-Match` on apply | — |
-| Untrusted code execution | Not applicable yet (no code generation) | Milestone 4 |
+| Code injection through spec text | Generated code is printed from an allowlisted render tree; every spec value is an ASCII-escaped JSON string literal; identifiers come only from validated ids; hostile-text tests (ADR-0014) | A future generator feature that emits user text outside literals must keep the same rule (enforced by the allowlist and tests) |
+| Untrusted code execution | The API generates text only and never installs, builds or runs generated code; generated apps are built and browser-tested in CI from example specs; downloads are deterministic zips with a SHA-256 manifest | Users build downloaded code themselves; an isolated on-demand build runner (no credentials, restricted network, resource limits) is still to come |
 
 ## Not claimed
 

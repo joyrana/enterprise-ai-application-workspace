@@ -7,6 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "e2e",
+  testIgnore: ["generated/**"], // generated apps have their own config (playwright.generated.config.ts)
   timeout: 90_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,

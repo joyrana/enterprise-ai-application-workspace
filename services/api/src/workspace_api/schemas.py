@@ -13,6 +13,7 @@ from typing import Annotated, Any
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from appspec import ApplicationSpec, SpecSummary, ValidationIssue
+from codegen_react import FileDiff
 from design_system import RenderedScreen, UiDocument, UiIssue
 from skill_sdk import CommandResult, Decision, SpecCommand
 
@@ -329,3 +330,32 @@ class UiPreview(ApiModel):
     document: UiDocument
     issues: list[UiIssue]
     rendered: list[RenderedScreen]
+
+
+class CodeFileInfo(ApiModel):
+    path: str
+    bytes: int
+    sha256: str
+    language: str
+
+
+class CodeManifest(ApiModel):
+    spec_revision: int
+    generator: str
+    design_system: str
+    files: list[CodeFileInfo]
+    warnings: list[UiIssue] = Field(description="UI warnings carried into the code (e.g. unsupported components).")
+
+
+class CodeFile(ApiModel):
+    path: str
+    spec_revision: int
+    language: str
+    sha256: str
+    content: str
+
+
+class CodeDiff(ApiModel):
+    from_revision: int
+    to_revision: int
+    files: list[FileDiff] = Field(description="Only files that differ; empty when the generated code is identical.")
