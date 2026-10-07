@@ -29,10 +29,10 @@ from design_system import (
     validate_document,
 )
 
-from .jsx import GenerationError, components_in, is_library_component, literal, needs_layout, print_nodes
+from .jsx import GenerationError, Printer, components_in, is_library_component, literal, needs_layout
 
 GENERATOR = "codegen-react"
-GENERATOR_VERSION = "0.1.0"
+GENERATOR_VERSION = "0.2.0"
 MANIFEST = "workspace-manifest.json"
 
 
@@ -81,37 +81,78 @@ def _header(spec_revision: int | None, contract: DesignSystemContract) -> str:
 
 
 def _screen_file(screen: RenderedScreen, header: str, contract: DesignSystemContract) -> str:
-    used = components_in(screen.root)
-    library = sorted(c for c in used if is_library_component(c))
     packages = {m.package for m in contract.mappings.values()} - {"html"}
     if len(packages) != 1:
         raise GenerationError("expected exactly one component package in the contract")
     [package] = packages
-    has_form = "form" in used
+    printer = Printer()
+    body = printer.nodes(screen.root, 3)
+    used = components_in(screen.root) | printer.extra_components
+    library = sorted(c for c in used if is_library_component(c))
     has_layout = needs_layout(screen.root)
     lines = [header.rstrip("\n"), ""]
     if library:
         lines.append(f"import {{ {', '.join(library)} }} from {literal(package)};")
-    if has_form:
-        lines.append('import type { FormEvent } from "react";')
+    if printer.uses_navigate:
+        lines.append('import { useNavigate } from "react-router-dom";')
+    if printer.forms:
+        lines.append('import { useFormState } from "../forms";')
     if has_layout:
         lines.append('import { useLayoutStyles } from "../layout";')
     lines.append("")
-    if has_form:
-        lines.append("// Static screen: submitting does nothing until behaviour is generated (Milestone 5).")
-        lines.append("const preventSubmit = (event: FormEvent) => event.preventDefault();")
+    constants = printer.label_constants()
+    if constants:
+        lines.extend(constants)
         lines.append("")
     name = f"{pascal(screen.screen_id)}Screen"
     lines.append(f"export function {name}() {{")
     if has_layout:
         lines.append("  const layout = useLayoutStyles();")
+    if printer.uses_navigate:
+        lines.append("  const navigate = useNavigate();")
+    for var in printer.forms:
+        lines.append(f"  const {var} = useFormState();")
     lines.append("  return (")
     lines.append("    <>")
-    lines.extend(print_nodes(screen.root, 3))
+    lines.extend(body)
     lines.append("    </>")
     lines.append("  );")
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+_FORMS = """import { useState, type FormEvent } from "react";
+
+/**
+ * Form state for a generated form: the browser checks the constraints from the specification
+ * (required, min, max, lengths, pattern); invalid fields get their message shown by Fluent Field.
+ * Saving is not connected to a backend yet.
+ */
+export function useFormState() {
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const next: Record<string, string> = {};
+    for (const element of Array.from(event.currentTarget.elements)) {
+      if (
+        (element instanceof HTMLInputElement ||
+          element instanceof HTMLSelectElement ||
+          element instanceof HTMLTextAreaElement) &&
+        element.name &&
+        !element.validity.valid
+      ) {
+        next[element.name] = element.validationMessage;
+      }
+    }
+    setErrors(next);
+    setSubmitted(Object.keys(next).length === 0);
+  };
+
+  return { errors, submitted, onSubmit };
+}
+"""
 
 
 _LAYOUT = """import { makeStyles, tokens } from "@fluentui/react-components";
@@ -272,6 +313,7 @@ def _static_files(name: str, title: str, header: str) -> dict[str, str]:
         + 'if (!root) throw new Error("missing #root");\n'
         + "createRoot(root).render(\n  <StrictMode>\n    <App />\n  </StrictMode>,\n);\n",
         "src/layout.ts": header + "\n" + _LAYOUT,
+        "src/forms.ts": header + "\n" + _FORMS,
         ".gitignore": "node_modules/\ndist/\n",
     }
 

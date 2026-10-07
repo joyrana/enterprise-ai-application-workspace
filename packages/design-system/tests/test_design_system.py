@@ -210,7 +210,15 @@ def test_fluent2_rendering_keeps_labels_and_semantics(spec: ApplicationSpec) -> 
         id="f",
         label="New adjustment",
         fields=[
-            FormField(id="f-amount", name="amount", label="Amount", input="number", required=True, help_text="EUR"),
+            FormField(
+                id="f-amount",
+                name="amount",
+                label="Amount",
+                input="number",
+                required=True,
+                help_text="EUR",
+                number_kind="decimal",
+            ),
             FormField(id="f-ok", name="ok", label="Approved", input="checkbox"),
             FormField(id="f-kind", name="kind", label="Kind", input="select", options=["a", "b"]),
         ],
@@ -222,7 +230,7 @@ def test_fluent2_rendering_keeps_labels_and_semantics(spec: ApplicationSpec) -> 
     amount, approved, kind, actions = form_node.children
     assert amount.component == "Field"
     assert amount.props == {"label": "Amount", "required": True, "hint": "EUR"}
-    assert amount.children[0].props == {"name": "amount", "type": "number"}
+    assert amount.children[0].props == {"name": "amount", "type": "number", "required": True, "step": "any"}
     assert approved.component == "Checkbox"
     assert approved.props == {"label": "Approved", "name": "ok"}
     assert [o.text for o in kind.children[0].children] == ["a", "b"]

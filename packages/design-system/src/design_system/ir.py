@@ -61,6 +61,8 @@ class FormField(_Node):
     options: list[Label] = Field(default_factory=list, max_length=100)
     #: For ``select`` inputs whose options come from another entity at runtime.
     options_from_entity: str | None = None
+    #: For ``number`` inputs: integers only, or any decimal (money, decimal). Additive in IR v1.
+    number_kind: Literal["integer", "decimal"] | None = None
     validation: list[FieldValidation] = Field(default_factory=list)
 
 

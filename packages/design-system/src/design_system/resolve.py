@@ -59,8 +59,15 @@ class _Fluent2:
 
     HEADING_TAGS: ClassVar[dict[int, str]] = {1: "h1", 2: "h2", 3: "h3", 4: "h4"}
 
-    def __init__(self, contract: DesignSystemContract) -> None:
+    def __init__(self, contract: DesignSystemContract, routes: dict[str, str] | None = None) -> None:
         self.contract = contract
+        #: screen id -> route, so navigation actions can name their destination.
+        self.routes = routes or {}
+
+    def _navigation(self, action: Action) -> dict[str, Prop]:
+        if action.action == "navigate" and action.target_screen in self.routes:
+            return {"navigateTo": self.routes[action.target_screen]}
+        return {}
 
     def _c(self, construct: str, index: int = 0) -> str:
         mapping = self.contract.mapping(construct)
@@ -122,7 +129,7 @@ class _Fluent2:
                 children=[
                     RenderNode(
                         component=self._c("toolbar", 1),
-                        props={"appearance": "primary" if a.intent == "primary" else "subtle"},
+                        props={"appearance": "primary" if a.intent == "primary" else "subtle"} | self._navigation(a),
                         text=a.label,
                         ir_id=a.id,
                     )
@@ -145,7 +152,7 @@ class _Fluent2:
         kind = "submit" if in_form and action.action == "submit" else "button"
         return RenderNode(
             component=self._c(f"action:{action.intent}"),
-            props={"appearance": appearance, "type": kind},
+            props={"appearance": appearance, "type": kind} | self._navigation(action),
             text=action.label,
             ir_id=action.id,
         )
@@ -163,7 +170,7 @@ class _Fluent2:
         if field.help_text:
             wrapper["hint"] = field.help_text
         control = self._c(construct, 1)
-        control_props: dict[str, Prop] = {"name": field.name}
+        control_props: dict[str, Prop] = {"name": field.name} | self._constraints(field)
         children: list[RenderNode] = []
         if field.input in ("text", "number", "date", "datetime"):
             control_props["type"] = {"text": "text", "number": "number", "date": "date", "datetime": "datetime-local"}[
@@ -188,6 +195,29 @@ class _Fluent2:
             children=[RenderNode(component=control, props=control_props, children=children)],
             ir_id=field.id,
         )
+
+    @staticmethod
+    def _constraints(field: FormField) -> dict[str, Prop]:
+        """Spec validation rules as native constraint attributes (checked by the browser, shown by Field)."""
+        out: dict[str, Prop] = {}
+        if field.required:
+            out["required"] = True
+        if field.input == "number" and field.number_kind == "decimal":
+            out["step"] = "any"
+        numeric = field.input in ("number", "date", "datetime")
+        texty = field.input in ("text", "textarea")
+        for rule in field.validation:
+            value = rule.value
+            if rule.kind == "required":
+                out["required"] = True
+            elif rule.kind in ("min", "max") and numeric and isinstance(value, int | float | str) and value != "":
+                out[rule.kind] = str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
+            elif rule.kind in ("min-length", "max-length") and texty and isinstance(value, int | float):
+                if float(value).is_integer() and 0 <= value <= 100_000:
+                    out["minLength" if rule.kind == "min-length" else "maxLength"] = int(value)
+            elif rule.kind == "pattern" and field.input == "text" and isinstance(value, str) and 0 < len(value) <= 200:
+                out["pattern"] = value
+        return out
 
     def form(self, form: Form) -> RenderNode:
         children = [self.field(f) for f in form.fields]
@@ -226,7 +256,7 @@ class _Fluent2:
         )
 
 
-_ADAPTERS: dict[str, Callable[[DesignSystemContract], _Fluent2]] = {"fluent2": _Fluent2}
+_ADAPTERS: dict[str, Callable[[DesignSystemContract, dict[str, str]], _Fluent2]] = {"fluent2": _Fluent2}
 
 
 def has_adapter(contract_id: str) -> bool:
@@ -237,7 +267,7 @@ def render_screens(screens: list[Screen], contract: DesignSystemContract) -> lis
     factory = _ADAPTERS.get(contract.id)
     if factory is None:
         raise AdapterError(f"No adapter for design system '{contract.id}' yet.")
-    adapter = factory(contract)
+    adapter = factory(contract, {s.id: s.route for s in screens})
     return [adapter.screen(s) for s in screens]
 
 
