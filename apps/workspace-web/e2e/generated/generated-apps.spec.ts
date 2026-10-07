@@ -57,7 +57,8 @@ test("generated app finance-entities: navigation actions work and forms validate
   const amount = form.getByRole("spinbutton", { name: /Amount/ });
   await expect(amount).toHaveAttribute("aria-invalid", "true");
   await expect(form.getByText("Fix 1 field(s)")).toBeVisible();
-  await expect(form.getByText("Amount", { exact: true }).last()).toBeVisible();
+  // The summary names the field by its label.
+  await expect(form.getByText("Fix 1 field(s)").locator("..")).toContainText("Amount");
   const invalid = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .exclude("[data-tabster-dummy]")

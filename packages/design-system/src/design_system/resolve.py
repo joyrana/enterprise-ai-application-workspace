@@ -170,7 +170,8 @@ class _Fluent2:
         if field.help_text:
             wrapper["hint"] = field.help_text
         control = self._c(construct, 1)
-        control_props: dict[str, Prop] = {"name": field.name} | self._constraints(field)
+        control_props: dict[str, Prop] = {"name": field.name}
+        control_props.update(self._constraints(field))
         children: list[RenderNode] = []
         if field.input in ("text", "number", "date", "datetime"):
             control_props["type"] = {"text": "text", "number": "number", "date": "date", "datetime": "datetime-local"}[
