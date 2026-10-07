@@ -70,12 +70,13 @@ def test_zip_download_is_deterministic(client: TestClient, pid: str) -> None:
     first = client.get(f"/api/v1/projects/{pid}/code.zip")
     assert first.status_code == 200
     assert first.headers["content-type"] == "application/zip"
-    assert first.headers["content-disposition"] == 'attachment; filename="finance-ops-app-r2.zip"'
+    # The project name follows the spec ("Finance Operations Adjustments") once the spec is saved.
+    assert first.headers["content-disposition"] == 'attachment; filename="finance-operations-adjustments-app-r2.zip"'
     assert client.get(f"/api/v1/projects/{pid}/code.zip").content == first.content
     with zipfile.ZipFile(io.BytesIO(first.content)) as zf:
         names = zf.namelist()
-        assert "finance-ops-app-r2/package.json" in names
-        package = json.loads(zf.read("finance-ops-app-r2/package.json"))
+        assert "finance-operations-adjustments-app-r2/package.json" in names
+        package = json.loads(zf.read("finance-operations-adjustments-app-r2/package.json"))
         assert package["dependencies"]["@fluentui/react-components"] == "9.74.9"
 
 
