@@ -2485,6 +2485,8 @@ export interface components {
             label: string;
             /** Name */
             name: string;
+            /** Number Kind */
+            number_kind?: ("integer" | "decimal") | null;
             /** Options */
             options?: string[];
             /** Options From Entity */

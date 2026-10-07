@@ -45,7 +45,10 @@ test("generated app finance-entities: navigation actions work and forms validate
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto(`${base}/adjustment`);
-  await page.getByRole("toolbar", { name: "Adjustment actions" }).getByRole("button", { name: "New adjustment" }).click();
+  await page
+    .getByRole("toolbar", { name: "Adjustment actions" })
+    .getByRole("button", { name: "New adjustment" })
+    .click();
   await expect(page).toHaveURL(`${base}/adjustment/new`);
   const form = page.getByRole("form", { name: "New adjustment" });
 
