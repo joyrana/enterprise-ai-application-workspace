@@ -120,7 +120,10 @@ test("generated app finance-entities: records are created, listed, referenced an
   await page.getByRole("button", { name: "Delete 125.5" }).click();
   const dialog = page.getByRole("dialog", { name: "Delete 125.5?" });
   await expect(dialog).toBeVisible();
-  await expectNoSeriousAxe(page, "delete confirmation");
+  // Let the open animation finish (a fading surface is partly transparent), then check the dialog
+  // itself; the page behind it was checked above without the dialog.
+  await dialog.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
+  await expectNoSeriousAxe(page, "delete confirmation", '[role="dialog"]');
   await dialog.getByRole("button", { name: "Keep" }).click();
   await expect(dialog).toBeHidden();
   await expect(rows).toHaveCount(2);
@@ -207,13 +210,14 @@ async function expectEditing(page: Page) {
   await expect(form.getByRole("combobox", { name: /Transaction/ }).locator("option:checked")).toHaveText("0.8");
 }
 
-async function expectNoSeriousAxe(page: Page, what: string) {
-  const results = await new AxeBuilder({ page })
+async function expectNoSeriousAxe(page: Page, what: string, include?: string) {
+  let builder = new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .exclude("[data-tabster-dummy]")
-    .analyze();
+    .exclude("[data-tabster-dummy]");
+  if (include) builder = builder.include(include);
+  const results = await builder.analyze();
   const serious = results.violations
     .filter((v) => v.impact === "serious" || v.impact === "critical")
-    .map((v) => `${v.id}: ${v.help}`);
+    .map((v) => `${v.id}: ${v.help} — ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
   expect(serious, `axe with ${what}`).toEqual([]);
 }
