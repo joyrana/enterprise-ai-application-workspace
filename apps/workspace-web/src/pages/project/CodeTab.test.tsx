@@ -29,7 +29,11 @@ describe("CodeTab", () => {
   it("browses generated files and shows the diff from the previous revision", async () => {
     const { calls } = mockFetch([
       { method: "GET", path: BASE, body: MANIFEST },
-      { method: "GET", path: `${BASE}/file`, body: file("src/screens/RulesScreen.tsx", "export function RulesScreen() {}") },
+      {
+        method: "GET",
+        path: `${BASE}/file`,
+        body: file("src/screens/RulesScreen.tsx", "export function RulesScreen() {}"),
+      },
       {
         method: "GET",
         path: `${BASE}/diff`,

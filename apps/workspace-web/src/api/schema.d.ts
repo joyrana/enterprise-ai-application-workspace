@@ -107,6 +107,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Generated React + Fluent 2 project for a spec revision: file list, hashes and warnings */
+        get: operations["get_project_code_api_v1_projects__project_id__code_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/code.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download the generated project as a zip archive */
+        get: operations["download_project_code_api_v1_projects__project_id__code_zip_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/code/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unified diff of the generated code between two spec revisions */
+        get: operations["get_project_code_diff_api_v1_projects__project_id__code_diff_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/code/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One generated file */
+        get: operations["get_project_code_file_api_v1_projects__project_id__code_file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/runs": {
         parameters: {
             query?: never;
@@ -778,6 +846,58 @@ export interface components {
          * @enum {string}
          */
         Classification: "public" | "internal" | "confidential" | "restricted";
+        /** CodeDiff */
+        CodeDiff: {
+            /**
+             * Files
+             * @description Only files that differ; empty when the generated code is identical.
+             */
+            files: components["schemas"]["FileDiff"][];
+            /** From Revision */
+            from_revision: number;
+            /** To Revision */
+            to_revision: number;
+        };
+        /** CodeFile */
+        CodeFile: {
+            /** Content */
+            content: string;
+            /** Language */
+            language: string;
+            /** Path */
+            path: string;
+            /** Sha256 */
+            sha256: string;
+            /** Spec Revision */
+            spec_revision: number;
+        };
+        /** CodeFileInfo */
+        CodeFileInfo: {
+            /** Bytes */
+            bytes: number;
+            /** Language */
+            language: string;
+            /** Path */
+            path: string;
+            /** Sha256 */
+            sha256: string;
+        };
+        /** CodeManifest */
+        CodeManifest: {
+            /** Design System */
+            design_system: string;
+            /** Files */
+            files: components["schemas"]["CodeFileInfo"][];
+            /** Generator */
+            generator: string;
+            /** Spec Revision */
+            spec_revision: number;
+            /**
+             * Warnings
+             * @description UI warnings carried into the code (e.g. unsupported components).
+             */
+            warnings: components["schemas"]["UiIssue"][];
+        };
         /** CollectionSummary */
         CollectionSummary: {
             /** Confirmed */
@@ -1037,6 +1157,22 @@ export interface components {
             message?: string | null;
             /** Value */
             value?: string | number | null;
+        };
+        /** FileDiff */
+        FileDiff: {
+            /** Additions */
+            additions: number;
+            /** Deletions */
+            deletions: number;
+            /** Path */
+            path: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "added" | "removed" | "modified";
+            /** Unified */
+            unified: string;
         };
         /** FlaggedProposal */
         FlaggedProposal: {
@@ -2904,6 +3040,333 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    get_project_code_api_v1_projects__project_id__code_get: {
+        parameters: {
+            query?: {
+                /** @description Spec revision; defaults to the current one. */
+                revision?: number | null;
+            };
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodeManifest"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    download_project_code_api_v1_projects__project_id__code_zip_get: {
+        parameters: {
+            query?: {
+                /** @description Spec revision; defaults to the current one. */
+                revision?: number | null;
+            };
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deterministic zip of the generated project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    get_project_code_diff_api_v1_projects__project_id__code_diff_get: {
+        parameters: {
+            query: {
+                /** @description Older spec revision. */
+                from: number;
+                /** @description Newer revision; defaults to current. */
+                to?: number | null;
+            };
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodeDiff"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    get_project_code_file_api_v1_projects__project_id__code_file_get: {
+        parameters: {
+            query: {
+                path: string;
+                /** @description Spec revision; defaults to the current one. */
+                revision?: number | null;
+            };
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodeFile"];
                 };
             };
             /** @description Bad Request */

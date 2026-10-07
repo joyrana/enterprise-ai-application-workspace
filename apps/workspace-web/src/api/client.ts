@@ -293,9 +293,8 @@ export const api = {
   },
 
   async getCodeDiff(projectId: string, from: number, to: number, signal?: AbortSignal): Promise<CodeDiff> {
-    return (
-      await request<CodeDiff>(`/api/v1/projects/${enc(projectId)}/code/diff${query({ from, to })}`, { signal })
-    ).data;
+    return (await request<CodeDiff>(`/api/v1/projects/${enc(projectId)}/code/diff${query({ from, to })}`, { signal }))
+      .data;
   },
 
   /** The zip needs the dev identity headers, so it is fetched rather than linked. */

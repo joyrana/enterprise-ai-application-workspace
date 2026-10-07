@@ -45,7 +45,10 @@ const useStyles = makeStyles({
 
 export function CodeTab({ projectId, revision }: { projectId: string; revision: number }) {
   const styles = useStyles();
-  const { state, reload } = useAsync<CodeManifest>((signal) => api.getCode(projectId, signal), `${projectId}:${revision}`);
+  const { state, reload } = useAsync<CodeManifest>(
+    (signal) => api.getCode(projectId, signal),
+    `${projectId}:${revision}`,
+  );
 
   if (state.status === "loading") return <Spinner label="Generating code" />;
   if (state.status === "error") return <ProblemMessage error={state.error} onRetry={reload} />;
