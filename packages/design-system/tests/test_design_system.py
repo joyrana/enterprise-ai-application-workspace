@@ -162,6 +162,21 @@ def test_references_and_duplicates(spec: ApplicationSpec) -> None:
         assert code in found
 
 
+def test_entity_lists_get_edit_and_delete_row_actions(raw: dict[str, Any]) -> None:
+    raw["screens"], raw["navigation"] = [], []
+    doc = derive_document(load_spec(raw))
+    table = next(n for n in doc.screens[0].body if isinstance(n, Table))
+    assert [(a.action, a.target_screen, a.intent) for a in table.row_actions] == [
+        ("edit-record", "adjustment-form", "secondary"),
+        ("delete-record", None, "danger"),
+    ]
+    edit_nowhere = Action(id="e", label="Edit", action="edit-record", target_screen="nowhere")
+    broken = UiDocument(
+        screens=[screen(Heading(id="h", text="H", level=1), Table(id="t", caption="T", row_actions=[edit_nowhere]))]
+    )
+    assert "ref-screen" in codes(broken)
+
+
 def test_ir_rejects_unknown_fields_and_bad_ids() -> None:
     with pytest.raises(ValidationError):
         Heading.model_validate({"id": "Bad Id", "text": "x", "level": 1})

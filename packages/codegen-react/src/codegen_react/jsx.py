@@ -183,6 +183,8 @@ class DataBindings:
     list_routes: dict[str, str] = field(default_factory=dict)
     #: Route of the screen being printed (a form never "returns" to its own screen).
     current_route: str = ""
+    #: screen id -> route, for row actions that open another screen.
+    screen_routes: dict[str, str] = field(default_factory=dict)
 
 
 class Printer:
@@ -193,6 +195,11 @@ class Printer:
         self.form_args: dict[str, str] = {}
         self.bound_forms: set[str] = set()
         self.data_hooks: list[str] = []
+        #: bound form variable -> (entity id, editing variable)
+        self.form_entities: dict[str, tuple[str, str]] = {}
+        self.uses_search_params = False
+        self.uses_confirm = False
+        self.row_action_markup: list[str] = []
         self.data_imports: set[str] = set()
         self.store_imports: set[str] = set()
         self.forms: list[str] = []
@@ -201,8 +208,22 @@ class Printer:
         self.uses_navigate = False
         self.extra_components: set[str] = set()
 
+    def _defaults(self, node: RenderNode, form_var: str | None) -> str:
+        """Initial values when a bound form edits an existing record."""
+        if form_var not in self.form_entities:
+            return ""
+        _, editing = self.form_entities[str(form_var)]
+        name = node.props.get("name")
+        if not isinstance(name, str):
+            return ""
+        if node.component in ("Input", "Textarea", "Select"):
+            return f" defaultValue={{fieldValue({editing}, {literal(name)})}}"
+        if node.component == "Checkbox":
+            return f' defaultChecked={{fieldValue({editing}, {literal(name)}) === "true"}}'
+        return ""
+
     def _behaviour(self, node: RenderNode, form_var: str | None) -> str:
-        out = ""
+        out = self._defaults(node, form_var)
         target = node.props.get("navigateTo")
         if isinstance(target, str):
             self.uses_navigate = True
@@ -235,13 +256,21 @@ class Printer:
             return
         entity = literal(ir.entity_id)
         self.bound_forms.add(var)
-        self.data_imports.add("saveRecord")
+        self.data_imports |= {"saveRecord", "stores", "fieldValue", "displayName"}
+        self.store_imports.add("useRecord")
+        self.uses_search_params = True
+        editing = f"editing{len(self.form_entities) + 1}"
+        self.form_entities[var] = (ir.entity_id, editing)
+        self.data_hooks.append(f'const {editing} = useRecord(stores[{entity}], searchParams.get("id"));')
         route = self.bindings.list_routes.get(ir.entity_id)
         if route and route != self.bindings.current_route:
             self.uses_navigate = True
-            self.form_args[var] = f"{{ save: (data) => {{ saveRecord({entity}, data); navigate({literal(route)}); }} }}"
+            self.form_args[var] = (
+                f"{{ save: async (data) => {{ await saveRecord({entity}, data, {editing}?.id); "
+                f"navigate({literal(route)}); }} }}"
+            )
         else:
-            self.form_args[var] = f"{{ save: (data) => saveRecord({entity}, data) }}"
+            self.form_args[var] = f"{{ save: (data) => saveRecord({entity}, data, {editing}?.id) }}"
 
     def _hook(self, kind: str, entity: str) -> str:
         var = f"{kind}{len(self.data_hooks) + 1}"
@@ -249,6 +278,14 @@ class Printer:
         self.store_imports.add("useEntityList")
         self.data_imports.add("stores")
         return var
+
+    def _subscribe(self, entity: str) -> None:
+        """Re-render when a referenced entity's records load or change (the HTTP store loads lazily)."""
+        hook = f"useEntityList(stores[{literal(entity)}]);"
+        if hook not in self.data_hooks:
+            self.data_hooks.append(hook)
+            self.store_imports.add("useEntityList")
+            self.data_imports.add("stores")
 
     def _bound_table(self, node: RenderNode, ir: IrTable, pad: str, attrs: str, depth: int) -> list[str]:
         assert ir.entity_id is not None
@@ -264,9 +301,33 @@ class Printer:
             ref = self.bindings.references.get((ir.entity_id, column.key))
             if column.type == "reference" and ref in self.bindings.entities:
                 self.data_imports.add("displayRef")
+                self._subscribe(str(ref))
                 cells.append(f"<{cell_c}>{{displayRef({literal(ref)}, row[{key}])}}</{cell_c}>")
             else:
                 cells.append(f"<{cell_c}>{{formatValue(row[{key}])}}</{cell_c}>")
+        entity = literal(ir.entity_id)
+        for action in ir.row_actions:
+            if action.action == "edit-record" and action.target_screen in self.bindings.screen_routes:
+                self.uses_navigate = True
+                self.extra_components.add("Button")
+                self.data_imports.add("displayName")
+                route = literal(self.bindings.screen_routes[action.target_screen])
+                cells_actions = (
+                    f'<Button size="small" aria-label={{`{action.label} ${{displayName({entity}, row)}}`}} '
+                    f"onClick={{() => navigate(`${{{route}}}?id=${{encodeURIComponent(row.id)}}`)}}>"
+                    f"{{{literal(action.label)}}}</Button>"
+                )
+                self.row_action_markup.append(cells_actions)
+            elif action.action == "delete-record":
+                self.uses_confirm = True
+                self.data_imports |= {"displayName", "deleteRecord"}
+                self.row_action_markup.append(
+                    f"<ConfirmDelete name={{displayName({entity}, row)}} "
+                    f"onConfirm={{() => deleteRecord({entity}, row.id)}} />"
+                )
+        if self.row_action_markup:
+            cells.append(f"<{cell_c}>{''.join(self.row_action_markup)}</{cell_c}>")
+            self.row_action_markup = []
         lines = [f"{pad}<{node.component}{attrs}>"]
         lines.extend(self.nodes([header], len(pad) // 2 + 1, depth + 1))
         p = pad + "  "
@@ -288,14 +349,15 @@ class Printer:
         ]
         return lines
 
-    def _reference_field(self, node: RenderNode, ref: str, pad: str, attrs: str) -> list[str]:
+    def _reference_field(self, node: RenderNode, ref: str, pad: str, attrs: str, form_var: str | None) -> list[str]:
         select = node.children[0]
         option_c = "option"
         options = self._hook("options", ref)
         self.data_imports.add("displayName")
         return [
             f"{pad}<{node.component}{attrs}>",
-            f"{pad}  <{select.component}{_props(select)}>",
+            # Keyed by the option count so an edited record's value is applied once its options have loaded.
+            f"{pad}  <{select.component}{_props(select)}{self._defaults(select, form_var)} key={{{options}.length}}>",
             f'{pad}    <{option_c} value="">{{{literal("Select…")}}}</{option_c}>',
             f"{pad}    {{{options}.map((record) => (",
             f"{pad}      <{option_c} key={{record.id}} value={{record.id}}>",
@@ -308,13 +370,30 @@ class Printer:
 
     def declarations(self) -> list[str]:
         out = ["const navigate = useNavigate();"] if self.uses_navigate else []
+        if self.uses_search_params:
+            out.append("const [searchParams] = useSearchParams();")
         out += self.data_hooks
         out += [f"const {var} = useFormState({self.form_args.get(var, '')});" for var in self.forms]
         return out
 
     def _form_feedback(self, var: str, pad: str) -> list[str]:
         self.extra_components |= {"MessageBar", "MessageBarBody", "MessageBarTitle"}
+        save_error = (
+            [
+                f"{pad}{{{var}.saveError && (",
+                f'{pad}  <MessageBar intent="error">',
+                f"{pad}    <MessageBarBody>",
+                f"{pad}      <MessageBarTitle>Could not save</MessageBarTitle>",
+                f"{pad}      {{{var}.saveError}}",
+                f"{pad}    </MessageBarBody>",
+                f"{pad}  </MessageBar>",
+                f"{pad})}}",
+            ]
+            if var in self.bound_forms
+            else []
+        )
         return [
+            *save_error,
             f"{pad}{{Object.keys({var}.errors).length > 0 && (",
             f'{pad}  <MessageBar intent="error">',
             f"{pad}    <MessageBarBody>",
@@ -331,7 +410,7 @@ class Printer:
             *(
                 [
                     f"{pad}      <MessageBarTitle>Saved</MessageBarTitle>",
-                    f"{pad}      The record was saved in this browser.",
+                    f"{pad}      The record was saved.",
                 ]
                 if var in self.bound_forms
                 else [
@@ -375,7 +454,7 @@ class Printer:
                 and ir.options_from_entity in self.bindings.entities
                 and len(node.children) == 1
             ):
-                lines.extend(self._reference_field(node, str(ir.options_from_entity), pad, attrs))
+                lines.extend(self._reference_field(node, str(ir.options_from_entity), pad, attrs, form_var))
                 continue
             only = node.children[0] if len(node.children) == 1 else None
             if tag == "Field" and only is not None and only.component == "input":
@@ -389,7 +468,20 @@ class Printer:
             if node.text is not None and not node.children:
                 lines.append(f"{pad}<{tag}{attrs}>{{{literal(node.text)}}}</{tag}>")
                 continue
-            lines.append(f"{pad}<{tag}{attrs}>")
+            if tag == "form" and inner_form in self.form_entities:
+                entity, editing = self.form_entities[inner_form]
+                lines.append(f'{pad}<{tag}{attrs} key={{{editing}?.id ?? "new"}}>')
+                lines += [
+                    f"{pad}  {{{editing} && (",
+                    f'{pad}    <MessageBar intent="info">',
+                    f"{pad}      <MessageBarBody>",
+                    f"{pad}        {{`Editing ${{displayName({literal(entity)}, {editing})}}`}}",
+                    f"{pad}      </MessageBarBody>",
+                    f"{pad}    </MessageBar>",
+                    f"{pad}  )}}",
+                ]
+            else:
+                lines.append(f"{pad}<{tag}{attrs}>")
             if node.text is not None:
                 lines.append(f"{pad}  {{{literal(node.text)}}}")
             lines.extend(self.nodes(node.children, indent + 1, depth + 1, inner_form))

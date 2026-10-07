@@ -63,8 +63,20 @@ There is also the brief's demand for verifiable output and traceability.
     - reference fields that list the referenced entity's records.
 
     `api/openapi.json` states the backend contract derived from the same entities, so a real
-    backend can replace the browser store behind the same interface. Edit preservation comes
-    in Milestone 5.
+    backend can replace the browser store behind the same interface.
+  - Version 0.4.0 completes create, read, update and delete:
+    - entity lists get row actions (IR `edit-record` and `delete-record`, additive in IR v1);
+    - Edit opens the entity's form with `?id=`, which loads the record and replaces it on save;
+    - Delete is confirmed in a Fluent dialog first (destructive actions are never one click);
+    - an HTTP `Store` implements `api/openapi.json` (list, create, replace, delete). It is
+      chosen at build time when `VITE_DATA_API_URL` is set; otherwise records stay in the
+      browser. Server errors are shown in the form or the dialog, never swallowed.
+
+    The generated app sends no credentials, so a real backend must sit behind the
+    organisation's own authentication (a reverse proxy or gateway); that is outside the
+    generator. CI runs the HTTP variant against a small in-memory server that follows the
+    generated contract (`scripts/e2e/fake_data_api.py`); it is a test fixture, not a backend.
+    Edit preservation comes in Milestone 5.
 
 ## Consequences
 
