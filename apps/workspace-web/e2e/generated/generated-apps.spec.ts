@@ -59,7 +59,10 @@ test("generated app finance-entities: records are created, listed, referenced an
 
   // Navigation action from the list to the form.
   await page.goto(`${base}/adjustment`);
-  await page.getByRole("toolbar", { name: "Adjustment actions" }).getByRole("button", { name: "New adjustment" }).click();
+  await page
+    .getByRole("toolbar", { name: "Adjustment actions" })
+    .getByRole("button", { name: "New adjustment" })
+    .click();
   await expect(page).toHaveURL(`${base}/adjustment/new`);
   const form = page.getByRole("form", { name: "New adjustment" });
 
