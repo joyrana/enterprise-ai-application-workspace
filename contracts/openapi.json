@@ -97,7 +97,9 @@
               "submit",
               "cancel",
               "navigate",
-              "custom"
+              "custom",
+              "edit-record",
+              "delete-record"
             ],
             "title": "Action",
             "type": "string"

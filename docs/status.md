@@ -1,6 +1,53 @@
 # Implementation status
 
-Last updated: 2026-10-07 · Milestone 4 third slice (PR #12)
+Last updated: 2026-10-07 · Milestone 4 fourth slice (PR #13)
+
+## Milestone 4 (fourth slice) — Edit, confirmed delete and an HTTP store (generator 0.4.0)
+
+- IR v1, additive: `edit-record` and `delete-record` row actions. Entity lists derive both. An
+  edit action pointing to an unknown screen is a `ref-screen` error.
+- Generated lists have an Edit button that opens the form with `?id=`, and a Delete button
+  confirmed in a Fluent dialog. Bound forms load that record, replace it on save and show
+  save errors.
+- The HTTP `Store` implements `api/openapi.json`, which now includes `PUT` and `DELETE`. It is
+  chosen when `VITE_DATA_API_URL` is set at build time.
+  - Reference columns subscribe to the referenced store.
+  - Reference selects re-apply the edited value once their options load.
+- `scripts/e2e/fake_data_api.py` is a stdlib, in-memory test server. It serves only the
+  contract's collections and rejects unknown or missing fields. It is a test fixture, not a
+  backend.
+- The README has new architecture, pipeline, AI-run, workflow and generated-app diagrams
+  (Mermaid) and an engineering-practices table.
+
+Evidence: run [37576686445](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/37576686445)
+at `9451a8c`:
+
+- pytest **353 passed** (new: 3 generator tests and 1 design-system test), Vitest 46,
+  workspace Playwright 7.
+- **Generated apps: 5 passed.** Three example apps type-check with strict `tsc` and build. One
+  of them is built in HTTP mode. The new browser tests:
+  1. **Local store:** edit a record (the form opens with its values, including the
+     reference); delete it, with "Keep" first and then "Delete"; the empty state survives a
+     reload.
+  2. **HTTP:** create records and verify them on the server; reload and see the reference
+     resolved; open the edit URL directly; update and delete, each verified on the server;
+     no browser errors or warnings.
+- On the first CI runs, two of the browser tests failed (the HTTP test passed from the start):
+  - An existing cell lookup became ambiguous because of the new actions cell. It is now exact.
+  - axe reported `color-contrast` with the delete dialog open. The check now waits for the
+    dialog's open animation and is scoped to the dialog; the page behind it is checked
+    separately without the dialog.
+  - The likely cause is that the surface was still fading in. I did not confirm this
+    separately, because the first report did not list the affected elements. It does now.
+- Dependency review still needs the repository's Dependency graph setting.
+- The Mermaid diagrams were not render-checked in CI; GitHub renders them when the page is viewed.
+
+Not yet:
+- authentication wiring for a real backend (it belongs at the organisation's gateway or proxy);
+- the form title still reads "New …" when editing (the banner says "Editing …");
+- edit preservation (Milestone 5) and the isolated build runner.
+
+---
 
 ## Milestone 4 (third slice) — Data in generated apps (generator 0.3.0)
 

@@ -37,7 +37,7 @@ from .data import STORE_TS, entities_ts, openapi_json
 from .jsx import DataBindings, GenerationError, Printer, components_in, is_library_component, literal, needs_layout
 
 GENERATOR = "codegen-react"
-GENERATOR_VERSION = "0.3.0"
+GENERATOR_VERSION = "0.4.0"
 MANIFEST = "workspace-manifest.json"
 
 
@@ -98,8 +98,15 @@ def _screen_file(screen: RenderedScreen, header: str, contract: DesignSystemCont
     lines = [header.rstrip("\n"), ""]
     if library:
         lines.append(f"import {{ {', '.join(library)} }} from {literal(package)};")
-    if printer.uses_navigate:
-        lines.append('import { useNavigate } from "react-router-dom";')
+    router = sorted(
+        name
+        for name, used_ in (("useNavigate", printer.uses_navigate), ("useSearchParams", printer.uses_search_params))
+        if used_
+    )
+    if router:
+        lines.append(f'import {{ {", ".join(router)} }} from "react-router-dom";')
+    if printer.uses_confirm:
+        lines.append('import { ConfirmDelete } from "../components/ConfirmDelete";')
     if printer.forms:
         lines.append('import { useFormState } from "../forms";')
     if printer.data_imports:
@@ -132,16 +139,19 @@ _FORMS = """import { useState, type FormEvent } from "react";
 /**
  * Form state for a generated form: the browser checks the constraints from the specification
  * (required, min, max, lengths, pattern); invalid fields get their message shown by Fluent Field.
- * Forms bound to an entity pass `save`, which stores the record (see src/data).
+ * Forms bound to an entity pass `save`, which stores the record (see src/data); its errors are shown.
  */
-export function useFormState(options: { save?: (data: FormData) => void } = {}) {
+export function useFormState(options: { save?: (data: FormData) => Promise<void> | void } = {}) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const form = event.currentTarget;
     const next: Record<string, string> = {};
-    for (const element of Array.from(event.currentTarget.elements)) {
+    for (const element of Array.from(form.elements)) {
       if (
         (element instanceof HTMLInputElement ||
           element instanceof HTMLSelectElement ||
@@ -153,12 +163,76 @@ export function useFormState(options: { save?: (data: FormData) => void } = {}) 
       }
     }
     setErrors(next);
-    const valid = Object.keys(next).length === 0;
-    if (valid && options.save) options.save(new FormData(event.currentTarget));
-    setSubmitted(valid);
+    setSaveError(null);
+    if (Object.keys(next).length > 0) {
+      setSubmitted(false);
+      return;
+    }
+    if (options.save) {
+      setSaving(true);
+      try {
+        await options.save(new FormData(form));
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : "Saving failed.");
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+    }
+    setSubmitted(true);
   };
 
-  return { errors, submitted, onSubmit };
+  return { errors, submitted, saveError, saving, onSubmit };
+}
+"""
+
+_CONFIRM = """import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
+} from "@fluentui/react-components";
+import { useState } from "react";
+
+/** Destructive actions are confirmed in a dialog (ADR-0014). */
+export function ConfirmDelete({ name, onConfirm }: { name: string; onConfirm: () => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const confirm = async () => {
+    try {
+      await onConfirm();
+      setOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Deleting failed.");
+    }
+  };
+  return (
+    <Dialog open={open} onOpenChange={(_, data) => setOpen(data.open)}>
+      <DialogTrigger disableButtonEnhancement>
+        <Button size="small" aria-label={`Delete ${name}`}>
+          Delete
+        </Button>
+      </DialogTrigger>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>{`Delete ${name}?`}</DialogTitle>
+          <DialogContent>{error ?? "This cannot be undone."}</DialogContent>
+          <DialogActions>
+            <DialogTrigger disableButtonEnhancement>
+              <Button appearance="secondary">Keep</Button>
+            </DialogTrigger>
+            <Button appearance="primary" onClick={() => void confirm()}>
+              Delete
+            </Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
+  );
 }
 """
 
@@ -289,6 +363,7 @@ def _static_files(name: str, title: str, header: str) -> dict[str, str]:
             "noUnusedParameters": True,
             "isolatedModules": True,
             "skipLibCheck": True,
+            "types": ["vite/client"],
             "noEmit": True,
         },
         "include": ["src"],
@@ -322,6 +397,7 @@ def _static_files(name: str, title: str, header: str) -> dict[str, str]:
         + "createRoot(root).render(\n  <StrictMode>\n    <App />\n  </StrictMode>,\n);\n",
         "src/layout.ts": header + "\n" + _LAYOUT,
         "src/forms.ts": header + "\n" + _FORMS,
+        "src/components/ConfirmDelete.tsx": header + "\n" + _CONFIRM,
         ".gitignore": "node_modules/\ndist/\n",
     }
 
@@ -362,6 +438,7 @@ def _bindings(spec: ApplicationSpec, document: UiDocument) -> DataBindings:
             (e.id, f.name): f.reference_entity_id for e in spec.entities for f in e.fields if f.reference_entity_id
         },
         list_routes=list_routes,
+        screen_routes={s.id: s.route for s in document.screens},
     )
 
 

@@ -47,6 +47,7 @@ execution) adds the next major trust boundary.
 | Duplicate or replayed AI actions | Idempotent run creation; atomic `queued → running` claim; decisions applicable once per run; `If-Match` on apply | — |
 | Code injection through spec text | Generated code is printed from an allowlisted render tree; every spec value is an ASCII-escaped JSON string literal; identifiers come only from validated ids; hostile-text tests (ADR-0014) | A future generator feature that emits user text outside literals must keep the same rule (enforced by the allowlist and tests) |
 | Untrusted code execution | The API generates text only and never installs, builds or runs generated code; generated apps are built and browser-tested in CI from example specs; downloads are deterministic zips with a SHA-256 manifest | Users build downloaded code themselves; an isolated on-demand build runner (no credentials, restricted network, resource limits) is still to come |
+| Generated apps' data access | Generated apps send no credentials and choose a backend only at build time (`VITE_DATA_API_URL`); destructive actions need a confirmation dialog; server errors are shown, not swallowed; the HTTP store only calls the paths in the generated `api/openapi.json` | Authentication and authorisation for a real backend are the deploying organisation's (gateway or reverse proxy); the generator does not yet emit auth wiring |
 
 ## Not claimed
 

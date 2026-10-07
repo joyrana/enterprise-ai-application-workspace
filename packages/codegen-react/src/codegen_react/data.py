@@ -44,10 +44,15 @@ export interface Entity {
   id: string;
 }
 
-/** Where records live. Replace createLocalStore with a client for the API in api/openapi.json. */
+/**
+ * Where records live. Reads are synchronous snapshots (for React); writes are async so the same
+ * interface fits the in-browser store and the HTTP store for the backend in api/openapi.json.
+ */
 export interface Store<T extends Entity> {
   list(): readonly T[];
-  create(values: Omit<T, "id">): T;
+  create(values: Omit<T, "id">): Promise<T>;
+  update(id: string, values: Omit<T, "id">): Promise<T>;
+  remove(id: string): Promise<void>;
   subscribe(listener: () => void): () => void;
 }
 
@@ -57,9 +62,23 @@ function newId(): string {
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function notifier() {
+  const listeners = new Set<() => void>();
+  return {
+    notify: () => listeners.forEach((listener) => listener()),
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
 /** Keeps records in this browser (localStorage when available, otherwise in memory). */
 export function createLocalStore<T extends Entity>(key: string): Store<T> {
   const storageKey = `generated-app:${key}`;
+  const events = notifier();
   let items: readonly T[] = [];
   try {
     const saved = window.localStorage.getItem(storageKey);
@@ -67,23 +86,87 @@ export function createLocalStore<T extends Entity>(key: string): Store<T> {
   } catch {
     items = [];
   }
-  const listeners = new Set<() => void>();
+  const commit = (next: readonly T[]) => {
+    items = next;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(items));
+    } catch {
+      // Storage unavailable (private mode, quota): keep the records in memory.
+    }
+    events.notify();
+  };
   return {
     list: () => items,
-    create(values) {
+    async create(values) {
       const record = { ...values, id: newId() } as T;
-      items = [...items, record];
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(items));
-      } catch {
-        // Storage unavailable (private mode, quota): keep the record in memory.
-      }
-      listeners.forEach((listener) => listener());
+      commit([...items, record]);
       return record;
     },
+    async update(id, values) {
+      const record = { ...values, id } as T;
+      if (!items.some((r) => r.id === id)) throw new Error("The record no longer exists.");
+      commit(items.map((r) => (r.id === id ? record : r)));
+      return record;
+    },
+    async remove(id) {
+      commit(items.filter((r) => r.id !== id));
+    },
+    subscribe: events.subscribe,
+  };
+}
+
+/** Talks to a backend that implements api/openapi.json. Records are cached for synchronous reads. */
+export function createHttpStore<T extends Entity>(baseUrl: string, collection: string): Store<T> {
+  const url = `${baseUrl.replace(/\\/+$/, "")}/${collection}`;
+  const events = notifier();
+  let items: readonly T[] = [];
+  let loaded = false;
+  let loading = false;
+  const request = async (path: string, init?: RequestInit): Promise<Response> => {
+    const response = await fetch(`${url}${path}`, {
+      ...init,
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+    });
+    if (!response.ok) throw new Error(`The server answered ${response.status} ${response.statusText}.`);
+    return response;
+  };
+  const refresh = async () => {
+    if (loading) return;
+    loading = true;
+    try {
+      items = (await (await request("")).json()) as T[];
+      loaded = true;
+      events.notify();
+    } catch (error) {
+      console.warn(`Could not load ${collection}:`, error);
+    } finally {
+      loading = false;
+    }
+  };
+  return {
+    list: () => items,
+    async create(values) {
+      const record = (await (await request("", { method: "POST", body: JSON.stringify(values) })).json()) as T;
+      items = [...items, record];
+      events.notify();
+      return record;
+    },
+    async update(id, values) {
+      const path = `/${encodeURIComponent(id)}`;
+      const record = (await (await request(path, { method: "PUT", body: JSON.stringify(values) })).json()) as T;
+      items = items.map((r) => (r.id === id ? record : r));
+      events.notify();
+      return record;
+    },
+    async remove(id) {
+      await request(`/${encodeURIComponent(id)}`, { method: "DELETE" });
+      items = items.filter((r) => r.id !== id);
+      events.notify();
+    },
     subscribe(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
+      const unsubscribe = events.subscribe(listener);
+      if (!loaded) void refresh();
+      return unsubscribe;
     },
   };
 }
@@ -91,13 +174,30 @@ export function createLocalStore<T extends Entity>(key: string): Store<T> {
 export function useEntityList<T extends Entity>(store: Store<T>): readonly T[] {
   return useSyncExternalStore(store.subscribe, store.list, store.list);
 }
+
+export function useRecord<T extends Entity>(store: Store<T>, id: string | null): T | undefined {
+  const items = useEntityList(store);
+  return id ? items.find((r) => r.id === id) : undefined;
+}
 """
 
 
 def entities_ts(spec: ApplicationSpec, header: str) -> str:
     if not spec.entities:
         return header + "\n// No data entities are specified yet.\nexport const stores = {};\n"
-    lines = [header.rstrip("\n"), "", 'import { createLocalStore, type Entity } from "./store";', ""]
+    lines = [
+        header.rstrip("\n"),
+        "",
+        'import { createHttpStore, createLocalStore, type Entity, type Store } from "./store";',
+        "",
+        "/** Set VITE_DATA_API_URL at build time to use a backend implementing api/openapi.json. */",
+        "const API_URL: string | undefined = import.meta.env.VITE_DATA_API_URL;",
+        "",
+        "function storeFor<T extends Entity>(collection: string): Store<T> {",
+        "  return API_URL ? createHttpStore<T>(API_URL, collection) : createLocalStore<T>(collection);",
+        "}",
+        "",
+    ]
     for entity in spec.entities:
         lines.append(f"/** {type_name(entity.id)}: generated from entity {literal(entity.id)}. */")
         lines.append(f"export interface {type_name(entity.id)} extends Entity {{")
@@ -106,7 +206,7 @@ def entities_ts(spec: ApplicationSpec, header: str) -> str:
             lines.append(f"  {literal(field.name)}: {ts}{'' if field.required else ' | null'};")
         lines.append("}")
         lines.append("")
-    store_entries = [f"  {literal(e.id)}: createLocalStore<{type_name(e.id)}>({literal(e.id)})," for e in spec.entities]
+    store_entries = [f"  {literal(e.id)}: storeFor<{type_name(e.id)}>({literal(e.id)})," for e in spec.entities]
     lines += ["export const stores = {", *store_entries, "};", ""]
     lines.append("export type EntityName = keyof typeof stores;")
     lines.append("")
@@ -124,8 +224,13 @@ def entities_ts(spec: ApplicationSpec, header: str) -> str:
     return "\n".join(lines)
 
 
-_HELPERS = """/** Converts submitted form data to a typed record and stores it. */
-export function saveRecord(entity: EntityName, data: FormData): void {
+_HELPERS = """type AnyStore = Store<Entity> & {
+  create(values: object): Promise<Entity>;
+  update(id: string, values: object): Promise<Entity>;
+};
+
+/** Converts submitted form data to a typed record; creates it, or updates the record with `id`. */
+export async function saveRecord(entity: EntityName, data: FormData, id?: string): Promise<void> {
   const record: Record<string, string | number | boolean | null> = {};
   for (const [name, kind] of Object.entries(FIELD_KINDS[entity])) {
     const raw = data.get(name);
@@ -135,7 +240,20 @@ export function saveRecord(entity: EntityName, data: FormData): void {
     else if (kind === "number") record[name] = Number(raw);
     else record[name] = raw;
   }
-  (stores[entity] as unknown as { create(values: object): unknown }).create(record);
+  const store = stores[entity] as unknown as AnyStore;
+  if (id) await store.update(id, record);
+  else await store.create(record);
+}
+
+export async function deleteRecord(entity: EntityName, id: string): Promise<void> {
+  await (stores[entity] as unknown as AnyStore).remove(id);
+}
+
+/** The value to show in a form control when editing a record. */
+export function fieldValue(record: Entity | undefined, name: string): string | undefined {
+  if (!record) return undefined;
+  const value = (record as unknown as Record<string, unknown>)[name];
+  return value === null || value === undefined ? "" : String(value);
 }
 
 /** A short human label for a record: its first non-empty field, or a shortened id. */
@@ -221,7 +339,24 @@ def openapi_json(spec: ApplicationSpec, generator: str, spec_revision: int | Non
                 "responses": {"201": {"description": "Created", "content": {"application/json": {"schema": ref}}}},
             },
         }
+        id_param = [{"name": "id", "in": "path", "required": True, "schema": {"type": "string"}}]
         paths[f"/{entity.id}/{{id}}"] = {
+            "put": {
+                "operationId": f"update{name}",
+                "summary": f"Replace a {entity.name} record",
+                "parameters": id_param,
+                "requestBody": {"required": True, "content": {"application/json": {"schema": ref}}},
+                "responses": {
+                    "200": {"description": "OK", "content": {"application/json": {"schema": ref}}},
+                    "404": {"description": "Not found"},
+                },
+            },
+            "delete": {
+                "operationId": f"delete{name}",
+                "summary": f"Delete a {entity.name} record",
+                "parameters": id_param,
+                "responses": {"204": {"description": "Deleted"}, "404": {"description": "Not found"}},
+            },
             "get": {
                 "operationId": f"get{name}",
                 "summary": f"Get one {entity.name} record",
@@ -230,7 +365,7 @@ def openapi_json(spec: ApplicationSpec, generator: str, spec_revision: int | Non
                     "200": {"description": "OK", "content": {"application/json": {"schema": ref}}},
                     "404": {"description": "Not found"},
                 },
-            }
+            },
         }
     document = {
         "openapi": "3.1.0",

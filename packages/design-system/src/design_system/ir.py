@@ -70,7 +70,9 @@ class Action(_Node):
     kind: Literal["action"] = "action"
     label: Label
     intent: Literal["primary", "secondary", "danger"] = "secondary"
-    action: Literal["submit", "cancel", "navigate", "custom"] = "custom"
+    #: ``edit-record`` opens ``target_screen`` for the row's record; ``delete-record`` removes it after
+    #: confirmation. Both are row actions of a table bound to an entity (additive in IR v1).
+    action: Literal["submit", "cancel", "navigate", "custom", "edit-record", "delete-record"] = "custom"
     target_screen: str | None = None
 
 

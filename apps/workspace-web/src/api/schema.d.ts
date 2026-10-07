@@ -526,7 +526,7 @@ export interface components {
              * @default custom
              * @enum {string}
              */
-            action: "submit" | "cancel" | "navigate" | "custom";
+            action: "submit" | "cancel" | "navigate" | "custom" | "edit-record" | "delete-record";
             /** Id */
             id: string;
             /**

@@ -271,6 +271,10 @@ def _entity_screens(entity: DataEntity) -> list[Screen]:
                 entity_id=entity.id,
                 columns=_columns(entity),
                 empty_text=f"No {entity.name.lower()} records yet.",
+                row_actions=[
+                    Action(id=_id(list_id, "edit"), label="Edit", action="edit-record", target_screen=form_id),
+                    Action(id=_id(list_id, "delete"), label="Delete", intent="danger", action="delete-record"),
+                ],
             )
             if entity.fields
             else Placeholder(

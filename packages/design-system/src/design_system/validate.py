@@ -151,6 +151,10 @@ def _check_node(
 
     for apath, action in actions:
         seen[action.id] += 1
+        if action.action == "edit-record" and action.target_screen not in screen_ids:
+            issues.append(
+                _issue(f"{apath}/target_screen", "ref-screen", f"Unknown edit screen {action.target_screen}.")
+            )
         if action.action == "navigate":
             if not action.target_screen:
                 issues.append(_issue(f"{apath}/target_screen", "navigate-no-target", "Navigation needs a target."))
