@@ -55,7 +55,8 @@ test("generated app finance-entities: records are created, listed, referenced an
   await txForm.getByRole("spinbutton", { name: /Risk score/ }).fill("0.8");
   await txForm.getByRole("button", { name: "Save" }).click();
   await expect(page).toHaveURL(`${base}/transaction`);
-  await expect(page.getByRole("table", { name: "Transaction" }).getByRole("cell", { name: "0.8" })).toBeVisible();
+  const txTable = page.getByRole("table", { name: "Transaction" });
+  await expect(txTable.getByRole("cell", { name: "0.8", exact: true })).toBeVisible();
 
   // Navigation action from the list to the form.
   await page.goto(`${base}/adjustment`);
