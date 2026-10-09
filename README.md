@@ -126,7 +126,7 @@ flowchart TD
   req["Plain-language request"] --> screen{"Injection screen<br/>injection-scan@1"}
   screen --> route{"Router<br/>preconditions first,<br/>model picks only among eligible skills"}
   route --> skill["Skill run<br/>budgeted model call → schema-validated JSON"]
-  skill --> props["Typed proposals<br/>with provenance; flagged ones default to Reject"]
+  skill --> props["Typed proposals<br/>with provenance, flagged ones default to Reject"]
   props --> review{"Human review<br/>accept · confirm · reject"}
   review -- "accepted" --> rev[("New spec revision<br/>immutable · ETag / If-Match · audited")]
   review -- "rejected" --> drop["Discarded, recorded in audit"]
@@ -163,7 +163,7 @@ sequenceDiagram
   S->>G: prompt with untrusted-content notice + JSON schema
   G->>M: chat completion (bounded tokens, calls, deadline)
   M-->>G: answer
-  G->>G: extract and validate JSON; bounded retry on invalid output
+  G->>G: extract and validate JSON, bounded retry on invalid output
   G-->>S: typed result or explicit failure
   S->>DB: proposals with model provenance (atomic claim, no double apply)
   W->>A: poll run
