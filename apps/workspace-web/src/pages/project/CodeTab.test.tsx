@@ -130,4 +130,47 @@ describe("CodeTab", () => {
     expect(screen.getByRole("button", { name: "Build in progress" })).toBeDisabled();
     expect(calls.find((c) => c.method === "POST")?.url).toBe(`${BUILDS}?revision=2`);
   });
+
+  it("upgrades an edited copy and lists the files that need attention", async () => {
+    const { calls } = mockFetch([
+      { method: "GET", path: BASE, body: MANIFEST },
+      { method: "GET", path: BUILDS, body: { items: [] } },
+      { method: "GET", path: `${BASE}/file`, body: file("src/screens/RulesScreen.tsx", "x") },
+      { method: "GET", path: `${BASE}/diff`, body: { from_revision: 1, to_revision: 2, files: [] } },
+      {
+        method: "POST",
+        path: `${BASE}/upgrade`,
+        body: {
+          from_revision: 1,
+          from_generator: "codegen-react@0.5.0",
+          to_revision: 2,
+          generator: "codegen-react@0.5.0",
+          base_reproduced: true,
+          conflicts: 1,
+          files: [
+            { path: "package.json", status: "unchanged", conflicts: 0, note: null },
+            { path: "src/screens/RulesScreen.tsx", status: "conflict", conflicts: 1, note: null },
+            { path: "src/notes.ts", status: "user-file", conflicts: 0, note: null },
+          ],
+          filename: "finance-r2.zip",
+          archive_base64: "UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==",
+        },
+      },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<CodeTab projectId={project.id} revision={2} />);
+
+    const input = await screen.findByLabelText("Project zip");
+    await user.upload(input, new File([new Uint8Array([80, 75])], "mine.zip", { type: "application/zip" }));
+    await user.click(screen.getByRole("button", { name: "Upgrade" }));
+
+    expect(await screen.findByText("1 conflict(s) to resolve")).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: "Files that need your attention" });
+    expect(within(table).getByText("src/screens/RulesScreen.tsx")).toBeInTheDocument();
+    expect(within(table).getByText("Your file")).toBeInTheDocument();
+    expect(within(table).queryByText("package.json")).not.toBeInTheDocument();
+    const post = calls.find((c) => c.method === "POST");
+    expect(post?.headers["Content-Type"]).toBe("application/zip");
+    expect(screen.getByRole("button", { name: "Download upgraded project" })).toBeInTheDocument();
+  });
 });

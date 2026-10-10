@@ -76,7 +76,8 @@ There is also the brief's demand for verifiable output and traceability.
     organisation's own authentication (a reverse proxy or gateway); that is outside the
     generator. CI runs the HTTP variant against a small in-memory server that follows the
     generated contract (`scripts/e2e/fake_data_api.py`); it is a test fixture, not a backend.
-    Edit preservation comes in Milestone 5.
+    Version 0.5.0 marks files as editable: upgrades merge hand edits with regenerated code
+    (ADR-0016).
 
 ## Consequences
 

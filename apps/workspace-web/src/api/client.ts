@@ -48,6 +48,7 @@ export type CodeFile = Json<paths["/api/v1/projects/{project_id}/code/file"]["ge
 export type CodeDiff = Json<paths["/api/v1/projects/{project_id}/code/diff"]["get"]["responses"][200]>;
 export type Build = Json<paths["/api/v1/projects/{project_id}/builds/{build_id}"]["get"]["responses"][200]>;
 export type BuildPage = Json<paths["/api/v1/projects/{project_id}/builds"]["get"]["responses"][200]>;
+export type UpgradeResult = Json<paths["/api/v1/projects/{project_id}/code/upgrade"]["post"]["responses"][200]>;
 
 export interface ProblemDetails {
   type: string;
@@ -88,6 +89,8 @@ interface RequestOptions {
   body?: unknown;
   headers?: Record<string, string>;
   signal?: AbortSignal;
+  /** Raw request body (for example a zip upload) sent with `contentType` instead of JSON. */
+  raw?: { body: Blob; contentType: string };
 }
 
 interface ApiResponse<T> {
@@ -108,13 +111,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
     ...options.headers,
   };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  if (options.raw !== undefined) headers["Content-Type"] = options.raw.contentType;
 
   let response: Response;
   try {
     response = await fetch(`${BASE}${path}`, {
       method: options.method ?? "GET",
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.raw !== undefined ? options.raw.body : options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: options.signal,
     });
   } catch (error) {
@@ -297,6 +301,16 @@ export const api = {
   async getCodeDiff(projectId: string, from: number, to: number, signal?: AbortSignal): Promise<CodeDiff> {
     return (await request<CodeDiff>(`/api/v1/projects/${enc(projectId)}/code/diff${query({ from, to })}`, { signal }))
       .data;
+  },
+
+  /** Upload a hand-edited project zip; returns the per-file outcome and the upgraded zip (Milestone 5). */
+  async upgradeCode(projectId: string, archive: Blob): Promise<UpgradeResult> {
+    return (
+      await request<UpgradeResult>(`/api/v1/projects/${enc(projectId)}/code/upgrade`, {
+        method: "POST",
+        raw: { body: archive, contentType: "application/zip" },
+      })
+    ).data;
   },
 
   async listBuilds(projectId: string, signal?: AbortSignal): Promise<BuildPage> {

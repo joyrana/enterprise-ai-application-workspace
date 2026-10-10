@@ -13,6 +13,7 @@ from .generate import (
     toolchain,
 )
 from .jsx import ALLOWED, GenerationError, literal
+from .merge import FileOutcome, MergeResult, ProjectMerge, merge3, merge_projects
 
 __all__ = [
     "ALLOWED",
@@ -20,12 +21,17 @@ __all__ = [
     "GENERATOR_VERSION",
     "MANIFEST",
     "FileDiff",
+    "FileOutcome",
     "GeneratedProject",
     "GenerationBlocked",
     "GenerationError",
+    "MergeResult",
+    "ProjectMerge",
     "diff_projects",
     "generate_project",
     "literal",
+    "merge3",
+    "merge_projects",
     "package_name",
     "pascal",
     "toolchain",

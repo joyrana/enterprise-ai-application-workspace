@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, Path, Query, Request, Response, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -14,7 +15,7 @@ from appspec import ApplicationSpec, json_schema
 from design_system import DesignSystemContract
 from skill_sdk import SkillRegistry
 
-from . import builds, code, runs, service, ui, workflows
+from . import builds, code, runs, service, ui, upgrade, workflows
 from .ai import ModelRuntime
 from .auth import CurrentPrincipal
 from .errors import Problem
@@ -44,6 +45,7 @@ from .schemas import (
     SpecUpdate,
     SpecValidationResult,
     UiPreview,
+    UpgradeResult,
     WorkflowCreate,
     WorkflowDefinitionList,
     WorkflowOut,
@@ -592,6 +594,34 @@ def download_project_code(
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@api.post(
+    "/projects/{project_id}/code/upgrade",
+    response_model=UpgradeResult,
+    tags=["code"],
+    summary="Upgrade a hand-edited generated project to a newer revision, keeping the edits",
+    description=(
+        "Send the project zip you have been editing (as downloaded, then changed). The workspace reproduces the "
+        "generated project it came from and merges your edits with the code generated for the target revision, "
+        "three-way. Overlapping changes are marked inline as conflicts. Nothing is stored or executed."
+    ),
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/zip": {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+)
+async def upgrade_project_code(
+    request: Request,
+    project_id: ProjectId,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    target: Annotated[int | None, Query(ge=1, alias="to", description="Target revision; defaults to current.")] = None,
+) -> UpgradeResult:
+    data = await request.body()
+    return await run_in_threadpool(upgrade.run, session, principal, project_id, data, target)
 
 
 # --------------------------------------------------------------------------- isolated builds (ADR-0015)

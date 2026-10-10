@@ -17,6 +17,7 @@
 | [0013](0013-ui-ir-and-design-system-contracts.md) | UI intermediate representation and design-system contracts | Accepted |
 | [0014](0014-deterministic-code-generation.md) | Deterministic code generation; generated code never runs inside the workspace | Accepted |
 | [0015](0015-isolated-build-runner.md) | Isolated build runner for generated projects | Accepted |
+| [0016](0016-edit-preservation.md) | Edit preservation by three-way merge against a reproduced base | Accepted |
 
 Template: context → decision → consequences. Superseding an ADR means adding a new one and
 marking the old one "Superseded by ADR-NNNN", never rewriting history.
