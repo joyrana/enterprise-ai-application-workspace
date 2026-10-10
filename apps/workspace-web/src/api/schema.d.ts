@@ -233,6 +233,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview what a candidate specification would change in the screens and generated code
+         * @description Nothing is saved. Compares the candidate with the current revision.
+         */
+        post: operations["preview_impact_api_v1_projects__project_id__impact_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/runs": {
         parameters: {
             query?: never;
@@ -1414,6 +1434,48 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** ImpactFile */
+        ImpactFile: {
+            /** Additions */
+            additions: number;
+            /** Deletions */
+            deletions: number;
+            /** Path */
+            path: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "added" | "removed" | "modified";
+        };
+        /** ImpactReport */
+        ImpactReport: {
+            /**
+             * Base Revision
+             * @description The current revision the candidate is compared with.
+             */
+            base_revision: number;
+            entities: components["schemas"]["NamedChanges"];
+            /**
+             * Files
+             * @description Generated files that would change (empty when not comparable).
+             */
+            files: components["schemas"]["ImpactFile"][];
+            /** Generation Blocked */
+            generation_blocked: boolean;
+            /** Note */
+            note: string | null;
+            screens: components["schemas"]["NamedChanges"];
+            /** Spec Issues */
+            spec_issues: components["schemas"]["ValidationIssue"][];
+            /** Spec Valid */
+            spec_valid: boolean;
+            /**
+             * Ui Issues
+             * @description Screen errors that would block code generation.
+             */
+            ui_issues: components["schemas"]["UiIssue"][];
+        };
         /** IntegrationContract */
         IntegrationContract: {
             /** Confirmed By */
@@ -1493,6 +1555,15 @@ export interface components {
             prompt_tokens: number;
             /** Total Tokens */
             total_tokens: number;
+        };
+        /** NamedChanges */
+        NamedChanges: {
+            /** Added */
+            added: string[];
+            /** Changed */
+            changed: string[];
+            /** Removed */
+            removed: string[];
         };
         /** NavigationItem */
         "NavigationItem-Input": {
@@ -3873,6 +3944,88 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UpgradeResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    preview_impact_api_v1_projects__project_id__impact_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationSpec-Input"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpactReport"];
                 };
             };
             /** @description Bad Request */

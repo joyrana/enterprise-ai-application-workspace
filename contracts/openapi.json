@@ -2433,6 +2433,111 @@
         "title": "Health",
         "type": "object"
       },
+      "ImpactFile": {
+        "additionalProperties": false,
+        "properties": {
+          "additions": {
+            "title": "Additions",
+            "type": "integer"
+          },
+          "deletions": {
+            "title": "Deletions",
+            "type": "integer"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "added",
+              "removed",
+              "modified"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "status",
+          "additions",
+          "deletions"
+        ],
+        "title": "ImpactFile",
+        "type": "object"
+      },
+      "ImpactReport": {
+        "additionalProperties": false,
+        "properties": {
+          "base_revision": {
+            "description": "The current revision the candidate is compared with.",
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "entities": {
+            "$ref": "#/components/schemas/NamedChanges"
+          },
+          "files": {
+            "description": "Generated files that would change (empty when not comparable).",
+            "items": {
+              "$ref": "#/components/schemas/ImpactFile"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "generation_blocked": {
+            "title": "Generation Blocked",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "screens": {
+            "$ref": "#/components/schemas/NamedChanges"
+          },
+          "spec_issues": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationIssue"
+            },
+            "title": "Spec Issues",
+            "type": "array"
+          },
+          "spec_valid": {
+            "title": "Spec Valid",
+            "type": "boolean"
+          },
+          "ui_issues": {
+            "description": "Screen errors that would block code generation.",
+            "items": {
+              "$ref": "#/components/schemas/UiIssue"
+            },
+            "title": "Ui Issues",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base_revision",
+          "spec_valid",
+          "spec_issues",
+          "entities",
+          "screens",
+          "files",
+          "generation_blocked",
+          "ui_issues",
+          "note"
+        ],
+        "title": "ImpactReport",
+        "type": "object"
+      },
       "IntegrationContract": {
         "additionalProperties": false,
         "properties": {
@@ -2659,6 +2764,39 @@
           "total_tokens"
         ],
         "title": "ModelUsage",
+        "type": "object"
+      },
+      "NamedChanges": {
+        "additionalProperties": false,
+        "properties": {
+          "added": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Added",
+            "type": "array"
+          },
+          "changed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed",
+            "type": "array"
+          },
+          "removed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed",
+            "type": "array"
+          }
+        },
+        "required": [
+          "added",
+          "removed",
+          "changed"
+        ],
+        "title": "NamedChanges",
         "type": "object"
       },
       "NavigationItem-Input": {
@@ -8502,6 +8640,143 @@
         "summary": "Upgrade a hand-edited generated project to a newer revision, keeping the edits",
         "tags": [
           "code"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/impact": {
+      "post": {
+        "description": "Nothing is saved. Compares the candidate with the current revision.",
+        "operationId": "preview_impact_api_v1_projects__project_id__impact_post",
+        "parameters": [
+          {
+            "description": "Project identifier.",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "description": "Project identifier.",
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Development only: tenant identifier.",
+            "in": "header",
+            "name": "x-dev-tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: tenant identifier.",
+              "title": "X-Dev-Tenant"
+            }
+          },
+          {
+            "description": "Development only: user identifier.",
+            "in": "header",
+            "name": "x-dev-user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: user identifier.",
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationSpec-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpactReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Preview what a candidate specification would change in the screens and generated code",
+        "tags": [
+          "specification"
         ]
       }
     },
