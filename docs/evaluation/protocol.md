@@ -46,7 +46,7 @@ cannot be shaped after the fact. It complements the evidence tiers in ADR-0010.
 
 [docs/status.md](../status.md) records each milestone's results with run links.
 
-The first holdout result, written on 2026-10-10 and scored after commit `56d0adc`:
+The first holdout result (the set was written on 2026-10-10 and committed on its own, before the commit that scores it):
 - The injection screen keeps 100% precision (0 false positives in 12 benign cases).
 - Recall drops to 33% (4/12, 95% CI [14%, 61%]), against 89% on the development set.
 - It misses multilingual, indirect, obfuscated, tool-spoofing and authority-claim phrasings.

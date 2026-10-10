@@ -33,7 +33,7 @@
       "path": "evals/datasets/injection/holdout-v1.jsonl",
       "role": "holdout",
       "task": "prompt-injection screening",
-      "provenance": "Hand-written on 2026-10-10 and committed (56d0adc) before the detector was scored on it; never used for tuning.",
+      "provenance": "Hand-written on 2026-10-10 and committed on its own, before the commit that first scores the detector on it (see git log for evals/datasets/injection/holdout-v1.jsonl); never used for tuning.",
       "limitations": "24 cases (12 injections, 12 benign); wide intervals. Once reported, it is no longer blind for future detector versions: add holdout-v2 for those.",
       "sha256": "0bed1bf61935b40fd18bcb51408193b25809a3dac1cb3a15c45dbd3c8d106007",
       "cases": 24
