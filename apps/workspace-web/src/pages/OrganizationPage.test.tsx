@@ -46,6 +46,6 @@ describe("OrganizationPage", () => {
     renderAt("/organization");
     await screen.findByRole("textbox", { name: /Policy \(JSON\)/ });
     await userEvent.click(screen.getByRole("button", { name: "Save policies" }));
-    expect(await screen.findByText(/Only organization admins/)).toBeInTheDocument();
+    expect(await screen.findByText(/role 'org-admin'/)).toBeInTheDocument();
   });
 });
