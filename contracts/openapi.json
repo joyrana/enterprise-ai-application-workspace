@@ -1115,6 +1115,80 @@
         "title": "AuthorizationRule",
         "type": "object"
       },
+      "BrandTheme": {
+        "additionalProperties": false,
+        "properties": {
+          "base": {
+            "enum": [
+              "fluent2",
+              "material3"
+            ],
+            "title": "Base",
+            "type": "string"
+          },
+          "brand_color": {
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Brand Color",
+            "type": "string"
+          },
+          "corner_radius": {
+            "default": "medium",
+            "enum": [
+              "small",
+              "medium",
+              "large"
+            ],
+            "title": "Corner Radius",
+            "type": "string"
+          },
+          "font_family": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9 ,-]{1,120}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Font Family"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9-]{1,40}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "base",
+          "brand_color"
+        ],
+        "title": "BrandTheme",
+        "type": "object"
+      },
+      "BrandThemeSet": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BrandTheme"
+            },
+            "maxItems": 20,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "BrandThemeSet",
+        "type": "object"
+      },
       "BuildOut": {
         "additionalProperties": false,
         "properties": {
@@ -3408,6 +3482,37 @@
           "policy"
         ],
         "title": "OrgPolicyUpdate",
+        "type": "object"
+      },
+      "OrgThemesOut": {
+        "additionalProperties": false,
+        "properties": {
+          "themes": {
+            "$ref": "#/components/schemas/BrandThemeSet"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "themes"
+        ],
+        "title": "OrgThemesOut",
+        "type": "object"
+      },
+      "OrgThemesUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "themes": {
+            "$ref": "#/components/schemas/BrandThemeSet"
+          }
+        },
+        "required": [
+          "themes"
+        ],
+        "title": "OrgThemesUpdate",
         "type": "object"
       },
       "Outcome": {
@@ -7606,6 +7711,294 @@
         "summary": "One design-system contract: component mappings, tokens and rules",
         "tags": [
           "design"
+        ]
+      }
+    },
+    "/api/v1/org/design-systems": {
+      "get": {
+        "operationId": "get_org_themes_api_v1_org_design_systems_get",
+        "parameters": [
+          {
+            "description": "Development only: tenant identifier.",
+            "in": "header",
+            "name": "x-dev-tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: tenant identifier.",
+              "title": "X-Dev-Tenant"
+            }
+          },
+          {
+            "description": "Development only: user identifier.",
+            "in": "header",
+            "name": "x-dev-user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: user identifier.",
+              "title": "X-Dev-User"
+            }
+          },
+          {
+            "description": "Development only: comma-separated roles, e.g. 'org-admin'.",
+            "in": "header",
+            "name": "x-dev-roles",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: comma-separated roles, e.g. 'org-admin'.",
+              "title": "X-Dev-Roles"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgThemesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "The organization's brand themes (select one in a spec with design_system.id = 'org:<id>')",
+        "tags": [
+          "organization"
+        ]
+      },
+      "put": {
+        "operationId": "put_org_themes_api_v1_org_design_systems_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "description": "Development only: tenant identifier.",
+            "in": "header",
+            "name": "x-dev-tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: tenant identifier.",
+              "title": "X-Dev-Tenant"
+            }
+          },
+          {
+            "description": "Development only: user identifier.",
+            "in": "header",
+            "name": "x-dev-user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: user identifier.",
+              "title": "X-Dev-User"
+            }
+          },
+          {
+            "description": "Development only: comma-separated roles, e.g. 'org-admin'.",
+            "in": "header",
+            "name": "x-dev-roles",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: comma-separated roles, e.g. 'org-admin'.",
+              "title": "X-Dev-Roles"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgThemesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgThemesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Replace the organization's brand themes (org-admin role, If-Match: \"vN\")",
+        "tags": [
+          "organization"
         ]
       }
     },

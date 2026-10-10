@@ -35,9 +35,7 @@ const POLICY_EXAMPLE = {
 };
 
 const THEME_EXAMPLE = {
-  items: [
-    { id: "acme", name: "Acme", base: "fluent2", brand_color: "#8a1538", font_family: "Segoe UI, sans-serif" },
-  ],
+  items: [{ id: "acme", name: "Acme", base: "fluent2", brand_color: "#8a1538", font_family: "Segoe UI, sans-serif" }],
 };
 
 const KINDS = [
