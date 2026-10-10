@@ -5,16 +5,16 @@ designed, generated, tested and validated enterprise applications, while honorin
 organization's design system, engineering conventions, accessibility requirements and
 security policies.
 
-> **Status: Milestone 4 in progress (deterministic React + Fluent 2 code generation).**
-> The pieces in place:
+> **Status: Milestones 0–8 are implemented as described in the roadmap, with the limits listed
+> there.** The platform is not complete: see "Known gaps" and [docs/status.md](docs/status.md).
+> What exists:
 > - projects, the canonical specification, revision history, the audit trail and the workspace UI;
 > - AI skills with routing and human review, and checkpointed multi-step workflows;
-> - a Fluent 2 design preview;
-> - a deterministic generator that turns each spec revision into a buildable React app.
->
-> Generator 0.4.0 (edit, confirmed delete and an HTTP data store) is in review. The isolated
-> on-demand build runner and edit preservation are not built yet; see the roadmap. The
-> platform is not complete.
+> - deterministic generation of React + Fluent 2 and Angular + Material 3 apps from one UI IR;
+> - isolated builds in a locked-down container;
+> - edit preservation by three-way merge, and change-impact preview;
+> - organization policies and brand themes;
+> - an evaluation harness with intervals, pinned datasets, an untuned holdout and an end-to-end benchmark.
 >
 > **Development authentication only: do not expose this build to untrusted users.**
 
@@ -26,24 +26,26 @@ The trust boundaries are drawn as boxes:
 
 ```mermaid
 flowchart LR
-  user(["Analyst / engineer"]) --> web
+  user(["Analyst / engineer / org admin"]) --> web
 
   subgraph browser["Browser"]
     web["workspace-web<br/>React 18 · Fluent UI v9<br/>OpenAPI-typed client"]
   end
 
   subgraph api["services/api · FastAPI modular monolith"]
-    routes["Routes<br/>transport only · RFC 9457 errors"] --> svc["Services<br/>tenancy · transactions · audit"]
+    routes["Routes<br/>transport only · RFC 9457 errors"] --> svc["Services<br/>tenancy · roles · transactions · audit"]
     svc --> spec["application-spec<br/>typed, versioned source of truth"]
     svc --> sdk["skill-sdk<br/>router · safety screen · workflow state machine"]
     sdk --> skills["skills/<br/>discovery · criteria · conflicts · screen design"]
-    skills --> gw["model-gateway<br/>schema validation · budgets · no silent fallback"]
-    svc --> ds["design-system<br/>UI IR v1 · validation · Fluent 2 contract"]
-    ds --> cg["codegen-react<br/>allowlisted printer · manifest · zip"]
+    skills --> gw["model-gateway<br/>schema validation · budgets · circuit breaker"]
+    svc --> pol["org-policy<br/>typed rules · error findings block"]
+    svc --> ds["design-system<br/>UI IR v1 · Fluent 2 and Material 3 contracts · brand themes"]
+    ds --> cgr["codegen-react<br/>allowlisted printer · manifest · three-way merge"]
+    ds --> cga["codegen-angular<br/>TEXT literals · allowlisted templates"]
   end
 
   subgraph data["Data"]
-    db[("PostgreSQL 16<br/>spec revisions · runs · workflows · audit")]
+    db[("PostgreSQL 16<br/>spec revisions · runs · workflows · builds · org settings · audit")]
   end
 
   subgraph models["Model providers · untrusted output"]
@@ -51,16 +53,23 @@ flowchart LR
     ol["gpt-oss<br/>Ollama"]
   end
 
-  subgraph ci["CI · the only place generated code runs"]
-    build["Generated apps<br/>strict tsc · Vite build · Playwright + axe"]
+  subgraph runner["Build worker · separate process"]
+    br["build-runner<br/>verify archive, then container with no network"]
+  end
+
+  subgraph ci["CI · example and benchmark apps"]
+    build["strict tsc · Vite · ng build<br/>Playwright + axe · benchmark"]
   end
 
   web -- "/api/v1" --> routes
   svc --> db
   gw -- "OpenAI-compatible HTTP" --> hf
   gw --> ol
-  cg -. "files + SHA-256 manifest<br/>download / diff" .-> web
-  cg -. "example specs" .-> build
+  cgr -. "files + SHA-256 manifest" .-> web
+  cga -. "files + SHA-256 manifest" .-> web
+  db -. "queued builds" .-> br
+  cgr -. "example specs" .-> build
+  cga -. "example specs" .-> build
 ```
 
 ## What works today
@@ -88,7 +97,7 @@ flowchart LR
 - **Code generation** (ADR-0014): each spec revision yields a complete, static
   Vite + React + TypeScript + Fluent 2 project:
   - screens, forms with validation, and navigation actions;
-  - tables bound to typed entity stores, with Edit and a confirmed Delete (0.4.0, in review);
+  - tables bound to typed entity stores, with Edit and a confirmed Delete;
   - an OpenAPI contract for the backend. Setting `VITE_DATA_API_URL` switches the app from
     browser storage to that backend.
 
@@ -97,6 +106,22 @@ flowchart LR
   revisions and download a zip. CI builds example apps (including one running against a
   contract-following test server), drives create/edit/delete in Chromium and checks every
   route with axe. The workspace never runs generated code.
+- **Isolated builds** (ADR-0015): the Code tab queues a build, and a separate worker builds the
+  project. It first verifies the archive (manifest hashes, exact pins, no links or traversal),
+  then builds in a container with no network, no credentials, read-only mounts and resource
+  limits. CI probes the sandbox with a hostile project on every PR.
+- **Edit preservation and impact** (ADR-0016): upload an edited copy, and the workspace
+  reproduces the project it came from and merges your edits with the regenerated code
+  three-way, marking conflicts. Before saving a spec change, *Preview impact* lists the
+  entities, screens and files it would change.
+- **Angular + Material 3** (ADR-0017): projects with `framework: angular` generate standalone,
+  zoneless Angular 22 apps with typed reactive forms and Material components, from the same UI IR.
+- **Organization policies and brand themes** (ADR-0018, ADR-0019): organization admins define
+  typed rules (for example forbidden components or sensitive-field classification); error
+  findings block generation. Brand themes, checked for WCAG contrast, restyle generated
+  Fluent 2 and Material 3 apps.
+- **Resilience:** a shared circuit breaker fails runs fast during model outages, and stuck runs
+  and builds are recovered automatically.
 - **Screens and design systems** (ADR-0013): the spec's screens (or, when none exist, its data
   entities) are turned into a typed UI intermediate representation, checked for
   accessibility rules and references, and mapped to Fluent 2 components through a contract
@@ -230,10 +255,11 @@ flowchart LR
 | Supply chain | Locked dependencies, SHA-pinned GitHub Actions, dependency audit, secret scan; secrets never in prompts, code or bundles | ADR-0006 |
 
 Known gaps:
-- development authentication only;
-- no isolated on-demand build runner;
-- no edit preservation across regeneration;
-- generated apps leave backend authentication to the deploying organisation.
+- development authentication only (roles come from a header);
+- container isolation, not gVisor or microVMs; the runner builds React projects only;
+- Angular output lacks edit/delete row actions and an HTTP store;
+- generated apps leave backend authentication to the deploying organisation;
+- the injection screen's recall on unseen phrasings is low (33% on the holdout).
 
 The [threat model](docs/security/threat-model.md) tracks these.
 
@@ -295,6 +321,9 @@ uv run python -m workspace_api.export --out contracts
 apps/workspace-web/          React + Fluent UI v9 workspace
 services/api/                FastAPI service, Alembic migrations, tests
 services/build-runner/       Isolated, offline container builds of generated projects (ADR-0015)
+packages/codegen-angular/    Deterministic Angular + Material 3 code generator (ADR-0017)
+packages/org-policy/         Organization policy rules and evaluation (ADR-0018)
+toolchains/angular/          Pinned Angular toolchain that generated Angular projects use
 packages/application-spec/   Canonical spec library (no web/DB dependencies)
 packages/model-gateway/      Model providers (HF router, self-hosted, Ollama), validation, budgets
 packages/skill-sdk/          Skill manifests, registry, commands, router, safety, workflows
@@ -344,11 +373,11 @@ uv run python -m workspace_evals.injection                  # detector precision
 | 2c | Real-model evaluation (Ollama + Qwen in CI), Playwright E2E with axe | Done |
 | 2d | Prompt-injection hardening, checkpointed workflows, eval diagnostics and variance | Done (HF-router and gpt-oss baselines need a token / local run) |
 | 3 | Design-system contracts, Fluent 2 adapter, UI intermediate representation | Done (entity/navigation proposals open) |
-| 4 | React generation, isolated builds, preview, diff review | In progress (generation, diff, CI builds and CRUD done; isolated runner open) |
-| 5 | Incremental changes, edit preservation, resilience | Planned |
-| 6 | Angular + Material 3 | Planned |
-| 7 | Organization design systems and policies | Planned |
-| 8 | Research-grade evaluation | Planned |
+| 4 | React generation, isolated builds, preview, diff review | Done (ADR-0014, ADR-0015). The isolated runner builds React projects only |
+| 5 | Incremental changes, edit preservation, resilience | Done: three-way merge upgrades (ADR-0016), impact preview, circuit breaker, stale-run and stale-build recovery |
+| 6 | Angular + Material 3 | Done: same IR, CI-built and axe-tested (ADR-0017). No edit/delete row actions or HTTP store for Angular yet |
+| 7 | Organization design systems and policies | Done: typed policies (ADR-0018) and brand themes (ADR-0019) |
+| 8 | Research-grade evaluation | Done: intervals, pinned datasets, untuned holdout, end-to-end benchmark ([protocol](docs/evaluation/protocol.md)) |
 
 ## Real-model evaluation
 
@@ -362,6 +391,7 @@ every PR (`cd apps/workspace-web && npm run e2e` locally, with the API and
 ## Documentation
 
 - [Implementation status, verified results and known limitations](docs/status.md)
+- [Evaluation protocol: claims, metrics, thresholds](docs/evaluation/protocol.md)
 - [Milestone 0 assessment and acceptance criteria](docs/assessment/milestone-0.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Architecture decision records](docs/adr/README.md)
