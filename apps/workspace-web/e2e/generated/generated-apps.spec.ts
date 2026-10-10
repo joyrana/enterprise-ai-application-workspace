@@ -211,6 +211,15 @@ async function expectEditing(page: Page) {
 }
 
 async function expectNoSeriousAxe(page: Page, what: string, include?: string) {
+  // Let finite animations and transitions finish (fading text is partly transparent mid-way).
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
   let builder = new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .exclude("[data-tabster-dummy]");
