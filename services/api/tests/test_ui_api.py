@@ -29,12 +29,23 @@ def test_design_systems_are_listed_with_their_pinned_library(client: TestClient)
             "library_package": "@fluentui/react-components",
             "library_version": "9.74.9",
             "has_adapter": True,
-        }
+        },
+        {
+            "id": "material3",
+            "name": "Material 3 (Angular)",
+            "version": "1.0.0",
+            "framework": "angular",
+            "library_package": "@angular/material",
+            "library_version": "22.2.2",
+            "has_adapter": False,
+        },
     ]
     contract = client.get("/api/v1/design-systems/fluent2").json()
     assert contract["mappings"]["field:select"]["components"] == ["Field", "Select", "option"]
     assert contract["tokens"]["color.background.brand"] == "colorBrandBackground"
-    assert client.get("/api/v1/design-systems/material3").status_code == 404
+    material = client.get("/api/v1/design-systems/material3").json()
+    assert material["mappings"]["field:select"]["components"][2] == "select[matNativeControl]"
+    assert client.get("/api/v1/design-systems/acme").status_code == 404
 
 
 def test_preview_derives_validates_and_renders_the_current_revision(
@@ -114,9 +125,23 @@ def test_selected_design_system_must_exist_and_match_the_framework(
 
     spec["design_system"] = {}
     put(client, pid, spec, revision=4)
-    angular = client.get(f"/api/v1/projects/{pid}/ui")
-    assert angular.status_code == 422
-    assert "Milestone 6" in angular.json()["detail"]
+    angular = client.get(f"/api/v1/projects/{pid}/ui").json()
+    assert angular["design_system"]["id"] == "material3"
+    assert angular["design_system"]["selected_by"] == "default"
+    assert "Material 3 is the default for Angular" in angular["design_system"]["note"]
+    assert "no in-browser preview yet" in angular["design_system"]["note"]
+    assert angular["rendered"] == []
+    assert [s["id"] for s in angular["document"]["screens"]] == ["adjustment-rules"]
+
+    # Angular projects generate Angular + Material 3 code.
+    code = client.get(f"/api/v1/projects/{pid}/code").json()
+    assert code["generator"] == "codegen-angular@0.1.0"
+    assert code["design_system"] == "material3@1.0.0"
+    assert "src/app/screens/adjustment-rules-screen.ts" in [f["path"] for f in code["files"]]
+    # The isolated runner only has the React toolchain; it says so instead of failing later.
+    build = client.post(f"/api/v1/projects/{pid}/builds")
+    assert build.status_code == 422
+    assert build.json()["type"] == "urn:workspace:error:build-not-supported"
 
 
 def test_preview_is_tenant_scoped(client: TestClient, make_project: Callable[..., dict[str, Any]]) -> None:

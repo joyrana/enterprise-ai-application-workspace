@@ -46,14 +46,14 @@ jobs:
       - name: Lint
         run: uv run ruff check --output-format github .
       - name: Type check
-        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy services/build-runner/src packages/application-spec/src packages/codegen-react/src packages/design-system/src packages/model-gateway/src packages/skill-sdk/src skills/src evals/src services/api/src
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy services/build-runner/src packages/codegen-angular/src packages/application-spec/src packages/codegen-react/src packages/design-system/src packages/model-gateway/src packages/skill-sdk/src skills/src evals/src services/api/src
       - name: Tests (unit + integration against PostgreSQL)
         env:
           SUMMARY_PATTERN: "[0-9]+ passed"
         run: >-
           $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "pytest"
           uv run pytest --tb=short
-          --cov=appspec --cov=build_runner --cov=codegen_react --cov=design_system --cov=model_gateway --cov=skill_sdk --cov=workspace_skills --cov=workspace_evals --cov=workspace_api --cov-report=term-missing
+          --cov=appspec --cov=build_runner --cov=codegen_angular --cov=codegen_react --cov=design_system --cov=model_gateway --cov=skill_sdk --cov=workspace_skills --cov=workspace_evals --cov=workspace_api --cov-report=term-missing
           --junitxml=reports/pytest.xml
       - name: Routing eval baseline (lexical, deterministic; no thresholds yet)
         env:
@@ -207,11 +207,14 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: apps/workspace-web/package-lock.json
+          cache-dependency-path: |
+            apps/workspace-web/package-lock.json
+            toolchains/angular/package-lock.json
       - name: Install (locked)
         run: |
           uv sync --locked
           (cd apps/workspace-web && npm ci)
+          (cd toolchains/angular && npm ci --no-audit --no-fund)
       - name: Generate example apps
         run: |
           set -euo pipefail
@@ -219,6 +222,8 @@ jobs:
           uv run python -m codegen_react --spec "$spec" --revision 2 --out apps/workspace-web/.generated/finance-screens
           uv run python -m codegen_react --spec "$spec" --revision 2 --without-screens --out apps/workspace-web/.generated/finance-entities
           uv run python -m codegen_react --spec "$spec" --revision 2 --without-screens --out apps/workspace-web/.generated/finance-entities-http
+          uv run python -m codegen_angular --spec "$spec" --revision 2 --out apps/workspace-web/.generated/finance-angular-screens
+          uv run python -m codegen_angular --spec "$spec" --revision 2 --without-screens --out apps/workspace-web/.generated/finance-angular
       - name: Type-check and build generated apps (strict TypeScript, locked toolchain)
         working-directory: apps/workspace-web
         run: |
@@ -231,6 +236,17 @@ jobs:
             VITE_DATA_API_URL="$api_url" $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "vite build $app" npx vite build ".generated/$app" --logLevel warn
           done
           echo "::notice title=generated apps::finance-screens, finance-entities and finance-entities-http type-check and build"
+      - name: Build generated Angular apps (strict templates, locked Angular toolchain)
+        working-directory: apps/workspace-web
+        env:
+          NG_CLI_ANALYTICS: "false"
+        run: |
+          set -euo pipefail
+          for app in finance-angular-screens finance-angular; do
+            ln -s "$GITHUB_WORKSPACE/toolchains/angular/node_modules" ".generated/$app/node_modules"
+            (cd ".generated/$app" && $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "ng build $app" npx ng build)
+          done
+          echo "::notice title=generated apps::finance-angular-screens and finance-angular build with Angular 22.2.2 and Material 3"
       - name: Install Chromium for Playwright
         working-directory: apps/workspace-web
         run: npx playwright install --with-deps chromium

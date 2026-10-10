@@ -3,7 +3,7 @@ name = "enterprise-ai-application-workspace"
 version = "0.1.0"
 description = "Workspace root (uv workspace). Not a distributable package."
 requires-python = ">=3.12"
-dependencies = ["appspec", "build-runner", "codegen-react", "design-system", "model-gateway", "skill-sdk", "workspace-skills", "workspace-evals", "workspace-api"]
+dependencies = ["appspec", "build-runner", "codegen-angular", "codegen-react", "design-system", "model-gateway", "skill-sdk", "workspace-skills", "workspace-evals", "workspace-api"]
 
 [dependency-groups]
 dev = [
@@ -20,11 +20,12 @@ dev = [
 package = false
 
 [tool.uv.workspace]
-members = ["services/build-runner", "packages/application-spec", "packages/codegen-react", "packages/design-system", "packages/model-gateway", "packages/skill-sdk", "skills", "evals", "services/api"]
+members = ["services/build-runner", "packages/codegen-angular", "packages/application-spec", "packages/codegen-react", "packages/design-system", "packages/model-gateway", "packages/skill-sdk", "skills", "evals", "services/api"]
 
 [tool.uv.sources]
 appspec = { workspace = true }
 build-runner = { workspace = true }
+codegen-angular = { workspace = true }
 codegen-react = { workspace = true }
 design-system = { workspace = true }
 model-gateway = { workspace = true }
@@ -43,7 +44,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "C4", "SIM", "RUF", "PT", "TID", "
 ignore = ["S101"]  # asserts are fine in tests and narrowing
 
 [tool.ruff.lint.isort]
-known-first-party = ["appspec", "build_runner", "codegen_react", "design_system", "model_gateway", "skill_sdk", "workspace_skills", "workspace_evals", "workspace_api"]
+known-first-party = ["appspec", "build_runner", "codegen_angular", "codegen_react", "design_system", "model_gateway", "skill_sdk", "workspace_skills", "workspace_evals", "workspace_api"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S105", "S106", "S608"]
@@ -53,6 +54,7 @@ python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 mypy_path = [
+  "packages/codegen-angular/src",
   "services/build-runner/src",
   "packages/application-spec/src",
   "packages/codegen-react/src",
@@ -73,6 +75,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers --import-mode=importlib"
 testpaths = [
+  "packages/codegen-angular/tests",
   "services/build-runner/tests",
   "packages/application-spec/tests",
   "packages/codegen-react/tests",

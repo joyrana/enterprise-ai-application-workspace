@@ -108,6 +108,10 @@ class BuildAlreadyActive(AppError):
     status, code, title = 409, "build-already-active", "A build of this project is already queued or running"
 
 
+class BuildNotSupported(AppError):
+    status, code, title = 422, "build-not-supported", "The isolated runner cannot build this project yet"
+
+
 class PayloadTooLarge(AppError):
     status, code, title = 413, "payload-too-large", "Request body is too large"
 
