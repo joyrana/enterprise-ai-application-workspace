@@ -105,4 +105,37 @@ describe("SpecEditorTab", () => {
     await openEditor();
     expect(screen.getByRole("button", { name: "Save revision" })).toBeDisabled();
   });
+
+  it("previews the impact of a change without saving it", async () => {
+    const { calls } = mockFetch([
+      { method: "GET", path: SPEC, body: specRevision(), headers: { ETag: '"r1"' } },
+      {
+        method: "POST",
+        path: `/api/v1/projects/${project.id}/impact`,
+        body: {
+          base_revision: 1,
+          spec_valid: true,
+          spec_issues: [],
+          entities: { added: [], removed: [], changed: ["Adjustment"] },
+          screens: { added: ["Adjustment form"], removed: [], changed: [] },
+          files: [{ path: "src/screens/AdjustmentListScreen.tsx", status: "modified", additions: 3, deletions: 1 }],
+          generation_blocked: false,
+          ui_issues: [],
+          note: null,
+        },
+      },
+    ]);
+    await openEditor();
+    setEditor(renamed("Finance ops v2"));
+    await userEvent.click(screen.getByRole("button", { name: "Preview impact" }));
+
+    expect(await screen.findByText("Impact compared with r1 (nothing saved)")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Changes to entities and screens" })).toHaveTextContent(
+      "Screens: added Adjustment form",
+    );
+    expect(screen.getByRole("list", { name: "Generated files that would change" })).toHaveTextContent(
+      "src/screens/AdjustmentListScreen.tsx · modified · +3 −1",
+    );
+    expect(calls.filter((c) => c.method === "PUT")).toHaveLength(0);
+  });
 });

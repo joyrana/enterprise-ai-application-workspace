@@ -12,7 +12,14 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { useState } from "react";
-import { ApiError, api, type SpecRevision, type SpecUpdate, type ValidationResult } from "../../api/client";
+import {
+  ApiError,
+  api,
+  type ImpactReport,
+  type SpecRevision,
+  type SpecUpdate,
+  type ValidationResult,
+} from "../../api/client";
 import { ProblemMessage } from "../../components/ProblemMessage";
 
 const useStyles = makeStyles({
@@ -36,6 +43,7 @@ type Feedback =
   | { kind: "conflict"; error: ApiError }
   | { kind: "error"; error: unknown }
   | { kind: "validated"; result: ValidationResult }
+  | { kind: "impact"; report: ImpactReport }
   | { kind: "unchanged" };
 
 function parse(text: string): { ok: true; value: unknown } | { ok: false; message: string } {
@@ -56,7 +64,7 @@ export function SpecEditorTab({ projectId, revision, etag, onSaved, onReload }: 
   const original = JSON.stringify(revision.spec, null, 2);
   const [text, setText] = useState(original);
   const [changeSummary, setChangeSummary] = useState("");
-  const [busy, setBusy] = useState<"validate" | "save" | null>(null);
+  const [busy, setBusy] = useState<"validate" | "impact" | "save" | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const dirty = text !== original;
 
@@ -66,6 +74,19 @@ export function SpecEditorTab({ projectId, revision, etag, onSaved, onReload }: 
     setBusy("validate");
     try {
       setFeedback({ kind: "validated", result: await api.validateSpec(projectId, parsed.value) });
+    } catch (error) {
+      setFeedback({ kind: "error", error });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const previewImpact = async () => {
+    const parsed = parse(text);
+    if (!parsed.ok) return setFeedback({ kind: "parse", message: parsed.message });
+    setBusy("impact");
+    try {
+      setFeedback({ kind: "impact", report: await api.previewImpact(projectId, parsed.value) });
     } catch (error) {
       setFeedback({ kind: "error", error });
     } finally {
@@ -122,6 +143,9 @@ export function SpecEditorTab({ projectId, revision, etag, onSaved, onReload }: 
         <Button onClick={validate} disabled={busy !== null}>
           {busy === "validate" ? "Validating…" : "Validate"}
         </Button>
+        <Button onClick={previewImpact} disabled={busy !== null || !dirty}>
+          {busy === "impact" ? "Comparing…" : "Preview impact"}
+        </Button>
         <Button appearance="primary" onClick={save} disabled={busy !== null || !dirty}>
           {busy === "save" ? "Saving…" : "Save revision"}
         </Button>
@@ -175,6 +199,58 @@ export function SpecEditorTab({ projectId, revision, etag, onSaved, onReload }: 
           </MessageBarBody>
         </MessageBar>
       )}
+      {feedback?.kind === "impact" && <ImpactSummary report={feedback.report} />}
     </div>
+  );
+}
+
+function describe(label: string, changes: ImpactReport["entities"]): string | null {
+  const parts = [
+    changes.added.length ? `added ${changes.added.join(", ")}` : "",
+    changes.removed.length ? `removed ${changes.removed.join(", ")}` : "",
+    changes.changed.length ? `changed ${changes.changed.join(", ")}` : "",
+  ].filter(Boolean);
+  return parts.length ? `${label}: ${parts.join("; ")}` : null;
+}
+
+function ImpactSummary({ report }: { report: ImpactReport }) {
+  const styles = useStyles();
+  const lines = [describe("Entities", report.entities), describe("Screens", report.screens)].filter(
+    (line): line is string => line !== null,
+  );
+  const intent = !report.spec_valid || report.generation_blocked ? "warning" : "info";
+  return (
+    <MessageBar intent={intent} role="status" layout="multiline">
+      <MessageBarBody>
+        <MessageBarTitle>Impact compared with r{report.base_revision} (nothing saved)</MessageBarTitle>
+        {report.note && <Body1>{report.note}</Body1>}
+        {lines.length > 0 && (
+          <ul className={styles.list} aria-label="Changes to entities and screens">
+            {lines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {report.ui_issues.length > 0 && (
+          <ul className={styles.list} aria-label="Screen errors">
+            {report.ui_issues.map((issue) => (
+              <li key={`${issue.path}:${issue.code}`}>{issue.message}</li>
+            ))}
+          </ul>
+        )}
+        {report.files.length > 0 && (
+          <ul className={styles.list} aria-label="Generated files that would change">
+            {report.files.map((f) => (
+              <li key={f.path}>
+                {f.path} · {f.status} · +{f.additions} −{f.deletions}
+              </li>
+            ))}
+          </ul>
+        )}
+        {report.spec_valid && !report.generation_blocked && report.files.length === 0 && lines.length === 0 && (
+          <Body1>No effect on the screens or the generated code.</Body1>
+        )}
+      </MessageBarBody>
+    </MessageBar>
   );
 }

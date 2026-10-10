@@ -15,7 +15,7 @@ from appspec import ApplicationSpec, json_schema
 from design_system import DesignSystemContract
 from skill_sdk import SkillRegistry
 
-from . import builds, code, runs, service, ui, upgrade, workflows
+from . import builds, code, impact, runs, service, ui, upgrade, workflows
 from .ai import ModelRuntime
 from .auth import CurrentPrincipal
 from .errors import Problem
@@ -31,6 +31,7 @@ from .schemas import (
     CodeManifest,
     DesignSystemList,
     Health,
+    ImpactReport,
     ProjectCreate,
     ProjectOut,
     ProjectPage,
@@ -181,6 +182,19 @@ def validate_spec(
     project_id: ProjectId, body: ApplicationSpec, principal: CurrentPrincipal, session: DbSession
 ) -> SpecValidationResult:
     return service.validate_candidate(session, principal, project_id, body)
+
+
+@api.post(
+    "/projects/{project_id}/impact",
+    response_model=ImpactReport,
+    tags=["specification"],
+    summary="Preview what a candidate specification would change in the screens and generated code",
+    description="Nothing is saved. Compares the candidate with the current revision.",
+)
+def preview_impact(
+    project_id: ProjectId, body: ApplicationSpec, principal: CurrentPrincipal, session: DbSession
+) -> ImpactReport:
+    return impact.preview(session, principal, project_id, body)
 
 
 @api.get(

@@ -48,6 +48,7 @@ export type CodeFile = Json<paths["/api/v1/projects/{project_id}/code/file"]["ge
 export type CodeDiff = Json<paths["/api/v1/projects/{project_id}/code/diff"]["get"]["responses"][200]>;
 export type Build = Json<paths["/api/v1/projects/{project_id}/builds/{build_id}"]["get"]["responses"][200]>;
 export type BuildPage = Json<paths["/api/v1/projects/{project_id}/builds"]["get"]["responses"][200]>;
+export type ImpactReport = Json<paths["/api/v1/projects/{project_id}/impact"]["post"]["responses"][200]>;
 export type UpgradeResult = Json<paths["/api/v1/projects/{project_id}/code/upgrade"]["post"]["responses"][200]>;
 
 export interface ProblemDetails {
@@ -209,6 +210,11 @@ export const api = {
       etag: res.headers.get("ETag") ?? `"r${res.data.revision}"`,
       created: res.headers.get("X-Revision-Created") !== "false",
     };
+  },
+
+  async previewImpact(projectId: string, spec: unknown): Promise<ImpactReport> {
+    return (await request<ImpactReport>(`/api/v1/projects/${enc(projectId)}/impact`, { method: "POST", body: spec }))
+      .data;
   },
 
   async validateSpec(projectId: string, spec: unknown): Promise<ValidationResult> {
