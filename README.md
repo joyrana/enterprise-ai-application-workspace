@@ -287,6 +287,7 @@ uv run python -m workspace_api.export --out contracts
 ```
 apps/workspace-web/          React + Fluent UI v9 workspace
 services/api/                FastAPI service, Alembic migrations, tests
+services/build-runner/       Isolated, offline container builds of generated projects (ADR-0015)
 packages/application-spec/   Canonical spec library (no web/DB dependencies)
 packages/model-gateway/      Model providers (HF router, self-hosted, Ollama), validation, budgets
 packages/skill-sdk/          Skill manifests, registry, commands, router, safety, workflows
