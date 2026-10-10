@@ -112,6 +112,22 @@ MODEL_ID=gpt-oss:20b
 - Open item: the exact Qwen repository and size are pinned in Milestone 2 after a baseline
   evaluation, because model choice should follow measured schema compliance and quality.
 
+## Addendum (2026-10-10): circuit breaker
+
+Transport retries (jittered exponential backoff, honouring `Retry-After`) handle short blips.
+For longer outages, the API process shares one `CircuitBreaker` across all runs.
+- **Opening:** after 5 consecutive *transient* failures (rate limits, unavailability,
+  timeouts), runs fail fast with `provider_unavailable` for 30 s instead of each waiting out
+  its timeout.
+- **Recovery:** after the cooldown, a single trial call decides whether the circuit closes
+  or opens again.
+- **What doesn't count:** non-transient errors (credentials, bad request, schema failures)
+  never trip it.
+- **Visibility:** `GET /ai/status` reports the circuit state, and the Discovery tab explains
+  an open circuit.
+- **Limitation:** the state is per process. Several API replicas each keep their own; a
+  shared breaker (for example in Redis) is a later option.
+
 ## References
 
 - Hugging Face Inference Providers, OpenAI-compatible router:
