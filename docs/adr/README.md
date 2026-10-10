@@ -19,6 +19,7 @@
 | [0015](0015-isolated-build-runner.md) | Isolated build runner for generated projects | Accepted |
 | [0016](0016-edit-preservation.md) | Edit preservation by three-way merge against a reproduced base | Accepted |
 | [0017](0017-angular-material3-generation.md) | Angular + Material 3 generation from the same UI IR | Accepted |
+| [0018](0018-organization-policies.md) | Organization policies as typed, deterministic rules | Accepted |
 
 Template: context → decision → consequences. Superseding an ADR means adding a new one and
 marking the old one "Superseded by ADR-NNNN", never rewriting history.

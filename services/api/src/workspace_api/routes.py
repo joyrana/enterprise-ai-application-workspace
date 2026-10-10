@@ -15,7 +15,7 @@ from appspec import ApplicationSpec, json_schema
 from design_system import DesignSystemContract
 from skill_sdk import SkillRegistry
 
-from . import builds, code, impact, runs, service, ui, upgrade, workflows
+from . import builds, code, impact, org, runs, service, ui, upgrade, workflows
 from .ai import ModelRuntime
 from .auth import CurrentPrincipal
 from .errors import Problem
@@ -32,6 +32,9 @@ from .schemas import (
     DesignSystemList,
     Health,
     ImpactReport,
+    OrgPolicyOut,
+    OrgPolicyUpdate,
+    PolicyReport,
     ProjectCreate,
     ProjectOut,
     ProjectPage,
@@ -672,3 +675,43 @@ def get_project_build(
     session: DbSession,
 ) -> BuildOut:
     return builds.get_build(session, principal, project_id, build_id)
+
+
+# --------------------------------------------------------------------------- organization policies (ADR-0018)
+
+
+@api.get("/org/policies", response_model=OrgPolicyOut, tags=["organization"], summary="The organization's policy set")
+def get_org_policies(principal: CurrentPrincipal, session: DbSession, response: Response) -> OrgPolicyOut:
+    result = org.get_policies(session, principal)
+    response.headers["ETag"] = f'"v{result.version}"'
+    return result
+
+
+@api.put(
+    "/org/policies",
+    response_model=OrgPolicyOut,
+    tags=["organization"],
+    summary='Replace the organization\'s policy set (org-admin role, If-Match: "vN")',
+)
+def put_org_policies(
+    body: OrgPolicyUpdate,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    response: Response,
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
+) -> OrgPolicyOut:
+    result = org.put_policies(session, principal, if_match, body.policy)
+    response.headers["ETag"] = f'"v{result.version}"'
+    return result
+
+
+@api.get(
+    "/projects/{project_id}/policy",
+    response_model=PolicyReport,
+    tags=["organization"],
+    summary="Organization policy findings for a spec revision",
+)
+def get_project_policy(
+    project_id: ProjectId, principal: CurrentPrincipal, session: DbSession, revision: Revision = None
+) -> PolicyReport:
+    return org.report(session, principal, project_id, revision)

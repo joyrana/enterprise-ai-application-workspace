@@ -218,6 +218,18 @@ class Build(Base):
     )
 
 
+class OrgSettings(Base):
+    """Per-tenant organization settings: the policy set (ADR-0018), versioned for If-Match updates."""
+
+    __tablename__ = "org_settings"
+
+    tenant_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    policies: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    policies_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class Database:
     """Owns the engine and session factory for one application instance."""
 

@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from appspec import ApplicationSpec, SpecSummary, ValidationIssue
 from codegen_react import FileDiff
 from design_system import RenderedScreen, UiDocument, UiIssue
+from org_policy import PolicyFinding, PolicySet
 from skill_sdk import CommandResult, Decision, SpecCommand
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
@@ -471,4 +472,29 @@ class ImpactReport(ApiModel):
     files: list[ImpactFile] = Field(description="Generated files that would change (empty when not comparable).")
     generation_blocked: bool
     ui_issues: list[UiIssue] = Field(description="Screen errors that would block code generation.")
+    policy_findings: list[PolicyFinding] = Field(
+        default_factory=list, description="Organization policy findings for the candidate (ADR-0018)."
+    )
     note: str | None
+
+
+# --------------------------------------------------------------------------- organization policies (ADR-0018)
+
+
+class OrgPolicyOut(ApiModel):
+    version: int = Field(description='0 until the first policy is saved; send it back as If-Match: "vN".')
+    policy: PolicySet
+    updated_by: str | None
+    updated_at: datetime | None
+
+
+class OrgPolicyUpdate(ApiModel):
+    policy: PolicySet
+
+
+class PolicyReport(ApiModel):
+    policy_version: int
+    spec_revision: int
+    design_system: str
+    findings: list[PolicyFinding]
+    blocked: bool = Field(description="True when an error finding blocks code generation and builds.")

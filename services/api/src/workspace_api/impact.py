@@ -20,7 +20,7 @@ from appspec import ApplicationSpec, Severity, validate_spec
 from codegen_react import GenerationBlocked, diff_projects, generate_project
 from design_system import derive_document, validate_document
 
-from . import service, ui
+from . import org, service, ui
 from .auth import Principal
 from .schemas import ImpactFile, ImpactReport, NamedChanges
 
@@ -78,6 +78,9 @@ def preview(session: Session, principal: Principal, project_id: uuid.UUID, candi
         return report
 
     preview_revision = number + 1
+    _, _, report.policy_findings = org.findings_for(session, principal.tenant_id, candidate, preview_revision)
+    if any(f.severity == "error" for f in report.policy_findings):
+        report.generation_blocked = True
     before_doc = derive_document(current, spec_revision=preview_revision)
     after_doc = derive_document(candidate, spec_revision=preview_revision)
     screens_before = {s.id: s.model_dump(mode="json", exclude={"source"}) for s in before_doc.screens}
