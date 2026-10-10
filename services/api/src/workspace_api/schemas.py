@@ -444,3 +444,31 @@ class UpgradeResult(ApiModel):
     files: list[UpgradeFile]
     filename: str
     archive_base64: str = Field(description="The upgraded project as a zip, base64-encoded. Not stored.")
+
+
+# --------------------------------------------------------------------------- change impact (Milestone 5)
+
+
+class NamedChanges(ApiModel):
+    added: list[str]
+    removed: list[str]
+    changed: list[str]
+
+
+class ImpactFile(ApiModel):
+    path: str
+    status: Literal["added", "removed", "modified"]
+    additions: int
+    deletions: int
+
+
+class ImpactReport(ApiModel):
+    base_revision: int = Field(description="The current revision the candidate is compared with.")
+    spec_valid: bool
+    spec_issues: list[ValidationIssue]
+    entities: NamedChanges
+    screens: NamedChanges
+    files: list[ImpactFile] = Field(description="Generated files that would change (empty when not comparable).")
+    generation_blocked: bool
+    ui_issues: list[UiIssue] = Field(description="Screen errors that would block code generation.")
+    note: str | None
