@@ -657,6 +657,11 @@ export interface components {
         };
         /** AiStatus */
         AiStatus: {
+            /**
+             * Circuit
+             * @description Provider circuit breaker: 'open' means recent calls kept failing, so runs fail fast for a short cooldown instead of waiting for timeouts.
+             */
+            circuit?: ("closed" | "open" | "half_open") | null;
             /** Configured */
             configured: boolean;
             /**

@@ -333,8 +333,8 @@ export function DiscoveryTab({ projectId, etag, onApplied, pollMs = 1500, scanDe
       {status.circuit === "open" && (
         <MessageBar intent="warning">
           <MessageBarBody>
-            The model provider kept failing, so new runs fail fast for a short cooldown instead of waiting for
-            timeouts. Try again in a minute.
+            The model provider kept failing, so new runs fail fast for a short cooldown instead of waiting for timeouts.
+            Try again in a minute.
           </MessageBarBody>
         </MessageBar>
       )}
