@@ -51,6 +51,7 @@ export type BuildPage = Json<paths["/api/v1/projects/{project_id}/builds"]["get"
 export type ImpactReport = Json<paths["/api/v1/projects/{project_id}/impact"]["post"]["responses"][200]>;
 export type OrgPolicy = Json<paths["/api/v1/org/policies"]["get"]["responses"][200]>;
 export type OrgPolicyUpdate = Json<NonNullable<paths["/api/v1/org/policies"]["put"]["requestBody"]>>;
+export type OrgThemes = Json<paths["/api/v1/org/design-systems"]["get"]["responses"][200]>;
 export type PolicyReport = Json<paths["/api/v1/projects/{project_id}/policy"]["get"]["responses"][200]>;
 export type UpgradeResult = Json<paths["/api/v1/projects/{project_id}/code/upgrade"]["post"]["responses"][200]>;
 
@@ -227,6 +228,20 @@ export const api = {
       await request<OrgPolicy>("/api/v1/org/policies", {
         method: "PUT",
         body: { policy },
+        headers: { "If-Match": `"v${version}"` },
+      })
+    ).data;
+  },
+
+  async getOrgThemes(signal?: AbortSignal): Promise<OrgThemes> {
+    return (await request<OrgThemes>("/api/v1/org/design-systems", { signal })).data;
+  },
+
+  async saveOrgThemes(themes: unknown, version: number): Promise<OrgThemes> {
+    return (
+      await request<OrgThemes>("/api/v1/org/design-systems", {
+        method: "PUT",
+        body: { themes },
         headers: { "If-Match": `"v${version}"` },
       })
     ).data;

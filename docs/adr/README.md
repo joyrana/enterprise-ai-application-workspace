@@ -20,6 +20,7 @@
 | [0016](0016-edit-preservation.md) | Edit preservation by three-way merge against a reproduced base | Accepted |
 | [0017](0017-angular-material3-generation.md) | Angular + Material 3 generation from the same UI IR | Accepted |
 | [0018](0018-organization-policies.md) | Organization policies as typed, deterministic rules | Accepted |
+| [0019](0019-organization-brand-themes.md) | Organization brand themes on built-in design systems | Accepted |
 
 Template: context → decision → consequences. Superseding an ADR means adding a new one and
 marking the old one "Superseded by ADR-NNNN", never rewriting history.

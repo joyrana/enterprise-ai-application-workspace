@@ -17,10 +17,11 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from appspec import ApplicationSpec, Severity, validate_spec
-from codegen_react import GenerationBlocked, diff_projects, generate_project
+from codegen_angular import generate_project as generate_angular
+from codegen_react import GeneratedProject, GenerationBlocked, diff_projects, generate_project
 from design_system import derive_document, validate_document
 
-from . import org, service, ui
+from . import org, service, themes, ui
 from .auth import Principal
 from .schemas import ImpactFile, ImpactReport, NamedChanges
 
@@ -50,6 +51,11 @@ def _changes(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]]
         removed=sorted(label(before[k], k) for k in before.keys() - after.keys()),
         changed=sorted(label(after[k], k) for k in after.keys() & before.keys() if after[k] != before[k]),
     )
+
+
+def _generate(spec: ApplicationSpec, contract: Any, revision: int, theme: Any) -> GeneratedProject:
+    generate = generate_angular if contract.framework == "angular" else generate_project
+    return generate(spec, contract, spec_revision=revision, theme=theme)
 
 
 def preview(session: Session, principal: Principal, project_id: uuid.UUID, candidate: ApplicationSpec) -> ImpactReport:
@@ -92,14 +98,15 @@ def preview(session: Session, principal: Principal, project_id: uuid.UUID, candi
         report.note = "These changes would block code generation until the screen errors are fixed."
         return report
 
-    contract_after, _ = ui.choose(candidate)
+    org_themes = themes.themes_for(session, principal.tenant_id)
+    contract_after, _, theme_after = ui.resolve(candidate, org_themes)
     try:
-        contract_before, _ = ui.choose(current)
-        before = generate_project(current, contract_before, spec_revision=preview_revision)
+        contract_before, _, theme_before = ui.resolve(current, org_themes)
+        before = _generate(current, contract_before, preview_revision, theme_before)
     except (GenerationBlocked, ui.DesignSystemUnavailable):
         report.note = f"Revision r{number} does not generate code, so there is no file-level comparison."
         return report
-    after = generate_project(candidate, contract_after, spec_revision=preview_revision)
+    after = _generate(candidate, contract_after, preview_revision, theme_after)
     report.files = [
         ImpactFile(path=d.path, status=d.status, additions=d.additions, deletions=d.deletions)
         for d in diff_projects(before, after)

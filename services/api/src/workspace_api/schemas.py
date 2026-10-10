@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from appspec import ApplicationSpec, SpecSummary, ValidationIssue
 from codegen_react import FileDiff
-from design_system import RenderedScreen, UiDocument, UiIssue
+from design_system import BrandThemeSet, RenderedScreen, UiDocument, UiIssue
 from org_policy import PolicyFinding, PolicySet
 from skill_sdk import CommandResult, Decision, SpecCommand
 
@@ -498,3 +498,12 @@ class PolicyReport(ApiModel):
     design_system: str
     findings: list[PolicyFinding]
     blocked: bool = Field(description="True when an error finding blocks code generation and builds.")
+
+
+class OrgThemesOut(ApiModel):
+    version: int
+    themes: BrandThemeSet
+
+
+class OrgThemesUpdate(ApiModel):
+    themes: BrandThemeSet

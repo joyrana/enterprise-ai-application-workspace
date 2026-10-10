@@ -19,7 +19,7 @@ from appspec import ApplicationSpec
 from design_system import derive_document
 from org_policy import PolicyFinding, PolicySet, blocking, evaluate
 
-from . import service, ui
+from . import service, themes, ui
 from .auth import Principal
 from .db import OrgSettings
 from .errors import AppError, FieldError, Forbidden, PreconditionRequired, RevisionConflict
@@ -99,11 +99,11 @@ def findings_for(
     session: Session, tenant_id: str, spec: ApplicationSpec, revision: int | None
 ) -> tuple[int, str, list[PolicyFinding]]:
     version, policy = policy_for(session, tenant_id)
-    contract, _ = ui.choose(spec)
+    _, choice, _ = ui.resolve(spec, themes.themes_for(session, tenant_id))
     if not policy.rules:
-        return version, contract.id, []
+        return version, choice.id, []
     document = derive_document(spec, spec_revision=revision)
-    return version, contract.id, evaluate(policy, spec, document, contract.id)
+    return version, choice.id, evaluate(policy, spec, document, choice.id)
 
 
 def enforce(session: Session, tenant_id: str, spec: ApplicationSpec, revision: int) -> None:

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from codegen_angular import generate_project as generate_angular
 from codegen_react import GeneratedProject, GenerationBlocked, diff_projects, generate_project, package_name
 
-from . import org, service, ui
+from . import org, service, themes, ui
 from .auth import Principal
 from .errors import AppError, FieldError, NotFound
 from .schemas import CodeDiff, CodeFile, CodeFileInfo, CodeManifest
@@ -40,11 +40,11 @@ def project_at(
     project = service.find_project(session, principal, project_id)
     number = project.current_revision if revision is None else revision
     spec = service.spec_at(session, project, number)
-    contract, _ = ui.choose(spec)
+    contract, _, theme = ui.resolve(spec, themes.themes_for(session, principal.tenant_id))
     org.enforce(session, principal.tenant_id, spec, number)
     generate = generate_angular if contract.framework == "angular" else generate_project
     try:
-        return number, generate(spec, contract, spec_revision=number)
+        return number, generate(spec, contract, spec_revision=number, theme=theme)
     except GenerationBlocked as exc:
         raise CodeGenerationBlocked(
             f"Revision r{number} has {len(exc.issues)} UI error(s); fix them in the specification first.",
