@@ -2,7 +2,7 @@
 
 from .cli import build_archive
 from .sandbox import BuildReport, SandboxLimits, StepResult, docker_argv, extract_artifacts, run_build
-from .verify import ArchiveLimits, ProjectRejected, VerifiedProject, unpack
+from .verify import ArchiveLimits, ProjectRejected, VerifiedProject, read_archive, unpack
 
 __all__ = [
     "ArchiveLimits",
@@ -14,6 +14,7 @@ __all__ = [
     "build_archive",
     "docker_argv",
     "extract_artifacts",
+    "read_archive",
     "run_build",
     "unpack",
 ]

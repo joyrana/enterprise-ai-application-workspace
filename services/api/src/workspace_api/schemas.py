@@ -399,3 +399,43 @@ class BuildOut(ApiModel):
 
 class BuildPage(ApiModel):
     items: list[BuildOut]
+
+
+# --------------------------------------------------------------------------- edit preservation (Milestone 5)
+
+UpgradeStatus = Literal[
+    "unchanged",
+    "regenerated",
+    "kept",
+    "merged",
+    "conflict",
+    "added",
+    "user-file",
+    "removed",
+    "orphaned",
+    "deleted",
+    "restored",
+    "side-by-side",
+]
+
+
+class UpgradeFile(ApiModel):
+    path: str
+    status: UpgradeStatus
+    conflicts: int = Field(ge=0, description="Conflict regions marked inline (<<<<<<< your edit … >>>>>>>).")
+    note: str | None
+
+
+class UpgradeResult(ApiModel):
+    from_revision: int
+    from_generator: str
+    to_revision: int
+    generator: str
+    base_reproduced: bool = Field(
+        description="True when the original generated project could be reproduced exactly (same generator "
+        "version), so every file was merged three-way. Otherwise edited files are kept side by side."
+    )
+    conflicts: int
+    files: list[UpgradeFile]
+    filename: str
+    archive_base64: str = Field(description="The upgraded project as a zip, base64-encoded. Not stored.")

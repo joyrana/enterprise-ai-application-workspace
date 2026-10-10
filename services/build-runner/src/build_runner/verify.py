@@ -12,6 +12,7 @@ project. That is why the build itself still runs in the sandbox.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import stat
 import zipfile
@@ -99,16 +100,15 @@ def _check_package(package: dict[str, Any], toolchain: dict[str, Any]) -> None:
             raise ProjectRejected("dependencies", f"package.json must not declare {key}.")
 
 
-def unpack(
-    archive: Path, dest: Path, toolchain: dict[str, Any], limits: ArchiveLimits | None = None
-) -> VerifiedProject:
-    """Validate ``archive`` and unpack its project folder into ``dest`` (which must be empty)."""
+def read_archive(archive: Path | bytes, limits: ArchiveLimits | None = None) -> tuple[str, dict[str, bytes]]:
+    """Read a bounded, plain zip with one top-level folder: (folder name, relative path -> bytes).
+
+    Nothing is written to disk. Raises ``ProjectRejected`` for anything unsafe.
+    """
     limits = limits or ArchiveLimits()
-    if dest.exists() and any(dest.iterdir()):
-        raise ValueError(f"{dest} must be empty")
-    dest.mkdir(parents=True, exist_ok=True)
+    source = io.BytesIO(archive) if isinstance(archive, bytes) else archive
     try:
-        zf = zipfile.ZipFile(archive)
+        zf = zipfile.ZipFile(source)
     except (zipfile.BadZipFile, OSError) as exc:
         raise ProjectRejected("not-a-zip", "The file is not a readable zip archive.") from exc
     with zf:
@@ -120,6 +120,17 @@ def unpack(
             if len(data) != info.file_size:
                 raise ProjectRejected("corrupt", f"{info.filename!r} does not match its declared size.")
             contents[relative] = data
+    return root, contents
+
+
+def unpack(
+    archive: Path, dest: Path, toolchain: dict[str, Any], limits: ArchiveLimits | None = None
+) -> VerifiedProject:
+    """Validate ``archive`` and unpack its project folder into ``dest`` (which must be empty)."""
+    if dest.exists() and any(dest.iterdir()):
+        raise ValueError(f"{dest} must be empty")
+    dest.mkdir(parents=True, exist_ok=True)
+    _, contents = read_archive(archive, limits)
 
     if MANIFEST not in contents or "package.json" not in contents:
         raise ProjectRejected("not-generated", f"The project has no {MANIFEST} or package.json.")

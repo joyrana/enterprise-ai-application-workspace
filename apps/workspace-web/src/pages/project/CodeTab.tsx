@@ -16,6 +16,7 @@ import { api, type CodeDiff, type CodeFile, type CodeManifest } from "../../api/
 import { ProblemMessage } from "../../components/ProblemMessage";
 import { useAsync } from "../../hooks/useAsync";
 import { BuildPanel } from "./BuildPanel";
+import { UpgradePanel } from "./UpgradePanel";
 
 const useStyles = makeStyles({
   root: { display: "grid", gap: tokens.spacingVerticalL },
@@ -74,6 +75,7 @@ export function CodeTab({ projectId, revision }: { projectId: string; revision: 
         </Body1>
       )}
       <BuildPanel projectId={projectId} revision={manifest.spec_revision} />
+      <UpgradePanel projectId={projectId} revision={manifest.spec_revision} />
       <FileBrowser projectId={projectId} manifest={manifest} />
       <DiffView projectId={projectId} revision={manifest.spec_revision} />
     </div>

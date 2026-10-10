@@ -213,6 +213,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/code/upgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upgrade a hand-edited generated project to a newer revision, keeping the edits
+         * @description Send the project zip you have been editing (as downloaded, then changed). The workspace reproduces the generated project it came from and merges your edits with the code generated for the target revision, three-way. Overlapping changes are marked inline as conflicts. Nothing is stored or executed.
+         */
+        post: operations["upgrade_project_code_api_v1_projects__project_id__code_upgrade_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/runs": {
         parameters: {
             query?: never;
@@ -2331,6 +2351,50 @@ export interface components {
          * @enum {string}
          */
         UiState: "loading" | "empty" | "error" | "success" | "disabled";
+        /** UpgradeFile */
+        UpgradeFile: {
+            /**
+             * Conflicts
+             * @description Conflict regions marked inline (<<<<<<< your edit … >>>>>>>).
+             */
+            conflicts: number;
+            /** Note */
+            note: string | null;
+            /** Path */
+            path: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "unchanged" | "regenerated" | "kept" | "merged" | "conflict" | "added" | "user-file" | "removed" | "orphaned" | "deleted" | "restored" | "side-by-side";
+        };
+        /** UpgradeResult */
+        UpgradeResult: {
+            /**
+             * Archive Base64
+             * @description The upgraded project as a zip, base64-encoded. Not stored.
+             */
+            archive_base64: string;
+            /**
+             * Base Reproduced
+             * @description True when the original generated project could be reproduced exactly (same generator version), so every file was merged three-way. Otherwise edited files are kept side by side.
+             */
+            base_reproduced: boolean;
+            /** Conflicts */
+            conflicts: number;
+            /** Filename */
+            filename: string;
+            /** Files */
+            files: components["schemas"]["UpgradeFile"][];
+            /** From Generator */
+            from_generator: string;
+            /** From Revision */
+            from_revision: number;
+            /** Generator */
+            generator: string;
+            /** To Revision */
+            to_revision: number;
+        };
         /** UserJourney */
         UserJourney: {
             /** Confirmed By */
@@ -3719,6 +3783,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CodeFile"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    upgrade_project_code_api_v1_projects__project_id__code_upgrade_post: {
+        parameters: {
+            query?: {
+                /** @description Target revision; defaults to current. */
+                to?: number | null;
+            };
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/zip": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpgradeResult"];
                 };
             };
             /** @description Bad Request */
