@@ -1,0 +1,5 @@
+# Only the lockfile pair and the container script enter the image build context.
+*
+!apps/workspace-web/package.json
+!apps/workspace-web/package-lock.json
+!services/build-runner/container/build.sh

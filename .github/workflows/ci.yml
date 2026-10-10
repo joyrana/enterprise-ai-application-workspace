@@ -46,14 +46,14 @@ jobs:
       - name: Lint
         run: uv run ruff check --output-format github .
       - name: Type check
-        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy packages/application-spec/src packages/codegen-react/src packages/design-system/src packages/model-gateway/src packages/skill-sdk/src skills/src evals/src services/api/src
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "mypy" uv run mypy services/build-runner/src packages/application-spec/src packages/codegen-react/src packages/design-system/src packages/model-gateway/src packages/skill-sdk/src skills/src evals/src services/api/src
       - name: Tests (unit + integration against PostgreSQL)
         env:
           SUMMARY_PATTERN: "[0-9]+ passed"
         run: >-
           $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "pytest"
           uv run pytest --tb=short
-          --cov=appspec --cov=codegen_react --cov=design_system --cov=model_gateway --cov=skill_sdk --cov=workspace_skills --cov=workspace_evals --cov=workspace_api --cov-report=term-missing
+          --cov=appspec --cov=build_runner --cov=codegen_react --cov=design_system --cov=model_gateway --cov=skill_sdk --cov=workspace_skills --cov=workspace_evals --cov=workspace_api --cov-report=term-missing
           --junitxml=reports/pytest.xml
       - name: Routing eval baseline (lexical, deterministic; no thresholds yet)
         env:
@@ -239,6 +239,32 @@ jobs:
         env:
           SUMMARY_PATTERN: "[0-9]+ (passed|failed)"
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "generated apps" npx playwright test -c playwright.generated.config.ts
+
+  build-runner:
+    name: Isolated build runner (container sandbox)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install (locked)
+        run: uv sync --locked
+      - name: Build the runner image (workspace lockfile, installed without scripts)
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "runner image" docker build -f services/build-runner/Dockerfile -t workspace-build-runner:local .
+      - name: Build a generated app in the sandbox; probe the sandbox with a hostile project; reject a tampered one
+        run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "sandbox e2e" uv run python scripts/ci/sandbox_e2e.py --out reports/build-runner
+      - name: Upload build-runner reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-runner-reports
+          path: reports/build-runner/*.json
+          retention-days: 14
 
   secrets:
     name: Secret scan
