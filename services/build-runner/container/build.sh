@@ -17,7 +17,13 @@ step() {
 }
 
 cp -R /src/. /work/ || exit 90
-ln -s /toolchain/node_modules /work/node_modules || exit 91
+# node_modules is a real folder on the tmpfs whose entries link to the read-only toolchain, so
+# tools can write scratch files there (Vite bundles its config into node_modules/.vite-temp)
+# while the installed packages stay immutable.
+mkdir /work/node_modules || exit 91
+for entry in /toolchain/node_modules/* /toolchain/node_modules/.bin; do
+  ln -s "$entry" "/work/node_modules/$(basename "$entry")" || exit 91
+done
 cd /work || exit 92
 
 step typecheck node node_modules/typescript/bin/tsc -p tsconfig.json || exit 1
