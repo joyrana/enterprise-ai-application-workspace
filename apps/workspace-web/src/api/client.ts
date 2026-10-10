@@ -49,6 +49,9 @@ export type CodeDiff = Json<paths["/api/v1/projects/{project_id}/code/diff"]["ge
 export type Build = Json<paths["/api/v1/projects/{project_id}/builds/{build_id}"]["get"]["responses"][200]>;
 export type BuildPage = Json<paths["/api/v1/projects/{project_id}/builds"]["get"]["responses"][200]>;
 export type ImpactReport = Json<paths["/api/v1/projects/{project_id}/impact"]["post"]["responses"][200]>;
+export type OrgPolicy = Json<paths["/api/v1/org/policies"]["get"]["responses"][200]>;
+export type OrgPolicyUpdate = Json<NonNullable<paths["/api/v1/org/policies"]["put"]["requestBody"]>>;
+export type PolicyReport = Json<paths["/api/v1/projects/{project_id}/policy"]["get"]["responses"][200]>;
 export type UpgradeResult = Json<paths["/api/v1/projects/{project_id}/code/upgrade"]["post"]["responses"][200]>;
 
 export interface ProblemDetails {
@@ -81,6 +84,8 @@ export class ApiError extends Error {
 export const devIdentity = {
   tenant: import.meta.env.VITE_DEV_TENANT ?? "demo",
   user: import.meta.env.VITE_DEV_USER ?? "demo-user",
+  /** Development only: the demo user administers its organization (set VITE_DEV_ROLES="" to drop it). */
+  roles: import.meta.env.VITE_DEV_ROLES ?? "org-admin",
 };
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -109,6 +114,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
     Accept: "application/json, application/problem+json",
     "X-Dev-Tenant": devIdentity.tenant,
     "X-Dev-User": devIdentity.user,
+    ...(devIdentity.roles ? { "X-Dev-Roles": devIdentity.roles } : {}),
     ...options.headers,
   };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
@@ -210,6 +216,24 @@ export const api = {
       etag: res.headers.get("ETag") ?? `"r${res.data.revision}"`,
       created: res.headers.get("X-Revision-Created") !== "false",
     };
+  },
+
+  async getOrgPolicies(signal?: AbortSignal): Promise<OrgPolicy> {
+    return (await request<OrgPolicy>("/api/v1/org/policies", { signal })).data;
+  },
+
+  async saveOrgPolicies(policy: unknown, version: number): Promise<OrgPolicy> {
+    return (
+      await request<OrgPolicy>("/api/v1/org/policies", {
+        method: "PUT",
+        body: { policy },
+        headers: { "If-Match": `"v${version}"` },
+      })
+    ).data;
+  },
+
+  async getPolicyReport(projectId: string, signal?: AbortSignal): Promise<PolicyReport> {
+    return (await request<PolicyReport>(`/api/v1/projects/${enc(projectId)}/policy`, { signal })).data;
   },
 
   async previewImpact(projectId: string, spec: unknown): Promise<ImpactReport> {

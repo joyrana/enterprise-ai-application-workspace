@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
   "appspec",
   "build-runner",
+  "org-policy",
   "codegen-angular",
   "codegen-react",
   "design-system",
@@ -33,6 +34,7 @@ packages = ["src/workspace_api"]
 [tool.uv.sources]
 appspec = { workspace = true }
 build-runner = { workspace = true }
+org-policy = { workspace = true }
 codegen-angular = { workspace = true }
 codegen-react = { workspace = true }
 design-system = { workspace = true }

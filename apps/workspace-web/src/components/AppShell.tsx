@@ -111,6 +111,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               Projects
             </NavLink>
           </li>
+          <li>
+            <NavLink
+              to="/organization"
+              className={({ isActive }) => (isActive ? `${styles.navLink} ${styles.active}` : styles.navLink)}
+            >
+              Organization
+            </NavLink>
+          </li>
         </ul>
       </nav>
       <main id="main" ref={mainRef} className={styles.main} tabIndex={-1}>
