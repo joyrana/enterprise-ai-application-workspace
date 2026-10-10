@@ -304,9 +304,8 @@ export const api = {
   },
 
   async requestBuild(projectId: string, revision: number): Promise<Build> {
-    return (
-      await request<Build>(`/api/v1/projects/${enc(projectId)}/builds${query({ revision })}`, { method: "POST" })
-    ).data;
+    return (await request<Build>(`/api/v1/projects/${enc(projectId)}/builds${query({ revision })}`, { method: "POST" }))
+      .data;
   },
 
   /** The zip needs the dev identity headers, so it is fetched rather than linked. */
