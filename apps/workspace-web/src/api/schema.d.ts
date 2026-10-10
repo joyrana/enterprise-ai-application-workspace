@@ -62,7 +62,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The organization's brand themes (select one in a spec with design_system.id = 'org:<id>') */
+        /** The organization's brand themes (select one in a spec with design_system.id = 'org-<id>') */
         get: operations["get_org_themes_api_v1_org_design_systems_get"];
         /** Replace the organization's brand themes (org-admin role, If-Match: "vN") */
         put: operations["put_org_themes_api_v1_org_design_systems_put"];

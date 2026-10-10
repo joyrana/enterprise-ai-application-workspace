@@ -7840,7 +7840,7 @@
             "description": "Unprocessable Entity"
           }
         },
-        "summary": "The organization's brand themes (select one in a spec with design_system.id = 'org:<id>')",
+        "summary": "The organization's brand themes (select one in a spec with design_system.id = 'org-<id>')",
         "tags": [
           "organization"
         ]
