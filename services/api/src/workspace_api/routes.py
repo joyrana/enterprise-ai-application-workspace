@@ -723,7 +723,7 @@ def get_project_policy(
     "/org/design-systems",
     response_model=OrgThemesOut,
     tags=["organization"],
-    summary="The organization's brand themes (select one in a spec with design_system.id = 'org:<id>')",
+    summary="The organization's brand themes (select one in a spec with design_system.id = 'org-<id>')",
 )
 def get_org_themes(principal: CurrentPrincipal, session: DbSession, response: Response) -> OrgThemesOut:
     result = themes.get_themes(session, principal)

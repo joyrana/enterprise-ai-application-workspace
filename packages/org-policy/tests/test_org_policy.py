@@ -36,7 +36,7 @@ def test_frameworks_and_design_systems(raw: dict[str, Any]) -> None:
         raw,
         [
             {"id": "angular-only", "kind": "allowed-frameworks", "frameworks": ["angular"]},
-            {"id": "brand", "kind": "allowed-design-systems", "ids": ["org:acme"], "severity": "warning"},
+            {"id": "brand", "kind": "allowed-design-systems", "ids": ["org-acme"], "severity": "warning"},
         ],
     )
     assert [(f.rule_id, f.severity, f.path) for f in findings] == [

@@ -192,7 +192,7 @@ export function OrganizationPage() {
         id="themes"
         title="Brand themes"
         label="Brand themes (JSON)"
-        description="Your brand on top of Fluent 2 or Material 3. A project uses one by setting design_system.id to “org:<id>”. Brand colours must reach 4.5:1 contrast with white text."
+        description="Your brand on top of Fluent 2 or Material 3. A project uses one by setting design_system.id to “org-<id>”. Brand colours must reach 4.5:1 contrast with white text."
         example={THEME_EXAMPLE}
         load={async (signal) => {
           const t = await api.getOrgThemes(signal);

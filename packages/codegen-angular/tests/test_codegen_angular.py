@@ -230,4 +230,4 @@ def test_brand_themes_override_material_system_variables(raw: dict[str, Any]) ->
     assert "  --mat-sys-primary: #8a1538;" in css
     assert "  --mat-sys-on-primary: #ffffff;" in css
     assert "  --mat-sys-corner-medium: 16px;" in css
-    assert branded.design_system == "org:acme (material3@1.0.0)"
+    assert branded.design_system == "org-acme (material3@1.0.0)"

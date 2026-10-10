@@ -8,6 +8,9 @@ design system's own theming mechanism:
 Themes are data, validated here. The brand colour must give at least 4.5:1 contrast with white
 text (WCAG 2.1 AA), because both design systems put white labels on brand-coloured buttons.
 Font families are a plain list of names, so they cannot inject CSS or code.
+
+A specification selects a theme by ``design_system.id = "org-<theme id>"`` (spec identifiers are
+lowercase letters, digits and hyphens).
 """
 
 from __future__ import annotations
@@ -16,7 +19,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-ORG_PREFIX = "org:"
+ORG_PREFIX = "org-"
 HexColor = Annotated[str, Field(pattern=r"^#[0-9a-fA-F]{6}$")]
 _RADII = {"small": ("2px", "4px"), "medium": ("4px", "12px"), "large": ("8px", "16px")}  # (fluent, material)
 _STEPS = tuple(range(10, 161, 10))

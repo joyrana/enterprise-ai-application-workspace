@@ -26,7 +26,7 @@ def save(client: TestClient, items: list[dict[str, Any]], version: int, **header
 def pid(client: TestClient, make_project: Callable[..., dict[str, Any]], example_spec: dict[str, Any]) -> str:
     project_id = str(make_project("Finance ops")["id"])
     spec = copy.deepcopy(example_spec)
-    spec["design_system"] = {"id": {"value": "org:acme", "status": "proposed", "provenance": USER}}
+    spec["design_system"] = {"id": {"value": "org-acme", "status": "proposed", "provenance": USER}}
     response = client.put(f"/api/v1/projects/{project_id}/spec", json={"spec": spec}, headers={"If-Match": '"r1"'})
     assert response.status_code == 200, response.text
     return project_id
@@ -45,7 +45,7 @@ def test_admins_manage_accessible_brand_themes(client: TestClient) -> None:
     assert saved.json()["themes"]["items"][0]["brand_color"] == "#8a1538"
     assert save(client, [], 0).status_code == 412
     listing = client.get("/api/v1/design-systems").json()["items"]
-    assert listing[0]["id"] == "org:acme"
+    assert listing[0]["id"] == "org-acme"
     assert listing[0]["name"] == "Acme (organization theme on Fluent 2 (React))"
 
 
@@ -56,18 +56,18 @@ def test_projects_selecting_a_theme_generate_branded_code(client: TestClient, pi
 
     assert save(client, [ACME], 0).status_code == 200
     preview = client.get(f"/api/v1/projects/{pid}/ui").json()
-    assert preview["design_system"]["id"] == "org:acme"
+    assert preview["design_system"]["id"] == "org-acme"
     assert preview["design_system"]["note"] == "Acme: organization brand theme on Fluent 2 (React)."
     assert preview["rendered"] != []
 
     code = client.get(f"/api/v1/projects/{pid}/code").json()
-    assert code["design_system"] == "org:acme (fluent2@1.0.0)"
+    assert code["design_system"] == "org-acme (fluent2@1.0.0)"
     theme = client.get(f"/api/v1/projects/{pid}/code/file", params={"path": "src/theme.ts"}).json()["content"]
     assert '  80: "#8a1538",' in theme
     assert '  fontFamilyBase: "Inter, sans-serif",' in theme
 
     # Policies can require the organization's theme.
-    policy = {"rules": [{"id": "brand-only", "kind": "allowed-design-systems", "ids": ["org:acme"]}]}
+    policy = {"rules": [{"id": "brand-only", "kind": "allowed-design-systems", "ids": ["org-acme"]}]}
     put = client.put("/api/v1/org/policies", json={"policy": policy}, headers={**ADMIN, "If-Match": '"v0"'})
     assert put.status_code == 200, put.text
     assert client.get(f"/api/v1/projects/{pid}/policy").json()["findings"] == []

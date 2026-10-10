@@ -2,7 +2,7 @@
 
 Themes live next to the policy set in ``org_settings``, versioned separately. Only
 ``org-admin`` principals change them, with ``If-Match: "vN"``; every change is audited. A
-specification selects a theme with ``design_system.id = "org:<theme id>"``.
+specification selects a theme with ``design_system.id = "org-<theme id>"``.
 """
 
 from __future__ import annotations

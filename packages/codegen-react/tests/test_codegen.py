@@ -331,8 +331,8 @@ def test_brand_themes_change_the_fluent_theme_only(spec: ApplicationSpec) -> Non
     assert '  80: "#8a1538",' in source
     assert source.count(': "#') == 16  # sixteen BrandVariants
     assert '  fontFamilyBase: "Inter, sans-serif",' in source
-    assert 'Organization brand theme "Acme \\"Red\\"" ("org:acme") on Fluent 2.' in source
-    assert branded.design_system == "org:acme (fluent2@1.0.0)"
-    assert json.loads(branded.files[MANIFEST])["design_system"] == "org:acme (fluent2@1.0.0)"
+    assert 'Organization brand theme "Acme \\"Red\\"" ("org-acme") on Fluent 2.' in source
+    assert branded.design_system == "org-acme (fluent2@1.0.0)"
+    assert json.loads(branded.files[MANIFEST])["design_system"] == "org-acme (fluent2@1.0.0)"
     changed = {p for p in default.files if default.files[p] != branded.files.get(p)}
     assert changed == {"src/theme.ts", MANIFEST}

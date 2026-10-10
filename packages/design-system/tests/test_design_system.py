@@ -278,7 +278,7 @@ def test_brand_themes_are_validated_for_contrast_and_safe_fonts() -> None:
     assert round(contrast("#000000", "#ffffff"), 1) == 21.0
     theme = BrandTheme(id="acme", name="Acme", base="fluent2", brand_color="#8A1538")
     assert theme.brand_color == "#8a1538"
-    assert theme.selector == "org:acme"
+    assert theme.selector == "org-acme"
     ramp = brand_ramp(theme.brand_color)
     assert list(ramp) == list(range(10, 161, 10))
     assert ramp[80] == "#8a1538"
@@ -289,4 +289,4 @@ def test_brand_themes_are_validated_for_contrast_and_safe_fonts() -> None:
         BrandTheme(id="css", name="X", base="fluent2", brand_color="#8a1538", font_family="x; } body { color: red")
     with pytest.raises(ValidationError, match="unique"):
         BrandThemeSet(items=[theme, theme])
-    assert BrandThemeSet(items=[theme]).get("org:acme") == theme
+    assert BrandThemeSet(items=[theme]).get("org-acme") == theme

@@ -29,10 +29,10 @@ system, with accessibility kept intact.
     `createLightTheme` plus the font and radius tokens.
   - **Angular:** the theme becomes overrides of the M3 `--mat-sys-*` variables.
   - **Labelling:** the manifest and API report the design system as
-    `org:<id> (<base>@<version>)`.
-- **Selection:** a specification selects a theme with `design_system.id = "org:<id>"`.
+    `org-<id> (<base>@<version>)`.
+- **Selection:** a specification selects a theme with `design_system.id = "org-<id>"`.
   - Unknown themes and framework mismatches are refused with a clear message.
-  - Policies can require organization themes (`allowed-design-systems: ["org:acme"]`).
+  - Policies can require organization themes (`allowed-design-systems: ["org-acme"]`).
 - **Administration:** brand themes are stored per tenant next to the policies, with the
   same rules: the `org-admin` role, `If-Match: "vN"` and auditing.
 
