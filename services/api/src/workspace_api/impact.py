@@ -25,8 +25,17 @@ from .auth import Principal
 from .schemas import ImpactFile, ImpactReport, NamedChanges
 
 
+def _content(value: Any) -> Any:
+    """Drop server-stamped revision metadata, which says when an element changed, not what it is."""
+    if isinstance(value, dict):
+        return {k: _content(v) for k, v in value.items() if k != "revision"}
+    if isinstance(value, list):
+        return [_content(v) for v in value]
+    return value
+
+
 def _by_id(items: list[Any]) -> dict[str, dict[str, Any]]:
-    return {str(item["id"]): item for item in items if isinstance(item, dict) and "id" in item}
+    return {str(item["id"]): _content(item) for item in items if isinstance(item, dict) and "id" in item}
 
 
 def _changes(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]], name_key: str) -> NamedChanges:
