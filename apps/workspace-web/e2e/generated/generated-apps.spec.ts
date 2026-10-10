@@ -252,8 +252,8 @@ test("generated Angular app: Material 3 forms validate, save, list references an
   // Material leaves aria-invalid unset on an empty required field (aria-required says it) and links
   // the error message instead, so assistive technology reads it with the field.
   await expect(amount).toHaveAttribute("aria-required", "true");
+  await expect(amount).toHaveAttribute("aria-describedby", /mat-mdc-error/);
   const describedBy = (await amount.getAttribute("aria-describedby")) ?? "";
-  expect(describedBy).toMatch(/mat-mdc-error/);
   await expect(page.locator(`#${describedBy.split(" ").find((id) => id.startsWith("mat-mdc-error"))}`)).toHaveText(
     "This field is required.",
   );
