@@ -249,9 +249,15 @@ test("generated Angular app: Material 3 forms validate, save, list references an
   // Submitting empty: Material shows the field errors and the summary names the fields; nothing is saved.
   await form.getByRole("button", { name: "Save" }).click();
   const amount = form.getByRole("spinbutton", { name: /Amount/ });
-  await expect(amount).toHaveAttribute("aria-invalid", "true");
+  // Material leaves aria-invalid unset on an empty required field (aria-required says it) and links
+  // the error message instead, so assistive technology reads it with the field.
+  await expect(amount).toHaveAttribute("aria-required", "true");
+  const describedBy = (await amount.getAttribute("aria-describedby")) ?? "";
+  expect(describedBy).toMatch(/mat-mdc-error/);
+  await expect(page.locator(`#${describedBy.split(" ").find((id) => id.startsWith("mat-mdc-error"))}`)).toHaveText(
+    "This field is required.",
+  );
   await expect(form.getByRole("alert")).toContainText("Amount");
-  await expect(form.getByText("This field is required.").first()).toBeVisible();
   await expectNoSeriousAxe(page, "Angular validation errors");
 
   await amount.fill("125.50");
