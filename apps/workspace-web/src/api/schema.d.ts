@@ -55,6 +55,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/org/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The organization's policy set */
+        get: operations["get_org_policies_api_v1_org_policies_get"];
+        /** Replace the organization's policy set (org-admin role, If-Match: "vN") */
+        put: operations["put_org_policies_api_v1_org_policies_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects": {
         parameters: {
             query?: never;
@@ -247,6 +265,23 @@ export interface paths {
          * @description Nothing is saved. Compares the candidate with the current revision.
          */
         post: operations["preview_impact_api_v1_projects__project_id__impact_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organization policy findings for a spec revision */
+        get: operations["get_project_policy_api_v1_projects__project_id__policy_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -566,6 +601,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AcceptanceCriteriaRequired */
+        AcceptanceCriteriaRequired: {
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "acceptance-criteria-required";
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "error" | "warning";
+        };
         /** AcceptanceCriterion */
         AcceptanceCriterion: {
             /** Confirmed By */
@@ -698,6 +751,46 @@ export interface components {
             remote: boolean | null;
             /** Structured Mode */
             structured_mode: string | null;
+        };
+        /** AllowedDesignSystems */
+        AllowedDesignSystems: {
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: string;
+            /** Ids */
+            ids: string[];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "allowed-design-systems";
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "error" | "warning";
+        };
+        /** AllowedFrameworks */
+        AllowedFrameworks: {
+            /** Description */
+            description?: string | null;
+            /** Frameworks */
+            frameworks: ("react" | "angular")[];
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "allowed-frameworks";
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "error" | "warning";
         };
         /** ApplicationSpec */
         "ApplicationSpec-Input": {
@@ -1115,6 +1208,24 @@ export interface components {
             /** Label */
             label?: string | null;
         };
+        /** ConfirmedRequirementsOnly */
+        ConfirmedRequirementsOnly: {
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "confirmed-requirements-only";
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "error" | "warning";
+        };
         /** DataEntity */
         DataEntity: {
             /** Confirmed By */
@@ -1275,6 +1386,26 @@ export interface components {
             required: boolean;
             type: components["schemas"]["FieldType"];
         };
+        /** EntityNaming */
+        EntityNaming: {
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "entity-naming";
+            /** Pattern */
+            pattern: string;
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "error" | "warning";
+        };
         /**
          * FactStatus
          * @enum {string}
@@ -1339,6 +1470,26 @@ export interface components {
             phrase: string;
             /** Proposal Id */
             proposal_id: string;
+        };
+        /** ForbiddenComponents */
+        ForbiddenComponents: {
+            /** Constructs */
+            constructs: string[];
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "forbidden-components";
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "error" | "warning";
         };
         /** Form */
         Form: {
@@ -1465,6 +1616,11 @@ export interface components {
             generation_blocked: boolean;
             /** Note */
             note: string | null;
+            /**
+             * Policy Findings
+             * @description Organization policy findings for the candidate (ADR-0018).
+             */
+            policy_findings?: components["schemas"]["PolicyFinding"][];
             screens: components["schemas"]["NamedChanges"];
             /** Spec Issues */
             spec_issues: components["schemas"]["ValidationIssue"][];
@@ -1526,6 +1682,26 @@ export interface components {
             package: string;
             /** Version */
             version: string;
+        };
+        /** MaxFormFields */
+        MaxFormFields: {
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "max-form-fields";
+            /** Max */
+            max: number;
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "error" | "warning";
         };
         /** Message */
         Message: {
@@ -1637,6 +1813,23 @@ export interface components {
             /** Related Ids */
             related_ids?: string[];
         };
+        /** OrgPolicyOut */
+        OrgPolicyOut: {
+            policy: components["schemas"]["PolicySet"];
+            /** Updated At */
+            updated_at: string | null;
+            /** Updated By */
+            updated_by: string | null;
+            /**
+             * Version
+             * @description 0 until the first policy is saved; send it back as If-Match: "vN".
+             */
+            version: number;
+        };
+        /** OrgPolicyUpdate */
+        OrgPolicyUpdate: {
+            policy: components["schemas"]["PolicySet"];
+        };
         /**
          * Outcome
          * @enum {string}
@@ -1682,6 +1875,49 @@ export interface components {
             reason: string;
             /** Requested Kind */
             requested_kind: string;
+        };
+        /** PolicyFinding */
+        PolicyFinding: {
+            /** Kind */
+            kind: string;
+            /** Message */
+            message: string;
+            /** Path */
+            path: string;
+            /** Rule Id */
+            rule_id: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "error" | "warning";
+        };
+        /** PolicyReport */
+        PolicyReport: {
+            /**
+             * Blocked
+             * @description True when an error finding blocks code generation and builds.
+             */
+            blocked: boolean;
+            /** Design System */
+            design_system: string;
+            /** Findings */
+            findings: components["schemas"]["PolicyFinding"][];
+            /** Policy Version */
+            policy_version: number;
+            /** Spec Revision */
+            spec_revision: number;
+        };
+        /** PolicySet */
+        PolicySet: {
+            /**
+             * Policy Version
+             * @default 1
+             * @constant
+             */
+            policy_version: "1";
+            /** Rules */
+            rules?: (components["schemas"]["AllowedFrameworks"] | components["schemas"]["AllowedDesignSystems"] | components["schemas"]["ForbiddenComponents"] | components["schemas"]["MaxFormFields"] | components["schemas"]["AcceptanceCriteriaRequired"] | components["schemas"]["ConfirmedRequirementsOnly"] | components["schemas"]["SensitiveFields"] | components["schemas"]["EntityNaming"] | components["schemas"]["RequiredScreenStates"])[];
         };
         /**
          * Priority
@@ -1830,6 +2066,26 @@ export interface components {
             screen_id: string;
             /** Title */
             title: string;
+        };
+        /** RequiredScreenStates */
+        RequiredScreenStates: {
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "required-screen-states";
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "error" | "warning";
+            /** States */
+            states: ("loading" | "empty" | "error" | "success")[];
         };
         /** ResponsiveRule */
         ResponsiveRule: {
@@ -2119,6 +2375,35 @@ export interface components {
         SecurityProfile: {
             classification?: components["schemas"]["Tracked_Classification_"];
             risk_level?: components["schemas"]["Tracked_RiskLevel_"];
+        };
+        /**
+         * SensitiveFields
+         * @description Fields whose names look sensitive need the project classified at least ``minimum``.
+         */
+        SensitiveFields: {
+            /** Description */
+            description?: string | null;
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "sensitive-fields";
+            /**
+             * Minimum
+             * @default confidential
+             * @enum {string}
+             */
+            minimum: "internal" | "confidential" | "restricted";
+            /** Name Patterns */
+            name_patterns: string[];
+            /**
+             * Severity
+             * @default error
+             * @enum {string}
+             */
+            severity: "error" | "warning";
         };
         /** SetFact */
         SetFact: {
@@ -2788,6 +3073,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2863,6 +3150,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2938,6 +3227,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 design_system_id: string;
@@ -3007,6 +3298,165 @@ export interface operations {
             };
         };
     };
+    get_org_policies_api_v1_org_policies_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgPolicyOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    put_org_policies_api_v1_org_policies_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrgPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgPolicyOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
     list_projects_api_v1_projects_get: {
         parameters: {
             query?: {
@@ -3020,6 +3470,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3096,6 +3548,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -3194,6 +3648,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -3277,6 +3733,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -3355,6 +3813,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -3436,6 +3896,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -3514,6 +3976,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -3597,6 +4061,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -3678,6 +4144,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -3761,6 +4229,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -3843,6 +4313,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -3924,6 +4396,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4006,6 +4480,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4080,6 +4556,89 @@ export interface operations {
             };
         };
     };
+    get_project_policy_api_v1_projects__project_id__policy_get: {
+        parameters: {
+            query?: {
+                /** @description Spec revision; defaults to the current one. */
+                revision?: number | null;
+            };
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
+            };
+            path: {
+                /** @description Project identifier. */
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyReport"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
     list_project_runs_api_v1_projects__project_id__runs_get: {
         parameters: {
             query?: never;
@@ -4088,6 +4647,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4167,6 +4728,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4298,6 +4861,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4379,6 +4944,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4493,6 +5060,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4571,6 +5140,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4650,6 +5221,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4757,6 +5330,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4835,6 +5410,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4914,6 +5491,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -4999,6 +5578,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -5077,6 +5658,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -5156,6 +5739,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -5287,6 +5872,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -5367,6 +5954,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -5457,6 +6046,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path: {
                 /** @description Project identifier. */
@@ -5557,6 +6148,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -5708,6 +6301,8 @@ export interface operations {
                 "x-dev-tenant"?: string | null;
                 /** @description Development only: user identifier. */
                 "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
             };
             path?: never;
             cookie?: never;
