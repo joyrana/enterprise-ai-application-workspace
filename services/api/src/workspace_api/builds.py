@@ -29,7 +29,7 @@ from codegen_react import toolchain
 from . import code, service
 from .auth import Principal
 from .db import BUILD_ACTIVE, Build, Database
-from .errors import BuildAlreadyActive, NotFound
+from .errors import BuildAlreadyActive, BuildNotSupported, NotFound
 from .schemas import BuildOut, BuildPage, BuildReportOut
 
 DEFAULT_LIMITS = SandboxLimits()
@@ -83,6 +83,10 @@ def request_build(session: Session, principal: Principal, project_id: uuid.UUID,
     )
     if active:
         raise BuildAlreadyActive("Wait for the current build to finish before starting another.")
+    if not generated.generator.startswith("codegen-react@"):
+        raise BuildNotSupported(
+            f"The isolated runner builds React projects so far; {generated.generator} output is built in CI only."
+        )
     build = Build(
         tenant_id=principal.tenant_id,
         project_id=project.id,

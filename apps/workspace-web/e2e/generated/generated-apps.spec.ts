@@ -211,6 +211,15 @@ async function expectEditing(page: Page) {
 }
 
 async function expectNoSeriousAxe(page: Page, what: string, include?: string) {
+  // Let finite animations and transitions finish (fading text is partly transparent mid-way).
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
   let builder = new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .exclude("[data-tabster-dummy]");
@@ -221,3 +230,56 @@ async function expectNoSeriousAxe(page: Page, what: string, include?: string) {
     .map((v) => `${v.id}: ${v.help} — ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`);
   expect(serious, `axe with ${what}`).toEqual([]);
 }
+
+test("generated Angular app: Material 3 forms validate, save, list references and persist", async ({ page }) => {
+  const app = GENERATED_APPS.find((a) => a.name === "finance-angular");
+  if (!app) throw new Error("finance-angular is not configured");
+  const base = `http://127.0.0.1:${app.port}`;
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => {
+    if (m.type() === "error") errors.push(m.text());
+  });
+
+  await page.goto(`${base}/transaction`);
+  await expect(page.getByText("No transaction records yet.")).toBeVisible();
+  await page.getByRole("button", { name: "New transaction" }).click();
+  await expect(page).toHaveURL(`${base}/transaction/new`);
+  const txForm = page.getByRole("form", { name: "New transaction" });
+  await txForm.getByRole("spinbutton", { name: /Risk score/ }).fill("0.8");
+  await txForm.getByRole("button", { name: "Save" }).click();
+  await expect(page).toHaveURL(`${base}/transaction`);
+  await expect(
+    page.getByRole("table", { name: "Transaction" }).getByRole("cell", { name: "0.8", exact: true }),
+  ).toBeVisible();
+
+  await page.goto(`${base}/adjustment/new`);
+  const form = page.getByRole("form", { name: "New adjustment" });
+  // Submitting empty: Material shows the field errors and the summary names the fields; nothing is saved.
+  await form.getByRole("button", { name: "Save" }).click();
+  const amount = form.getByRole("spinbutton", { name: /Amount/ });
+  // Material leaves aria-invalid unset on an empty required field (aria-required says it) and links
+  // the error message instead, so assistive technology reads it with the field.
+  await expect(amount).toHaveAttribute("aria-required", "true");
+  await expect(amount).toHaveAttribute("aria-describedby", /mat-mdc-error/);
+  const describedBy = (await amount.getAttribute("aria-describedby")) ?? "";
+  await expect(page.locator(`#${describedBy.split(" ").find((id) => id.startsWith("mat-mdc-error"))}`)).toHaveText(
+    "This field is required.",
+  );
+  await expect(form.getByRole("alert")).toContainText("Amount");
+  await expectNoSeriousAxe(page, "Angular validation errors");
+
+  await amount.fill("125.50");
+  await form.getByRole("combobox", { name: /Kind/ }).selectOption("reclass");
+  await form.getByRole("combobox", { name: /Transaction/ }).selectOption({ label: "0.8" });
+  await form.getByRole("button", { name: "Save" }).click();
+  await expect(page).toHaveURL(`${base}/adjustment`);
+  const row = page.getByRole("table", { name: "Adjustment" }).getByRole("row").nth(1);
+  await expect(row).toContainText("125.5");
+  await expect(row).toContainText("reclass");
+  await expect(row).toContainText("0.8");
+
+  await page.reload();
+  await expect(page.getByRole("table", { name: "Adjustment" }).getByRole("row").nth(1)).toContainText("reclass");
+  expect(errors).toEqual([]);
+});

@@ -1,0 +1,18 @@
+[project]
+name = "codegen-angular"
+version = "0.1.0"
+description = "Deterministic Angular + Material 3 code generation from the UI IR (ADR-0017)."
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.9,<3", "appspec", "design-system", "codegen-react"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/codegen_angular"]
+
+[tool.uv.sources]
+appspec = { workspace = true }
+design-system = { workspace = true }
+codegen-react = { workspace = true }

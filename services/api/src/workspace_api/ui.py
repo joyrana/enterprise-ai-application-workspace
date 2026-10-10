@@ -27,7 +27,7 @@ from .auth import Principal
 from .errors import AppError, NotFound
 from .schemas import DesignSystemChoice, DesignSystemList, DesignSystemSummary, UiPreview
 
-DEFAULT_FOR_FRAMEWORK = {Framework.REACT: "fluent2"}
+DEFAULT_FOR_FRAMEWORK = {Framework.REACT: "fluent2", Framework.ANGULAR: "material3"}
 
 
 class DesignSystemUnavailable(AppError):
@@ -75,16 +75,16 @@ def choose(spec: ApplicationSpec) -> tuple[DesignSystemContract, DesignSystemCho
             )
         return contract, DesignSystemChoice(id=contract.id, version=contract.version, selected_by="spec", note=None)
     if framework is not None and framework not in DEFAULT_FOR_FRAMEWORK:
-        raise DesignSystemUnavailable(
-            f"No design system is available for {framework.value} yet (Material 3 for Angular is Milestone 6)."
-        )
-    contract = get_contract("fluent2")
+        raise DesignSystemUnavailable(f"No design system is available for {framework.value} yet.")
+    default_id = DEFAULT_FOR_FRAMEWORK.get(framework, "fluent2") if framework is not None else "fluent2"
+    contract = get_contract(default_id)
     assert contract is not None
-    note = (
-        "The spec selects no design system; Fluent 2 is the default for React."
-        if framework is not None
-        else "The spec selects no framework or design system; previewing with Fluent 2 (React) as an assumption."
-    )
+    if framework is None:
+        note = "The spec selects no framework or design system; previewing with Fluent 2 (React) as an assumption."
+    elif default_id == "fluent2":
+        note = "The spec selects no design system; Fluent 2 is the default for React."
+    else:
+        note = "The spec selects no design system; Material 3 is the default for Angular."
     return contract, DesignSystemChoice(id=contract.id, version=contract.version, selected_by="default", note=note)
 
 
@@ -94,10 +94,14 @@ def preview(session: Session, principal: Principal, project_id: uuid.UUID, revis
     spec = service.spec_at(session, project, number)
     contract, choice = choose(spec)
     document = derive_document(spec, spec_revision=number)
+    rendered = render_screens(document.screens, contract) if has_adapter(contract.id) else []
+    if not has_adapter(contract.id):
+        extra = f"{contract.name} has no in-browser preview yet; the generated code is in the Code tab."
+        choice = choice.model_copy(update={"note": f"{choice.note} {extra}" if choice.note else extra})
     return UiPreview(
         spec_revision=number,
         design_system=choice,
         document=document,
         issues=validate_document(document, spec),
-        rendered=render_screens(document.screens, contract),
+        rendered=rendered,
     )

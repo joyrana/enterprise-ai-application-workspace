@@ -201,8 +201,19 @@ def test_fluent2_contract_is_complete_and_pinned() -> None:
     assert contract.framework == "react"
     assert contract.library.package == "@fluentui/react-components"
     assert contract.library.version == "9.74.9"
-    assert set(builtin_contracts()) == {"fluent2"}
+    assert set(builtin_contracts()) == {"fluent2", "material3"}
     assert set(contract.mappings) <= set(IR_CONSTRUCTS)
+
+
+def test_material3_contract_is_complete_and_pinned_for_angular() -> None:
+    contract = get_contract("material3")
+    assert contract is not None
+    assert missing_constructs(contract) == []
+    assert contract.framework == "angular"
+    assert (contract.library.package, contract.library.version) == ("@angular/material", "22.2.2")
+    assert set(contract.mappings) == set(IR_CONSTRUCTS)
+    assert contract.mappings["field:select"].components[2] == "select[matNativeControl]"
+    assert all(token.startswith("--mat-sys-") for token in contract.tokens.values())
 
 
 def test_rendered_components_all_come_from_the_contract(raw: dict[str, Any]) -> None:

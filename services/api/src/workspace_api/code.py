@@ -13,6 +13,7 @@ import zipfile
 
 from sqlalchemy.orm import Session
 
+from codegen_angular import generate_project as generate_angular
 from codegen_react import GeneratedProject, GenerationBlocked, diff_projects, generate_project, package_name
 
 from . import service, ui
@@ -28,7 +29,7 @@ class CodeGenerationBlocked(AppError):
 
 
 def _language(path: str) -> str:
-    return {"tsx": "tsx", "ts": "typescript", "json": "json", "md": "markdown", "html": "html"}.get(
+    return {"tsx": "tsx", "ts": "typescript", "json": "json", "md": "markdown", "html": "html", "css": "css"}.get(
         path.rsplit(".", 1)[-1], "text"
     )
 
@@ -40,8 +41,9 @@ def project_at(
     number = project.current_revision if revision is None else revision
     spec = service.spec_at(session, project, number)
     contract, _ = ui.choose(spec)
+    generate = generate_angular if contract.framework == "angular" else generate_project
     try:
-        return number, generate_project(spec, contract, spec_revision=number)
+        return number, generate(spec, contract, spec_revision=number)
     except GenerationBlocked as exc:
         raise CodeGenerationBlocked(
             f"Revision r{number} has {len(exc.issues)} UI error(s); fix them in the specification first.",

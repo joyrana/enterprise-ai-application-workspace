@@ -1,0 +1,231 @@
+{
+  "contract_version": "1",
+  "framework": "angular",
+  "id": "material3",
+  "library": {
+    "docs_url": "https://material.angular.dev/",
+    "package": "@angular/material",
+    "version": "22.2.2"
+  },
+  "mappings": {
+    "action:danger": {
+      "components": [
+        "button[mat-flat-button]"
+      ],
+      "notes": "Filled button with the error colour role (class 'danger').",
+      "package": "@angular/material"
+    },
+    "action:primary": {
+      "components": [
+        "button[mat-flat-button]"
+      ],
+      "notes": "Filled button; at most one per form.",
+      "package": "@angular/material"
+    },
+    "action:secondary": {
+      "components": [
+        "button[mat-stroked-button]"
+      ],
+      "notes": "Outlined button.",
+      "package": "@angular/material"
+    },
+    "field:checkbox": {
+      "components": [
+        "mat-checkbox"
+      ],
+      "notes": null,
+      "package": "@angular/material"
+    },
+    "field:date": {
+      "components": [
+        "mat-form-field",
+        "mat-label",
+        "input[matInput]",
+        "mat-hint",
+        "mat-error"
+      ],
+      "notes": "input type=date. The Material datepicker needs a date adapter and is not used yet.",
+      "package": "@angular/material"
+    },
+    "field:datetime": {
+      "components": [
+        "mat-form-field",
+        "mat-label",
+        "input[matInput]",
+        "mat-hint",
+        "mat-error"
+      ],
+      "notes": "input type=datetime-local.",
+      "package": "@angular/material"
+    },
+    "field:file": {
+      "components": [
+        "label",
+        "input"
+      ],
+      "notes": "Angular Material has no file input; a labelled native input is used.",
+      "package": "html"
+    },
+    "field:number": {
+      "components": [
+        "mat-form-field",
+        "mat-label",
+        "input[matInput]",
+        "mat-hint",
+        "mat-error"
+      ],
+      "notes": "input type=number.",
+      "package": "@angular/material"
+    },
+    "field:select": {
+      "components": [
+        "mat-form-field",
+        "mat-label",
+        "select[matNativeControl]",
+        "option",
+        "mat-error"
+      ],
+      "notes": "Native select inside the form field: fully accessible and keyboard-friendly; mat-select is not used yet.",
+      "package": "@angular/material"
+    },
+    "field:text": {
+      "components": [
+        "mat-form-field",
+        "mat-label",
+        "input[matInput]",
+        "mat-hint",
+        "mat-error"
+      ],
+      "notes": "Outline appearance; mat-error shows the validation message.",
+      "package": "@angular/material"
+    },
+    "field:textarea": {
+      "components": [
+        "mat-form-field",
+        "mat-label",
+        "textarea[matInput]",
+        "mat-hint",
+        "mat-error"
+      ],
+      "notes": null,
+      "package": "@angular/material"
+    },
+    "form": {
+      "components": [
+        "form"
+      ],
+      "notes": "Reactive form (FormGroup) with native constraint attributes for accessibility.",
+      "package": "html"
+    },
+    "heading:1": {
+      "components": [
+        "h1"
+      ],
+      "notes": "Page title; styled with the M3 headline-small type role.",
+      "package": "html"
+    },
+    "heading:2": {
+      "components": [
+        "h2"
+      ],
+      "notes": "M3 title-large type role.",
+      "package": "html"
+    },
+    "heading:3": {
+      "components": [
+        "h3"
+      ],
+      "notes": "M3 title-medium type role.",
+      "package": "html"
+    },
+    "heading:4": {
+      "components": [
+        "h4"
+      ],
+      "notes": "M3 title-small type role.",
+      "package": "html"
+    },
+    "message": {
+      "components": [
+        "div",
+        "strong"
+      ],
+      "notes": "role=status; colours from the M3 container roles. Material has no banner component.",
+      "package": "html"
+    },
+    "section": {
+      "components": [
+        "section"
+      ],
+      "notes": "A labelled region (aria-label = section title).",
+      "package": "html"
+    },
+    "stat": {
+      "components": [
+        "div",
+        "p"
+      ],
+      "notes": "A labelled group with the value in the M3 headline-small role.",
+      "package": "html"
+    },
+    "table": {
+      "components": [
+        "table[mat-table]",
+        "th[mat-header-cell]",
+        "td[mat-cell]",
+        "tr[mat-header-row]",
+        "tr[mat-row]",
+        "tr[matNoDataRow]"
+      ],
+      "notes": "mat-table bound to the entity's records, with an empty-state row.",
+      "package": "@angular/material"
+    },
+    "text:default": {
+      "components": [
+        "p"
+      ],
+      "notes": "M3 body-medium type role.",
+      "package": "html"
+    },
+    "text:subtle": {
+      "components": [
+        "p"
+      ],
+      "notes": "M3 body-small type role in the on-surface-variant colour.",
+      "package": "html"
+    },
+    "toolbar": {
+      "components": [
+        "div",
+        "button[mat-flat-button]",
+        "button[mat-stroked-button]"
+      ],
+      "notes": "div role=toolbar; filled button for the primary action, outlined for the others.",
+      "package": "@angular/material"
+    }
+  },
+  "name": "Material 3 (Angular)",
+  "rules": [
+    "Colours, type and shape come from the Material 3 system variables (--mat-sys-*); generated styles never hard-code them except as fallbacks.",
+    "Every control sits in mat-form-field with a mat-label (or is a labelled checkbox), so labels are programmatically associated.",
+    "At most one filled (primary) button per form.",
+    "Page titles are level-1 headings; heading levels are not skipped.",
+    "Tables are labelled (aria-label from the caption) and show an empty-state row."
+  ],
+  "tokens": {
+    "color.background.brand": "--mat-sys-primary",
+    "color.background.default": "--mat-sys-surface",
+    "color.background.subtle": "--mat-sys-surface-container",
+    "color.border.default": "--mat-sys-outline-variant",
+    "color.foreground.brand": "--mat-sys-primary",
+    "color.foreground.danger": "--mat-sys-error",
+    "color.foreground.default": "--mat-sys-on-surface",
+    "color.foreground.secondary": "--mat-sys-on-surface-variant",
+    "color.foreground.subtle": "--mat-sys-on-surface-variant",
+    "radius.default": "--mat-sys-corner-medium",
+    "type.body": "--mat-sys-body-medium",
+    "type.page-title": "--mat-sys-headline-small"
+  },
+  "unsupported": {},
+  "version": "1.0.0"
+}
