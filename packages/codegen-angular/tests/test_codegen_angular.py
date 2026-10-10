@@ -216,3 +216,18 @@ def test_ir_errors_block_generation_and_react_contracts_are_refused(raw: dict[st
     assert fluent is not None
     with pytest.raises(GenerationError, match="not an Angular design system"):
         generate_project(spec, fluent)
+
+
+def test_brand_themes_override_material_system_variables(raw: dict[str, Any]) -> None:
+    from design_system import BrandTheme
+
+    spec = load_spec(raw)
+    default = generate_project(spec, CONTRACT, spec_revision=2)
+    assert "--mat-sys-primary:" not in default.files["src/styles.css"]
+    theme = BrandTheme(id="acme", name="Acme", base="material3", brand_color="#8A1538", corner_radius="large")
+    branded = generate_project(spec, CONTRACT, spec_revision=2, theme=theme)
+    css = branded.files["src/styles.css"]
+    assert "  --mat-sys-primary: #8a1538;" in css
+    assert "  --mat-sys-on-primary: #ffffff;" in css
+    assert "  --mat-sys-corner-medium: 16px;" in css
+    assert branded.design_system == "org-acme (material3@1.0.0)"

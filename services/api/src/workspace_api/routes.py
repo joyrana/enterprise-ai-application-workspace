@@ -15,7 +15,7 @@ from appspec import ApplicationSpec, json_schema
 from design_system import DesignSystemContract
 from skill_sdk import SkillRegistry
 
-from . import builds, code, impact, org, runs, service, ui, upgrade, workflows
+from . import builds, code, impact, org, runs, service, themes, ui, upgrade, workflows
 from .ai import ModelRuntime
 from .auth import CurrentPrincipal
 from .errors import Problem
@@ -34,6 +34,8 @@ from .schemas import (
     ImpactReport,
     OrgPolicyOut,
     OrgPolicyUpdate,
+    OrgThemesOut,
+    OrgThemesUpdate,
     PolicyReport,
     ProjectCreate,
     ProjectOut,
@@ -516,8 +518,8 @@ def cancel_project_workflow(
     tags=["design"],
     summary="Built-in design-system contracts",
 )
-def list_design_systems(principal: CurrentPrincipal) -> DesignSystemList:
-    return ui.list_design_systems()
+def list_design_systems(principal: CurrentPrincipal, session: DbSession) -> DesignSystemList:
+    return ui.list_design_systems(themes.themes_for(session, principal.tenant_id))
 
 
 @api.get(
@@ -715,3 +717,33 @@ def get_project_policy(
     project_id: ProjectId, principal: CurrentPrincipal, session: DbSession, revision: Revision = None
 ) -> PolicyReport:
     return org.report(session, principal, project_id, revision)
+
+
+@api.get(
+    "/org/design-systems",
+    response_model=OrgThemesOut,
+    tags=["organization"],
+    summary="The organization's brand themes (select one in a spec with design_system.id = 'org-<id>')",
+)
+def get_org_themes(principal: CurrentPrincipal, session: DbSession, response: Response) -> OrgThemesOut:
+    result = themes.get_themes(session, principal)
+    response.headers["ETag"] = f'"v{result.version}"'
+    return result
+
+
+@api.put(
+    "/org/design-systems",
+    response_model=OrgThemesOut,
+    tags=["organization"],
+    summary='Replace the organization\'s brand themes (org-admin role, If-Match: "vN")',
+)
+def put_org_themes(
+    body: OrgThemesUpdate,
+    principal: CurrentPrincipal,
+    session: DbSession,
+    response: Response,
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
+) -> OrgThemesOut:
+    result = themes.put_themes(session, principal, if_match, body.themes)
+    response.headers["ETag"] = f'"v{result.version}"'
+    return result

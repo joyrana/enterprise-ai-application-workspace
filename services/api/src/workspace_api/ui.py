@@ -13,6 +13,9 @@ from sqlalchemy.orm import Session
 from appspec import ApplicationSpec
 from appspec.model import Framework
 from design_system import (
+    ORG_PREFIX,
+    BrandTheme,
+    BrandThemeSet,
     DesignSystemContract,
     builtin_contracts,
     derive_document,
@@ -22,7 +25,7 @@ from design_system import (
     validate_document,
 )
 
-from . import service
+from . import service, themes
 from .auth import Principal
 from .errors import AppError, NotFound
 from .schemas import DesignSystemChoice, DesignSystemList, DesignSystemSummary, UiPreview
@@ -34,9 +37,23 @@ class DesignSystemUnavailable(AppError):
     status, code, title = 422, "design-system-unavailable", "No usable design system for this project"
 
 
-def list_design_systems() -> DesignSystemList:
+def list_design_systems(org_themes: BrandThemeSet | None = None) -> DesignSystemList:
+    builtin = builtin_contracts()
+    org_items = [
+        DesignSystemSummary(
+            id=t.selector,
+            name=f"{t.name} (organization theme on {builtin[t.base].name})",
+            version=builtin[t.base].version,
+            framework=builtin[t.base].framework,
+            library_package=builtin[t.base].library.package,
+            library_version=builtin[t.base].library.version,
+            has_adapter=has_adapter(t.base),
+        )
+        for t in (org_themes.items if org_themes is not None else [])
+    ]
     return DesignSystemList(
-        items=[
+        items=org_items
+        + [
             DesignSystemSummary(
                 id=c.id,
                 name=c.name,
@@ -46,7 +63,7 @@ def list_design_systems() -> DesignSystemList:
                 library_version=c.library.version,
                 has_adapter=has_adapter(c.id),
             )
-            for c in builtin_contracts().values()
+            for c in builtin.values()
         ]
     )
 
@@ -56,6 +73,35 @@ def get_design_system(contract_id: str) -> DesignSystemContract:
     if contract is None:
         raise NotFound(f"Design system '{contract_id}' was not found.")
     return contract
+
+
+def resolve(
+    spec: ApplicationSpec, themes: BrandThemeSet | None = None
+) -> tuple[DesignSystemContract, DesignSystemChoice, BrandTheme | None]:
+    """The contract, how it was chosen, and the organization brand theme on top of it (if any)."""
+    selected_id = spec.design_system.id.value
+    if selected_id and selected_id.startswith(ORG_PREFIX):
+        theme = themes.get(selected_id) if themes is not None else None
+        if theme is None:
+            raise DesignSystemUnavailable(
+                f"The spec selects '{selected_id}', which is not one of your organization's brand themes."
+            )
+        base = get_contract(theme.base)
+        assert base is not None
+        app_framework = spec.framework.framework.value
+        if app_framework is not None and base.framework != app_framework.value:
+            raise DesignSystemUnavailable(
+                f"'{selected_id}' is a brand theme on {base.name}, but the app's framework is {app_framework.value}."
+            )
+        choice = DesignSystemChoice(
+            id=selected_id,
+            version=base.version,
+            selected_by="spec",
+            note=f"{theme.name}: organization brand theme on {base.name}.",
+        )
+        return base, choice, theme
+    contract, choice = choose(spec)
+    return contract, choice, None
 
 
 def choose(spec: ApplicationSpec) -> tuple[DesignSystemContract, DesignSystemChoice]:
@@ -92,7 +138,7 @@ def preview(session: Session, principal: Principal, project_id: uuid.UUID, revis
     project = service.find_project(session, principal, project_id)
     number = project.current_revision if revision is None else revision
     spec = service.spec_at(session, project, number)
-    contract, choice = choose(spec)
+    contract, choice, _ = resolve(spec, themes.themes_for(session, principal.tenant_id))
     document = derive_document(spec, spec_revision=number)
     rendered = render_screens(document.screens, contract) if has_adapter(contract.id) else []
     if not has_adapter(contract.id):

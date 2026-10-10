@@ -20,7 +20,8 @@ from typing import Any
 from appspec import ApplicationSpec
 from appspec.model import FieldType
 from codegen_react import MANIFEST, GeneratedProject, GenerationBlocked, GenerationError, package_name, pascal
-from design_system import DesignSystemContract, UiDocument, derive_document, validate_document
+from codegen_react.generate import design_system_label
+from design_system import BrandTheme, DesignSystemContract, UiDocument, brand_ramp, derive_document, validate_document
 from design_system.ir import (
     Action,
     Form,
@@ -846,6 +847,27 @@ td.empty {
 """
 
 
+def brand_css(theme: BrandTheme | None) -> str:
+    """M3 system-variable overrides for an organization brand theme (empty for the default theme)."""
+    if theme is None:
+        return ""
+    ramp = brand_ramp(theme.brand_color)
+    lines = [
+        "",
+        f"/* Organization brand theme {theme.selector}: overrides of the Material 3 system variables. */",
+        ":root {",
+        f"  --mat-sys-primary: {ramp[80]};",
+        "  --mat-sys-on-primary: #ffffff;",
+        f"  --mat-sys-primary-container: {ramp[150]};",
+        f"  --mat-sys-on-primary-container: {ramp[20]};",
+        f"  --mat-sys-corner-medium: {theme.material_radius};",
+        "}",
+    ]
+    if theme.font_family:
+        lines += ["body,", "button,", "input,", "select,", "textarea {", f"  font-family: {theme.font_family};", "}"]
+    return "\n".join(lines) + "\n"
+
+
 def _app_ts(header: str, title: str, links: list[tuple[str, str]]) -> str:
     data = [{"path": "/" + path, "label": label} for path, label in links]
     return "\n".join(
@@ -1046,6 +1068,7 @@ def generate_project(
     *,
     spec_revision: int | None = None,
     document: UiDocument | None = None,
+    theme: BrandTheme | None = None,
 ) -> GeneratedProject:
     if contract.framework != "angular":
         raise GenerationError(f"{contract.name} is not an Angular design system")
@@ -1060,6 +1083,7 @@ def generate_project(
     list_routes = _list_routes(document)
     files: dict[str, str] = {}
     files.update(_static_files(package_name(title), title, header))
+    files["src/styles.css"] += brand_css(theme)
     files["src/app/forms.ts"] = header + "\n" + FORMS_TS
     files["src/app/data/store.ts"] = header + "\n" + STORE_TS
     files["src/app/data/entities.ts"] = entities_ts(spec, header)
@@ -1081,7 +1105,7 @@ def generate_project(
     project = GeneratedProject(
         generator=f"{GENERATOR}@{GENERATOR_VERSION}",
         spec_revision=spec_revision,
-        design_system=f"{contract.id}@{contract.version}",
+        design_system=design_system_label(contract, theme),
         files=dict(sorted(files.items())),
         warnings=warnings,
     )

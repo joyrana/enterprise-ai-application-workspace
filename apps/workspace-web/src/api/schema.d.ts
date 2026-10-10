@@ -55,6 +55,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/org/design-systems": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The organization's brand themes (select one in a spec with design_system.id = 'org-<id>') */
+        get: operations["get_org_themes_api_v1_org_design_systems_get"];
+        /** Replace the organization's brand themes (org-admin role, If-Match: "vN") */
+        put: operations["put_org_themes_api_v1_org_design_systems_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/org/policies": {
         parameters: {
             query?: never;
@@ -999,6 +1017,33 @@ export interface components {
             /** @default proposed */
             status: components["schemas"]["ItemStatus"];
         };
+        /** BrandTheme */
+        BrandTheme: {
+            /**
+             * Base
+             * @enum {string}
+             */
+            base: "fluent2" | "material3";
+            /** Brand Color */
+            brand_color: string;
+            /**
+             * Corner Radius
+             * @default medium
+             * @enum {string}
+             */
+            corner_radius: "small" | "medium" | "large";
+            /** Font Family */
+            font_family?: string | null;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** BrandThemeSet */
+        BrandThemeSet: {
+            /** Items */
+            items?: components["schemas"]["BrandTheme"][];
+        };
         /** BuildOut */
         BuildOut: {
             /**
@@ -1829,6 +1874,16 @@ export interface components {
         /** OrgPolicyUpdate */
         OrgPolicyUpdate: {
             policy: components["schemas"]["PolicySet"];
+        };
+        /** OrgThemesOut */
+        OrgThemesOut: {
+            themes: components["schemas"]["BrandThemeSet"];
+            /** Version */
+            version: number;
+        };
+        /** OrgThemesUpdate */
+        OrgThemesUpdate: {
+            themes: components["schemas"]["BrandThemeSet"];
         };
         /**
          * Outcome
@@ -3244,6 +3299,165 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DesignSystemContract"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    get_org_themes_api_v1_org_design_systems_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgThemesOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    put_org_themes_api_v1_org_design_systems_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+                /** @description Development only: tenant identifier. */
+                "x-dev-tenant"?: string | null;
+                /** @description Development only: user identifier. */
+                "x-dev-user"?: string | null;
+                /** @description Development only: comma-separated roles, e.g. 'org-admin'. */
+                "x-dev-roles"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrgThemesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgThemesOut"];
                 };
             };
             /** @description Bad Request */

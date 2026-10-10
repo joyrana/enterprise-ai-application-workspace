@@ -21,10 +21,12 @@ from pydantic import BaseModel, Field
 
 from appspec import ApplicationSpec
 from design_system import (
+    BrandTheme,
     DesignSystemContract,
     RenderedScreen,
     UiDocument,
     UiIssue,
+    brand_ramp,
     derive_document,
     render_screens,
     validate_document,
@@ -37,7 +39,7 @@ from .data import STORE_TS, entities_ts, openapi_json
 from .jsx import DataBindings, GenerationError, Printer, components_in, is_library_component, literal, needs_layout
 
 GENERATOR = "codegen-react"
-GENERATOR_VERSION = "0.5.0"
+GENERATOR_VERSION = "0.6.0"
 MANIFEST = "workspace-manifest.json"
 
 
@@ -74,6 +76,11 @@ def pascal(identifier: str) -> str:
 def package_name(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:60].strip("-")
     return f"{slug}-app" if slug and slug[0].isalpha() else "generated-app"
+
+
+def design_system_label(contract: DesignSystemContract, theme: BrandTheme | None) -> str:
+    base = f"{contract.id}@{contract.version}"
+    return f"{theme.selector} ({base})" if theme is not None else base
 
 
 def _header(spec_revision: int | None, contract: DesignSystemContract) -> str:
@@ -269,11 +276,12 @@ def _app_file(screens: list[RenderedScreen], header: str, app_name: str) -> str:
     return (
         header
         + "\n"
-        + f"import {{ {'' if screens else 'Body1, '}FluentProvider, Title3, makeStyles, tokens, webLightTheme }} "
+        + f"import {{ {'' if screens else 'Body1, '}FluentProvider, Title3, makeStyles, tokens }} "
         + 'from "@fluentui/react-components";\n'
         + 'import type { ReactElement } from "react";\n'
         + f"import {{ BrowserRouter, NavLink, {'Navigate, ' if screens else ''}Route, Routes }} "
         + 'from "react-router-dom";\n'
+        + 'import { appTheme } from "./theme";\n'
         + "\n".join(imports)
         + ("\n" if imports else "")
         + "\n"
@@ -301,7 +309,7 @@ def _app_file(screens: list[RenderedScreen], header: str, app_name: str) -> str:
         + "export function App() {\n"
         + "  const styles = useStyles();\n"
         + "  return (\n"
-        + "    <FluentProvider theme={webLightTheme}>\n"
+        + "    <FluentProvider theme={appTheme}>\n"
         + "      <BrowserRouter>\n"
         + "        <div className={styles.shell}>\n"
         + '          <nav aria-label="Screens" className={styles.nav}>\n'
@@ -442,12 +450,43 @@ def _bindings(spec: ApplicationSpec, document: UiDocument) -> DataBindings:
     )
 
 
+def theme_ts(header: str, theme: BrandTheme | None) -> str:
+    """The Fluent theme the app renders with: Fluent's light theme, or an organization brand theme."""
+    if theme is None:
+        return (
+            header
+            + "\n"
+            + 'import { webLightTheme, type Theme } from "@fluentui/react-components";\n\n'
+            + "/** Fluent 2's default light theme. An organization brand theme replaces this file's contents. */\n"
+            + "export const appTheme: Theme = webLightTheme;\n"
+        )
+    ramp = brand_ramp(theme.brand_color)
+    variants = "\n".join(f"  {step}: {literal(color)}," for step, color in ramp.items())
+    overrides = [f"  borderRadiusMedium: {literal(theme.fluent_radius)},"]
+    if theme.font_family:
+        overrides.insert(0, f"  fontFamilyBase: {literal(theme.font_family)},")
+    return (
+        header
+        + "\n"
+        + 'import { createLightTheme, type BrandVariants, type Theme } from "@fluentui/react-components";\n\n'
+        + f"/** Organization brand theme {literal(theme.name)} ({literal(theme.selector)}) on Fluent 2. */\n"
+        + "const brand: BrandVariants = {\n"
+        + variants
+        + "\n};\n\n"
+        + "export const appTheme: Theme = {\n"
+        + "  ...createLightTheme(brand),\n"
+        + "\n".join(overrides)
+        + "\n};\n"
+    )
+
+
 def generate_project(
     spec: ApplicationSpec,
     contract: DesignSystemContract,
     *,
     spec_revision: int | None = None,
     document: UiDocument | None = None,
+    theme: BrandTheme | None = None,
 ) -> GeneratedProject:
     document = document or derive_document(spec, spec_revision=spec_revision)
     issues = validate_document(document, spec)
@@ -461,6 +500,7 @@ def generate_project(
     files.update(_static_files(package_name(title), title, header))
     files["README.md"] = _readme(title, spec_revision, contract, rendered)
     files["src/App.tsx"] = _app_file(rendered, header, title)
+    files["src/theme.ts"] = theme_ts(header, theme)
     bindings = _bindings(spec, document)
     files["src/data/store.ts"] = header + "\n" + STORE_TS
     files["src/data/entities.ts"] = entities_ts(spec, header)
@@ -470,7 +510,7 @@ def generate_project(
     project = GeneratedProject(
         generator=f"{GENERATOR}@{GENERATOR_VERSION}",
         spec_revision=spec_revision,
-        design_system=f"{contract.id}@{contract.version}",
+        design_system=design_system_label(contract, theme),
         files=dict(sorted(files.items())),
         warnings=[i for i in issues if i.severity == "warning"],
     )

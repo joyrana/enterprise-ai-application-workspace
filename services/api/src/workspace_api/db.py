@@ -32,6 +32,7 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.engine import Engine
@@ -226,6 +227,9 @@ class OrgSettings(Base):
     tenant_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     policies: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     policies_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    #: Organization brand themes (design_system.BrandTheme items), versioned separately.
+    themes: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    themes_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
     updated_by: Mapped[str] = mapped_column(String(128), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
