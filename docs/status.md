@@ -1,6 +1,108 @@
 # Implementation status
 
-Last updated: 2026-10-07 · Milestone 4 fourth slice (PR #13)
+Last updated: 2026-10-10 · Milestones 4 (runner) to 8 (PRs #15–#23, stacked)
+
+## Milestones 4 to 8, as shipped in PRs #15–#23 (stacked; merge in order)
+
+These numbers come from CI on each PR's head; a link is given for each. Dependency review fails
+on every PR until the repository's Dependency graph setting is enabled. Every other job passed.
+
+### Milestone 4: isolated build runner (#15) and build jobs (#16)
+
+- `services/build-runner` first verifies the archive (bounded zip, no links or traversal,
+  manifest hashes, exact pins). It then builds in a container with no network, no
+  credentials, a read-only root and project mount, `noexec` tmpfs, no writable host mount,
+  uid 1000, no capabilities, resource limits and a host-enforced deadline (ADR-0015).
+- Build jobs: `POST /projects/{id}/builds` queues a build and a separate worker runs it, at
+  most one per project. Builds stuck after a worker crash are recovered. The Code tab panel
+  shows steps, the log tail and the isolation flags.
+- Evidence:
+  - #15, run [38019151873](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/38019151873):
+    - pytest 369;
+    - the example app built *inside* the sandbox;
+    - the hostile probe reported `{"network": "blocked", "rootfs": "read-only", "secrets": "none", "source": "read-only", "toolchain": "read-only", "uid": "1000"}`;
+    - the tampered archive was rejected before any container started.
+  - #16, run [38019153904](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/38019153904): pytest 373, Vitest 47.
+- Fixes found on the way:
+  - Vite writes into `node_modules/.vite-temp`, now a tmpfs folder of links into the read-only
+    toolchain.
+  - Fluent's "use client" warnings flooded the log tail; builds now log errors only.
+
+### Milestone 5: edit preservation (#17), circuit breaker (#18) and impact preview (#19)
+
+- **Edit preservation (ADR-0016):** upgrades use a three-way merge against a *reproduced*
+  base, with an explicit outcome per file and Git-style conflict markers. Uploads are read
+  with the runner's safe reader and never stored or executed. 3,000 randomized merges were
+  fuzzed during development: none lost a user line, and every case with separated edits
+  merged exactly.
+- **Circuit breaker:** after 5 consecutive transient provider failures, runs fail fast for
+  30 s. Then one half-open trial call decides. `/ai/status` reports the circuit state.
+- **Impact preview:** shows entities, screens and generated files changed, plus blockers,
+  without saving.
+- Evidence:
+  - #17, run [38019404576](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/38019404576): pytest 385, Vitest 48.
+  - #18, run [38019512073](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/38019512073): pytest 391.
+  - #19, run [38020612412](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/38020612412): pytest 394, Vitest 49.
+- Fix found on the way: the impact comparison counted server-stamped revision metadata as a
+  change.
+
+### Milestone 6: Angular + Material 3 (#20)
+
+- A `material3` contract pinned to `@angular/material@22.2.2`, and `codegen-angular` 0.1.0:
+  - standalone, zoneless components with signals;
+  - typed reactive forms with validators from the spec rules;
+  - `mat-table` bound to a signal store;
+  - spec text only as escaped literals, and allowlisted templates (ADR-0017).
+- The toolchain was looked up on the npm registry: Angular 22.2.2, TypeScript 6.0.3,
+  RxJS 7.8.2, tslib 2.8.1. The lockfile matches the pins (tested).
+- Evidence, run [38022248937](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/38022248937):
+  - pytest 403;
+  - **generated apps: 8 passed**. Both Angular apps build with `ng build`, pass axe on every
+    route, and the Angular form flow works;
+  - Vitest 49.
+- Not yet for Angular: edit/delete row actions (reported as a generation warning), the HTTP
+  store, and isolated-runner builds (the API returns `422 build-not-supported`).
+
+### Milestone 7: organization policies (#21) and brand themes (#22)
+
+- **Policies (ADR-0018):** nine typed rule kinds, evaluated deterministically. Error findings
+  block generation, builds and upgrades; warnings are reported. Only `org-admin` may change
+  them, using `If-Match`, and changes are audited.
+- **Brand themes (ADR-0019):** a brand colour, font and radius on Fluent 2 or Material 3.
+  WCAG AA contrast with white text is enforced. React gets `src/theme.ts` (React generator
+  0.6.0); Angular gets `--mat-sys-*` overrides. Specs select a theme with
+  `design_system.id = "org-<id>"`.
+- Evidence:
+  - #21, run [38022283728](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/38022283728): pytest 413, Vitest 51.
+  - #22, run [38022561189](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/38022561189): pytest 418, Vitest 52.
+- Fix found on the way: the selector started as `org:<id>`, but spec identifiers cannot
+  contain `:`. CI's API test caught it; the generator tests had built themes directly.
+
+### Milestone 8: research-grade evaluation (#23)
+
+- **Statistics:** Wilson intervals, a seeded bootstrap (case-level for repeated runs), exact
+  McNemar and Cohen's h. Datasets are pinned by SHA-256 in `evals/datasets/cards.json`.
+  The [evaluation protocol](evaluation/protocol.md) fixes claims and thresholds up front.
+- **Untuned holdout for the injection screen** (24 cases, committed before it was scored):
+  - precision 100% (0/12 false positives);
+  - **recall 33% (4/12, 95% CI 14–61%)**, against 89% on the development set;
+  - the detector was not changed. The screen stays advisory (ADR-0011).
+- **End-to-end benchmark:** 6 specs × React and Angular.
+- Evidence, run [38022564116](https://github.com/joyrana/enterprise-ai-application-workspace/actions/runs/38022564116):
+  - `benchmark[v1] 6 specs; generated react 6/6, angular 6/6; builds react 6/6, angular 6/6`;
+  - pytest 423, Vitest 52;
+  - routing lexical accuracy 61% (22/36, bootstrap 95% CI 44–78%).
+
+### Still not done (honest limits)
+
+- Development authentication only; roles come from a header.
+- Isolation is container-based, not gVisor or microVMs. The runner builds React projects only.
+- Angular parity gaps: no row actions and no HTTP store.
+- The injection screen generalizes poorly to unseen phrasings (see the holdout above).
+- Real-model benchmarks for the new skills need the opt-in workflow and a hosted-model token.
+- Labels come from one author, so inter-annotator agreement is not measured.
+
+---
 
 ## Milestone 4 (fourth slice) — Edit, confirmed delete and an HTTP store (generator 0.4.0)
 

@@ -32,6 +32,7 @@ from skill_sdk import NONE, ROUTER_PROMPT_VERSION, SkillRouter, lexical_choice
 from workspace_skills import default_registry
 
 from .discovery import REPO_ROOT, starting_spec
+from .stats import bootstrap
 
 DEFAULT_DATASET = REPO_ROOT / "evals" / "datasets" / "routing" / "v2.jsonl"
 Method = Literal["lexical", "router"]
@@ -133,6 +134,7 @@ def metrics(predictions: list[Prediction]) -> dict[str, Any]:
     return {
         "cases": total,
         "accuracy": round(correct / total, 3) if total else 0.0,
+        "accuracy_ci": _accuracy_ci(predictions),
         "correct": correct,
         "errors": dict(Counter(p.error_kind for p in predictions if p.error_kind)),
         "false_invocation_rate": round(
@@ -160,6 +162,16 @@ def metrics(predictions: list[Prediction]) -> dict[str, Any]:
             )
         },
     }
+
+
+def _accuracy_ci(predictions: list[Prediction]) -> dict[str, Any]:
+    """95% bootstrap interval over *cases* (repeats of one case are averaged first, not counted as
+    independent samples)."""
+    by_case: dict[str, list[bool]] = {}
+    for p in predictions:
+        by_case.setdefault(p.case_id, []).append(p.predicted == p.expected)
+    case_means = [sum(v) / len(v) for _, v in sorted(by_case.items())]
+    return bootstrap(case_means).as_dict()
 
 
 def _variance(predictions: list[Prediction]) -> dict[str, Any]:
