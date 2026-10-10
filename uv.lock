@@ -9,6 +9,7 @@ resolution-markers = [
 [manifest]
 members = [
     "appspec",
+    "build-runner",
     "codegen-react",
     "design-system",
     "enterprise-ai-application-workspace",
@@ -156,6 +157,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/c4/cf/85379f13b76f3a69b
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/ca/78d423b324b8d77900030fa59c4aa9054261ef0925631cd2501dd015b7b7/boolean_py-5.0-py3-none-any.whl", hash = "sha256:ef28a70bd43115208441b53a045d1549e2f0ec6e3d08a9d142cbc41c1938e8d9", size = 26577, upload-time = "2025-04-03T10:39:48.449Z" },
 ]
+
+[[package]]
+name = "build-runner"
+version = "0.1.0"
+source = { editable = "services/build-runner" }
 
 [[package]]
 name = "cachecontrol"
@@ -495,6 +501,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "appspec" },
+    { name = "build-runner" },
     { name = "codegen-react" },
     { name = "design-system" },
     { name = "model-gateway" },
@@ -518,6 +525,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "appspec", editable = "packages/application-spec" },
+    { name = "build-runner", editable = "services/build-runner" },
     { name = "codegen-react", editable = "packages/codegen-react" },
     { name = "design-system", editable = "packages/design-system" },
     { name = "model-gateway", editable = "packages/model-gateway" },
