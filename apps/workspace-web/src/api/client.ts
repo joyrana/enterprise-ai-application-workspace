@@ -118,7 +118,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
     response = await fetch(`${BASE}${path}`, {
       method: options.method ?? "GET",
       headers,
-      body: options.raw !== undefined ? options.raw.body : options.body === undefined ? undefined : JSON.stringify(options.body),
+      body:
+        options.raw !== undefined
+          ? options.raw.body
+          : options.body === undefined
+            ? undefined
+            : JSON.stringify(options.body),
       signal: options.signal,
     });
   } catch (error) {

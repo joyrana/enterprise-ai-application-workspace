@@ -5291,6 +5291,117 @@
         "title": "UiState",
         "type": "string"
       },
+      "UpgradeFile": {
+        "additionalProperties": false,
+        "properties": {
+          "conflicts": {
+            "description": "Conflict regions marked inline (<<<<<<< your edit \u2026 >>>>>>>).",
+            "minimum": 0.0,
+            "title": "Conflicts",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "unchanged",
+              "regenerated",
+              "kept",
+              "merged",
+              "conflict",
+              "added",
+              "user-file",
+              "removed",
+              "orphaned",
+              "deleted",
+              "restored",
+              "side-by-side"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "status",
+          "conflicts",
+          "note"
+        ],
+        "title": "UpgradeFile",
+        "type": "object"
+      },
+      "UpgradeResult": {
+        "additionalProperties": false,
+        "properties": {
+          "archive_base64": {
+            "description": "The upgraded project as a zip, base64-encoded. Not stored.",
+            "title": "Archive Base64",
+            "type": "string"
+          },
+          "base_reproduced": {
+            "description": "True when the original generated project could be reproduced exactly (same generator version), so every file was merged three-way. Otherwise edited files are kept side by side.",
+            "title": "Base Reproduced",
+            "type": "boolean"
+          },
+          "conflicts": {
+            "title": "Conflicts",
+            "type": "integer"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/UpgradeFile"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "from_generator": {
+            "title": "From Generator",
+            "type": "string"
+          },
+          "from_revision": {
+            "title": "From Revision",
+            "type": "integer"
+          },
+          "generator": {
+            "title": "Generator",
+            "type": "string"
+          },
+          "to_revision": {
+            "title": "To Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "from_revision",
+          "from_generator",
+          "to_revision",
+          "generator",
+          "base_reproduced",
+          "conflicts",
+          "files",
+          "filename",
+          "archive_base64"
+        ],
+        "title": "UpgradeResult",
+        "type": "object"
+      },
       "UserJourney": {
         "additionalProperties": false,
         "properties": {
@@ -8215,6 +8326,163 @@
           }
         },
         "summary": "One generated file",
+        "tags": [
+          "code"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/code/upgrade": {
+      "post": {
+        "description": "Send the project zip you have been editing (as downloaded, then changed). The workspace reproduces the generated project it came from and merges your edits with the code generated for the target revision, three-way. Overlapping changes are marked inline as conflicts. Nothing is stored or executed.",
+        "operationId": "upgrade_project_code_api_v1_projects__project_id__code_upgrade_post",
+        "parameters": [
+          {
+            "description": "Project identifier.",
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "description": "Project identifier.",
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Target revision; defaults to current.",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Target revision; defaults to current.",
+              "title": "To"
+            }
+          },
+          {
+            "description": "Development only: tenant identifier.",
+            "in": "header",
+            "name": "x-dev-tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: tenant identifier.",
+              "title": "X-Dev-Tenant"
+            }
+          },
+          {
+            "description": "Development only: user identifier.",
+            "in": "header",
+            "name": "x-dev-user",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Development only: user identifier.",
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/zip": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpgradeResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Request Entity Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/problem+json": {}
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Upgrade a hand-edited generated project to a newer revision, keeping the edits",
         "tags": [
           "code"
         ]
