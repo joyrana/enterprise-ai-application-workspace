@@ -112,6 +112,11 @@ class AiStatus(ApiModel):
     profile: str | None
     remote: bool | None = Field(description="Whether prompts leave the organization's network.")
     structured_mode: str | None
+    circuit: Literal["closed", "open", "half_open"] | None = Field(
+        default=None,
+        description="Provider circuit breaker: 'open' means recent calls kept failing, so runs fail fast for a "
+        "short cooldown instead of waiting for timeouts.",
+    )
 
 
 class RunCreate(ApiModel):

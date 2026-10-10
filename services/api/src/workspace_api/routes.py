@@ -256,6 +256,7 @@ def ai_status(request: Request, principal: CurrentPrincipal) -> AiStatus:
         profile=runtime.profile,
         remote=runtime.capabilities.remote,
         structured_mode=runtime.capabilities.structured_mode.value,
+        circuit=runtime.breaker.state if runtime.breaker is not None else None,
     )
 
 

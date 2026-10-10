@@ -1,5 +1,6 @@
 """Provider-neutral model access for the workspace (see docs/adr/0007-model-providers.md)."""
 
+from .breaker import CircuitBreaker, GuardedProvider
 from .budget import Budget
 from .config import ModelConfigError, ModelSettings, Profile
 from .errors import ErrorKind, ModelError
@@ -14,9 +15,11 @@ __all__ = [
     "Budget",
     "CallRecord",
     "Capabilities",
+    "CircuitBreaker",
     "ErrorKind",
     "ExtractionError",
     "FakeProvider",
+    "GuardedProvider",
     "Message",
     "ModelConfigError",
     "ModelError",

@@ -260,6 +260,23 @@
       "AiStatus": {
         "additionalProperties": false,
         "properties": {
+          "circuit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "closed",
+                  "open",
+                  "half_open"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Provider circuit breaker: 'open' means recent calls kept failing, so runs fail fast for a short cooldown instead of waiting for timeouts.",
+            "title": "Circuit"
+          },
           "configured": {
             "title": "Configured",
             "type": "boolean"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -11,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
-from model_gateway import Capabilities, ErrorKind, FakeProvider, ModelError
+from model_gateway import Capabilities, CircuitBreaker, ErrorKind, FakeProvider, ModelError
 from workspace_api.ai import ModelRuntime
 
 pytestmark = pytest.mark.db
@@ -86,6 +87,7 @@ def test_ai_status_reports_unconfigured(client: TestClient) -> None:
         "profile": None,
         "remote": None,
         "structured_mode": None,
+        "circuit": None,
     }
 
 
@@ -191,6 +193,25 @@ def test_model_failure_is_recorded_with_classified_error(
         "message": "The model provider is rate limiting requests. Try again shortly.",
     }
     assert run["proposals"] == []
+
+
+def test_circuit_breaker_fails_runs_fast_while_the_provider_is_down(
+    client: TestClient, project: dict[str, Any], app: FastAPI
+) -> None:
+    # Two scripted failures only: a third provider call would exhaust the fake and fail differently.
+    provider = FakeProvider([ModelError(ErrorKind.UNAVAILABLE, "HTTP 503"), ModelError(ErrorKind.TIMEOUT, "timed out")])
+    app.state.model_runtime = dataclasses.replace(
+        runtime(provider), breaker=CircuitBreaker(failure_threshold=2, cooldown_s=60)
+    )
+    pid = project["id"]
+    kinds = []
+    for _ in range(3):
+        run = client.get(f"/api/v1/projects/{pid}/runs/{start(client, pid).json()['id']}").json()
+        assert run["status"] == "failed"
+        kinds.append(run["error"]["kind"])
+    assert kinds == ["provider_unavailable", "timeout", "provider_unavailable"]
+    assert len(provider.requests) == 2  # the third run never reached the provider
+    assert client.get("/api/v1/ai/status").json()["circuit"] == "open"
 
 
 def test_schema_failure_after_repair_is_recorded(

@@ -427,7 +427,7 @@ def _execute_one(db: Database, run_id: uuid.UUID, runtime: ModelRuntime, registr
             check_data_policy(
                 runtime.capabilities, _classification(spec), allow_remote=runtime.allow_remote_for_confidential
             )
-            provider = runtime.factory()
+            provider = runtime.provider()
             decision = SkillRouter(registry).route(
                 message,
                 spec,
