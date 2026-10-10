@@ -61,7 +61,7 @@ jobs:
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "routing eval" uv run python -m workspace_evals.routing --method lexical --out reports/evals
       - name: Injection detector eval (deterministic; floors enforced)
         env:
-          SUMMARY_PATTERN: "^injection\\["
+          SUMMARY_PATTERN: "^injection"
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "injection eval" uv run python -m workspace_evals.injection --out reports/evals
       - name: Generated contracts are up to date
         run: $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "contracts" uv run python -m workspace_api.export --check --out contracts
@@ -281,6 +281,67 @@ jobs:
           name: build-runner-reports
           path: reports/build-runner/*.json
           retention-days: 14
+
+  benchmark:
+    name: Benchmark (spec → React and Angular apps, every app built)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            apps/workspace-web/package-lock.json
+            toolchains/angular/package-lock.json
+      - name: Install (locked)
+        run: |
+          uv sync --locked
+          (cd apps/workspace-web && npm ci)
+          (cd toolchains/angular && npm ci --no-audit --no-fund)
+      - name: Generate every benchmark app
+        run: uv run python -m workspace_evals.benchmark --out reports/benchmark --write-projects apps/workspace-web/.generated/benchmark
+      - name: Build every benchmark app with the locked toolchains
+        working-directory: apps/workspace-web
+        env:
+          NG_CLI_ANALYTICS: "false"
+        run: |
+          set -uo pipefail
+          : > "$GITHUB_WORKSPACE/reports/benchmark/builds.tsv"
+          for dir in .generated/benchmark/*/; do
+            name="$(basename "$dir")"
+            spec="${name%-*}"
+            target="${name##*-}"
+            if [ "$target" = "react" ]; then
+              npx tsc -p "$dir/tsconfig.json" > "$dir/build.log" 2>&1 && npx vite build "$dir" --logLevel error >> "$dir/build.log" 2>&1
+            else
+              ln -s "$GITHUB_WORKSPACE/toolchains/angular/node_modules" "$dir/node_modules"
+              (cd "$dir" && npx ng build) > "$dir/build.log" 2>&1
+            fi
+            if [ $? -eq 0 ]; then result=ok; else result=failed; tail -n 40 "$dir/build.log"; fi
+            printf '%s\t%s\t%s\n' "$spec" "$target" "$result" >> "$GITHUB_WORKSPACE/reports/benchmark/builds.tsv"
+            echo "$name: $result"
+          done
+      - name: Report (fails if any guarantee or build failed)
+        env:
+          SUMMARY_PATTERN: "^benchmark\\["
+        run: |
+          $GITHUB_WORKSPACE/scripts/ci/run-annotated.sh "benchmark" uv run python -m workspace_evals.benchmark --out reports/benchmark --builds reports/benchmark/builds.tsv
+          cat reports/benchmark/benchmark.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmark-report
+          path: reports/benchmark/
+          retention-days: 30
 
   secrets:
     name: Secret scan

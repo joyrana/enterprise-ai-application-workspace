@@ -31,8 +31,11 @@ from pydantic import BaseModel, ConfigDict
 from skill_sdk.safety import DETECTOR_VERSION, scan_text
 
 from .discovery import REPO_ROOT
+from .stats import wilson
 
 DEFAULT_DATASET = REPO_ROOT / "evals" / "datasets" / "injection" / "v1.jsonl"
+#: Written and committed before the detector was scored on it; never tuned against (Milestone 8).
+HOLDOUT_DATASET = REPO_ROOT / "evals" / "datasets" / "injection" / "holdout-v1.jsonl"
 
 #: Enforced in CI. Raise them when the detector improves; never lower them to make a change pass.
 MIN_PRECISION = 0.95
@@ -105,6 +108,11 @@ def metrics(predictions: list[Prediction]) -> dict[str, Any]:
         "false_positive_rate": round(fp / (fp + tn), 4) if fp + tn else 0.0,
         "recall_by_style": by_style,
         "kinds": dict(Counter(k for p in predictions for k in p.kinds)),
+        "intervals": {
+            "precision": wilson(tp, tp + fp).as_dict(),
+            "recall": wilson(tp, tp + fn).as_dict(),
+            "false_positive_rate": wilson(fp, fp + tn).as_dict(),
+        },
         "missed": [p.id for p in predictions if p.label == "injection" and not p.flagged],
         "false_alarms": [p.id for p in predictions if p.label == "benign" and p.flagged],
     }
@@ -129,6 +137,11 @@ def summary_line(m: dict[str, Any]) -> str:
     )
 
 
+def _ci(m: dict[str, Any], name: str) -> str:
+    interval = m.get("intervals", {}).get(name)
+    return f" [{interval['low']:.0%}, {interval['high']:.0%}]" if interval else ""
+
+
 def markdown(report: dict[str, Any]) -> str:
     m = report["metrics"]
     lines = [
@@ -136,11 +149,32 @@ def markdown(report: dict[str, Any]) -> str:
         "",
         f"Dataset `{report['dataset']}` · {m['cases']} cases · generated {report['generated_at']}",
         "",
-        "| Metric | Value |",
-        "|---|---|",
-        f"| Precision | {m['precision']:.1%} |",
-        f"| Recall | {m['recall']:.1%} ({m['true_positives']}/{m['injections']}) |",
-        f"| False-positive rate | {m['false_positive_rate']:.1%} ({m['false_positives']}/{m['benign']}) |",
+        "Intervals are 95% Wilson score intervals.",
+        "",
+        "| Metric | Development set | Holdout (untuned) |",
+        "|---|---|---|",
+    ]
+    h = report.get("holdout", {}).get("metrics")
+
+    def row(label: str, name: str, value: str, held: str) -> str:
+        return f"| {label} | {value}{_ci(m, name)} | {held}{_ci(h, name) if h else ''} |"
+
+    lines += [
+        row("Precision", "precision", f"{m['precision']:.1%}", f"{h['precision']:.1%}" if h else "—"),
+        row(
+            "Recall",
+            "recall",
+            f"{m['recall']:.1%} ({m['true_positives']}/{m['injections']})",
+            f"{h['recall']:.1%} ({h['true_positives']}/{h['injections']})" if h else "—",
+        ),
+        row(
+            "False-positive rate",
+            "false_positive_rate",
+            f"{m['false_positive_rate']:.1%} ({m['false_positives']}/{m['benign']})",
+            f"{h['false_positive_rate']:.1%} ({h['false_positives']}/{h['benign']})" if h else "—",
+        ),
+        "",
+        "Floors are enforced on the development set only; the holdout is reported, never tuned against.",
         "",
         "| Style | Detected |",
         "|---|---|",
@@ -152,6 +186,8 @@ def markdown(report: dict[str, Any]) -> str:
         f"Missed: {', '.join(m['missed']) or 'none'}",
         f"False alarms: {', '.join(m['false_alarms']) or 'none'}",
     ]
+    if h:
+        lines.append(f"Missed on the holdout: {', '.join(h['missed']) or 'none'}")
     return "\n".join(lines) + "\n"
 
 
@@ -159,6 +195,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate the prompt-injection detector.")
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--out", type=Path, default=Path("reports/evals"))
+    parser.add_argument("--holdout", type=Path, default=HOLDOUT_DATASET)
     args = parser.parse_args(argv)
 
     predictions = predict(load_cases(args.dataset))
@@ -167,17 +204,27 @@ def main(argv: list[str] | None = None) -> int:
         dataset = str(args.dataset.resolve().relative_to(REPO_ROOT))
     except ValueError:
         dataset = str(args.dataset)
-    report = {
+    report: dict[str, Any] = {
         "detector": DETECTOR_VERSION,
         "dataset": dataset,
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "metrics": m,
         "predictions": [p.model_dump() for p in predictions],
     }
+    if args.holdout and args.holdout.exists():
+        held = predict(load_cases(args.holdout))
+        report["holdout"] = {"dataset": args.holdout.name, "metrics": metrics(held)}
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "injection.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     (args.out / "injection.md").write_text(markdown(report), encoding="utf-8")
     print(summary_line(m))
+    if "holdout" in report:
+        h = report["holdout"]["metrics"]
+        print(
+            f"injection holdout (untuned): recall {h['recall']:.0%} ({h['true_positives']}/{h['injections']}) "
+            f"95% CI [{h['intervals']['recall']['low']:.0%}, {h['intervals']['recall']['high']:.0%}], "
+            f"false positives {h['false_positives']}/{h['benign']}"
+        )
     problems = check_floors(m)
     for problem in problems:
         print(f"floor violated: {problem}", file=sys.stderr)

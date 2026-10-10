@@ -1,0 +1,69 @@
+{
+  "cards_version": "1",
+  "note": "Every evaluation dataset is pinned here by SHA-256. A test fails if a file changes without its card; changed data needs a new version file, not an edit.",
+  "datasets": [
+    {
+      "path": "evals/datasets/discovery/v1.jsonl",
+      "role": "development",
+      "task": "business discovery",
+      "provenance": "Hand-written scenarios with deterministic checks.",
+      "limitations": "Small; written by the workspace authors; English only.",
+      "sha256": "e256960b5350f6aa22d265be53115b62bcd88fb55f9b4d7a6c46b403bc11dc43",
+      "cases": 8
+    },
+    {
+      "path": "evals/datasets/discovery/v2.jsonl",
+      "role": "development",
+      "task": "business discovery",
+      "provenance": "Hand-written scenarios, extending v1 with harder and adversarial requests.",
+      "limitations": "Written alongside prompt changes; treat as a development set.",
+      "sha256": "2c051bb640ebffd2ac5800fdfc08ea29d76ac2e9babd516494ac19f2986f69c4",
+      "cases": 12
+    },
+    {
+      "path": "evals/datasets/injection/v1.jsonl",
+      "role": "development",
+      "task": "prompt-injection screening",
+      "provenance": "Hand-written together with the injection-scan@1 detector.",
+      "limitations": "The detector was tuned on it, so its numbers are an upper bound.",
+      "sha256": "a1bdaa2f1500c5f203dc62f592f533a6f1685aa85c30eaf5aee8220c5e6dd366",
+      "cases": 46
+    },
+    {
+      "path": "evals/datasets/injection/holdout-v1.jsonl",
+      "role": "holdout",
+      "task": "prompt-injection screening",
+      "provenance": "Hand-written on 2026-10-10 and committed (56d0adc) before the detector was scored on it; never used for tuning.",
+      "limitations": "24 cases (12 injections, 12 benign); wide intervals. Once reported, it is no longer blind for future detector versions: add holdout-v2 for those.",
+      "sha256": "0bed1bf61935b40fd18bcb51408193b25809a3dac1cb3a15c45dbd3c8d106007",
+      "cases": 24
+    },
+    {
+      "path": "evals/datasets/routing/v1.jsonl",
+      "role": "development",
+      "task": "skill routing",
+      "provenance": "Hand-labelled requests for the first three skills.",
+      "limitations": "Superseded by v2; kept for comparison.",
+      "sha256": "e4610f63c969a83748792e7c23bf5a4d3e9eea51db2fbc1eacf308f6505c7fa5",
+      "cases": 30
+    },
+    {
+      "path": "evals/datasets/routing/v2.jsonl",
+      "role": "development",
+      "task": "skill routing",
+      "provenance": "Hand-labelled requests including screen design and not-applicable cases.",
+      "limitations": "Written by the authors of the router prompts.",
+      "sha256": "91b1fd152a24c1234bd4466083fda463a45a1fbf236461c76bbd73439b65dc80",
+      "cases": 36
+    },
+    {
+      "path": "evals/datasets/screens/v1.jsonl",
+      "role": "development",
+      "task": "screen design",
+      "provenance": "Hand-written scenarios with structural checks.",
+      "limitations": "Four scenarios: indicative only.",
+      "sha256": "28944a6f6f1ae4d68b2f69123591dc8a811afad663e6758809ef28be1c8a951b",
+      "cases": 4
+    }
+  ]
+}
