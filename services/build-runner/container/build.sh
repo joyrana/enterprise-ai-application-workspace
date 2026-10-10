@@ -27,6 +27,6 @@ done
 cd /work || exit 92
 
 step typecheck node node_modules/typescript/bin/tsc -p tsconfig.json || exit 1
-step build node node_modules/vite/bin/vite.js build --logLevel warn || exit 1
+step build node node_modules/vite/bin/vite.js build --logLevel error || exit 1
 [ -d dist ] || exit 93
 tar -C dist -cf - .

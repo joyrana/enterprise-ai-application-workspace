@@ -48,6 +48,8 @@ const suspicious = Object.keys(process.env).filter((k) => /TOKEN|SECRET|PASSWORD
 results.secrets = suspicious.length ? suspicious.join(",") : "none";
 results.uid = String(process.getuid ? process.getuid() : -1);
 console.error("@@probe " + JSON.stringify(results));
+// Stop here: the probe is the point, and a short log keeps the probe line in the report's tail.
+throw new Error("sandbox probe finished");
 
 export default defineConfig({});
 """
