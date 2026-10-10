@@ -46,6 +46,8 @@ export type UiIssue = UiPreview["issues"][number];
 export type CodeManifest = Json<paths["/api/v1/projects/{project_id}/code"]["get"]["responses"][200]>;
 export type CodeFile = Json<paths["/api/v1/projects/{project_id}/code/file"]["get"]["responses"][200]>;
 export type CodeDiff = Json<paths["/api/v1/projects/{project_id}/code/diff"]["get"]["responses"][200]>;
+export type Build = Json<paths["/api/v1/projects/{project_id}/builds/{build_id}"]["get"]["responses"][200]>;
+export type BuildPage = Json<paths["/api/v1/projects/{project_id}/builds"]["get"]["responses"][200]>;
 
 export interface ProblemDetails {
   type: string;
@@ -294,6 +296,15 @@ export const api = {
 
   async getCodeDiff(projectId: string, from: number, to: number, signal?: AbortSignal): Promise<CodeDiff> {
     return (await request<CodeDiff>(`/api/v1/projects/${enc(projectId)}/code/diff${query({ from, to })}`, { signal }))
+      .data;
+  },
+
+  async listBuilds(projectId: string, signal?: AbortSignal): Promise<BuildPage> {
+    return (await request<BuildPage>(`/api/v1/projects/${enc(projectId)}/builds`, { signal })).data;
+  },
+
+  async requestBuild(projectId: string, revision: number): Promise<Build> {
+    return (await request<Build>(`/api/v1/projects/${enc(projectId)}/builds${query({ revision })}`, { method: "POST" }))
       .data;
   },
 

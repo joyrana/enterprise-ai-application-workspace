@@ -2123,6 +2123,7 @@ source = { editable = "services/api" }
 dependencies = [
     { name = "alembic" },
     { name = "appspec" },
+    { name = "build-runner" },
     { name = "codegen-react" },
     { name = "design-system" },
     { name = "fastapi" },
@@ -2138,6 +2139,7 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.14,<2" },
     { name = "appspec", editable = "packages/application-spec" },
+    { name = "build-runner", editable = "services/build-runner" },
     { name = "codegen-react", editable = "packages/codegen-react" },
     { name = "design-system", editable = "packages/design-system" },
     { name = "fastapi", specifier = ">=0.115,<1" },

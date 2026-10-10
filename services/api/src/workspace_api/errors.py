@@ -104,6 +104,10 @@ class WorkflowStateConflict(AppError):
     status, code, title = 409, "workflow-state-conflict", "The workflow cannot do that in its current state"
 
 
+class BuildAlreadyActive(AppError):
+    status, code, title = 409, "build-already-active", "A build of this project is already queued or running"
+
+
 class PayloadTooLarge(AppError):
     status, code, title = 413, "payload-too-large", "Request body is too large"
 

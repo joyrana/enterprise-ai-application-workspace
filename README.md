@@ -262,6 +262,13 @@ npm run dev                     # http://localhost:5173 (proxies /api to :8000)
 
 API docs: http://localhost:8000/docs
 
+Optional: isolated builds of generated projects (ADR-0015) need Docker and a separate worker:
+
+```bash
+docker build -f services/build-runner/Dockerfile -t workspace-build-runner:local .
+uv run python -m workspace_api.build_worker     # claims builds queued from the Code tab
+```
+
 ## Tests
 
 ```bash
