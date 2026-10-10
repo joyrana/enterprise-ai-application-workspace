@@ -63,7 +63,7 @@ def _out(build: Build) -> BuildOut:
         id=build.id,
         spec_revision=build.spec_revision,
         generator=build.generator,
-        status=build.status,  # type: ignore[arg-type]
+        status=build.status,
         requested_by=build.requested_by,
         created_at=build.created_at,
         started_at=build.started_at,
