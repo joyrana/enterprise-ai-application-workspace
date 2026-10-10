@@ -82,10 +82,9 @@ def diff(session: Session, principal: Principal, project_id: uuid.UUID, base: in
     return CodeDiff(from_revision=base_number, to_revision=head_number, files=diff_projects(before, after))
 
 
-def archive(session: Session, principal: Principal, project_id: uuid.UUID, revision: int | None) -> tuple[str, bytes]:
-    number, generated = project_at(session, principal, project_id, revision)
-    project = service.find_project(session, principal, project_id)
-    root = f"{package_name(project.name)}-r{number}"
+def archive_bytes(project_name: str, number: int, generated: GeneratedProject) -> tuple[str, bytes]:
+    """The deterministic zip of a generated project (also what the build worker hands the runner)."""
+    root = f"{package_name(project_name)}-r{number}"
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path, content in generated.files.items():
@@ -94,3 +93,9 @@ def archive(session: Session, principal: Principal, project_id: uuid.UUID, revis
             info.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(info, content.encode("utf-8"))
     return f"{root}.zip", buffer.getvalue()
+
+
+def archive(session: Session, principal: Principal, project_id: uuid.UUID, revision: int | None) -> tuple[str, bytes]:
+    number, generated = project_at(session, principal, project_id, revision)
+    project = service.find_project(session, principal, project_id)
+    return archive_bytes(project.name, number, generated)

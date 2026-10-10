@@ -96,6 +96,17 @@ class AuditEvent(Base):
 
 RUN_STATUSES = ("queued", "running", "succeeded", "failed")
 WORKFLOW_STATUSES = ("running", "awaiting_review", "completed", "failed", "cancelled")
+BUILD_STATUSES = (
+    "queued",
+    "running",
+    "succeeded",
+    "failed",
+    "timed_out",
+    "output_too_large",
+    "rejected",
+    "runner_error",
+)
+BUILD_ACTIVE = ("queued", "running")
 
 
 class Workflow(Base):
@@ -173,6 +184,37 @@ class WorkflowRun(Base):
         Index("ix_workflow_runs_tenant_project_created", "tenant_id", "project_id", "created_at"),
         Index("ix_workflow_runs_tenant_status", "tenant_id", "status"),
         Index("ix_workflow_runs_workflow", "workflow_id"),
+    )
+
+
+class Build(Base):
+    """A request to build a generated project in the isolated runner (ADR-0015).
+
+    The API only records the request; a separate worker process claims it, runs the sandbox and
+    stores the report (step results, log tail, artifact hashes). Built files are not stored.
+    """
+
+    __tablename__ = "builds"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    spec_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    generator: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    report: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    requested_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    worker: Mapped[str | None] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint(f"status IN {BUILD_STATUSES!r}", name="ck_builds_status"),
+        Index("ix_builds_tenant_project_created", "tenant_id", "project_id", "created_at"),
+        Index("ix_builds_status_created", "status", "created_at"),
     )
 
 

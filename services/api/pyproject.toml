@@ -5,6 +5,7 @@ description = "Backend API for the Enterprise AI Application Workspace (projects
 requires-python = ">=3.12"
 dependencies = [
   "appspec",
+  "build-runner",
   "codegen-react",
   "design-system",
   "model-gateway",
@@ -19,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 workspace-api-export-openapi = "workspace_api.export:main"
+workspace-build-worker = "workspace_api.build_worker:main"
 
 [build-system]
 requires = ["hatchling>=1.25"]
@@ -29,6 +31,7 @@ packages = ["src/workspace_api"]
 
 [tool.uv.sources]
 appspec = { workspace = true }
+build-runner = { workspace = true }
 codegen-react = { workspace = true }
 design-system = { workspace = true }
 model-gateway = { workspace = true }

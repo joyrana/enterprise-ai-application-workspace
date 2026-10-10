@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -359,3 +359,43 @@ class CodeDiff(ApiModel):
     from_revision: int
     to_revision: int
     files: list[FileDiff] = Field(description="Only files that differ; empty when the generated code is identical.")
+
+
+# --------------------------------------------------------------------------- isolated builds (ADR-0015)
+
+BuildStatus = Literal[
+    "queued", "running", "succeeded", "failed", "timed_out", "output_too_large", "rejected", "runner_error"
+]
+
+
+class BuildStep(ApiModel):
+    name: str
+    exit_code: int
+    duration_ms: int
+
+
+class BuildReportOut(ApiModel):
+    image: str
+    duration_ms: int
+    exit_code: int | None
+    reason: str | None
+    steps: list[BuildStep]
+    log_tail: list[str] = Field(description="Last lines of the build output (the runner keeps at most 200).")
+    artifacts: dict[str, str] = Field(description="Built file path → SHA-256. The files themselves are not stored.")
+    isolation: list[str] = Field(description="Container isolation flags the runner actually used.")
+
+
+class BuildOut(ApiModel):
+    id: uuid.UUID
+    spec_revision: int
+    generator: str
+    status: BuildStatus
+    requested_by: str
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    report: BuildReportOut | None
+
+
+class BuildPage(ApiModel):
+    items: list[BuildOut]

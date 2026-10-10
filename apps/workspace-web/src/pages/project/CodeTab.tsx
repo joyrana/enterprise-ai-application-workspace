@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { api, type CodeDiff, type CodeFile, type CodeManifest } from "../../api/client";
 import { ProblemMessage } from "../../components/ProblemMessage";
 import { useAsync } from "../../hooks/useAsync";
+import { BuildPanel } from "./BuildPanel";
 
 const useStyles = makeStyles({
   root: { display: "grid", gap: tokens.spacingVerticalL },
@@ -62,7 +63,7 @@ export function CodeTab({ projectId, revision }: { projectId: string; revision: 
           files
         </Caption1>
         <Badge appearance="tint" color="informative">
-          Static app: no data access or behaviour yet
+          Data in the browser, or a backend implementing api/openapi.json
         </Badge>
         <DownloadButton projectId={projectId} revision={manifest.spec_revision} />
       </div>
@@ -72,6 +73,7 @@ export function CodeTab({ projectId, revision }: { projectId: string; revision: 
           see the Screens tab.
         </Body1>
       )}
+      <BuildPanel projectId={projectId} revision={manifest.spec_revision} />
       <FileBrowser projectId={projectId} manifest={manifest} />
       <DiffView projectId={projectId} revision={manifest.spec_revision} />
     </div>

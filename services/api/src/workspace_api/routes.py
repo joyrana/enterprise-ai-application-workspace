@@ -14,7 +14,7 @@ from appspec import ApplicationSpec, json_schema
 from design_system import DesignSystemContract
 from skill_sdk import SkillRegistry
 
-from . import code, runs, service, ui, workflows
+from . import builds, code, runs, service, ui, workflows
 from .ai import ModelRuntime
 from .auth import CurrentPrincipal
 from .errors import Problem
@@ -23,6 +23,8 @@ from .schemas import (
     ApplyRunRequest,
     ApplyRunResult,
     AuditPage,
+    BuildOut,
+    BuildPage,
     CodeDiff,
     CodeFile,
     CodeManifest,
@@ -590,3 +592,38 @@ def download_project_code(
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# --------------------------------------------------------------------------- isolated builds (ADR-0015)
+
+
+@api.post(
+    "/projects/{project_id}/builds",
+    response_model=BuildOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["builds"],
+    summary="Queue a build of the generated project in the isolated runner",
+    description=(
+        "The API only records the request; a separate worker builds the project in a container with no "
+        "network and no credentials (ADR-0015). One active build per project."
+    ),
+)
+def create_build(
+    project_id: ProjectId, principal: CurrentPrincipal, session: DbSession, revision: Revision = None
+) -> BuildOut:
+    return builds.request_build(session, principal, project_id, revision)
+
+
+@api.get("/projects/{project_id}/builds", response_model=BuildPage, tags=["builds"], summary="Recent builds")
+def list_project_builds(project_id: ProjectId, principal: CurrentPrincipal, session: DbSession) -> BuildPage:
+    return builds.list_builds(session, principal, project_id)
+
+
+@api.get("/projects/{project_id}/builds/{build_id}", response_model=BuildOut, tags=["builds"], summary="One build")
+def get_project_build(
+    project_id: ProjectId,
+    build_id: Annotated[uuid.UUID, Path(description="Build identifier.")],
+    principal: CurrentPrincipal,
+    session: DbSession,
+) -> BuildOut:
+    return builds.get_build(session, principal, project_id, build_id)

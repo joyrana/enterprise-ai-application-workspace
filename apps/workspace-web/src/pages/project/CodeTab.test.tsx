@@ -7,6 +7,7 @@ import { renderWithProviders } from "../../test/render";
 import { CodeTab } from "./CodeTab";
 
 const BASE = `/api/v1/projects/${project.id}/code`;
+const BUILDS = `/api/v1/projects/${project.id}/builds`;
 const MANIFEST = {
   spec_revision: 2,
   generator: "codegen-react@0.1.0",
@@ -29,6 +30,7 @@ describe("CodeTab", () => {
   it("browses generated files and shows the diff from the previous revision", async () => {
     const { calls } = mockFetch([
       { method: "GET", path: BASE, body: MANIFEST },
+      { method: "GET", path: BUILDS, body: { items: [] } },
       {
         method: "GET",
         path: `${BASE}/file`,
@@ -83,5 +85,49 @@ describe("CodeTab", () => {
     renderWithProviders(<CodeTab projectId={project.id} revision={3} />);
     expect(await screen.findByText("The screens have errors that block code generation")).toBeInTheDocument();
     expect(screen.getByText(/is used 2 times/)).toBeInTheDocument();
+  });
+
+  it("starts an isolated build and shows the last report", async () => {
+    const finished = {
+      id: "b1",
+      spec_revision: 2,
+      generator: "codegen-react@0.4.0",
+      status: "failed",
+      requested_by: "alice",
+      created_at: "2026-10-10T00:00:00Z",
+      started_at: "2026-10-10T00:00:01Z",
+      finished_at: "2026-10-10T00:00:05Z",
+      report: {
+        image: "workspace-build-runner:local",
+        duration_ms: 4000,
+        exit_code: 1,
+        reason: "step 'typecheck' failed",
+        steps: [{ name: "typecheck", exit_code: 2, duration_ms: 3500 }],
+        log_tail: ["src/App.tsx(3,1): error TS2304: Cannot find name 'x'."],
+        artifacts: {},
+        isolation: ["--network none", "--read-only"],
+      },
+    };
+    const queued = { ...finished, id: "b2", status: "queued", started_at: null, finished_at: null, report: null };
+    const { calls } = mockFetch([
+      { method: "GET", path: BASE, body: MANIFEST },
+      { method: "GET", path: BUILDS, body: { items: [finished] } },
+      { method: "GET", path: `${BASE}/file`, body: file("src/screens/RulesScreen.tsx", "x") },
+      { method: "GET", path: `${BASE}/diff`, body: { from_revision: 1, to_revision: 2, files: [] } },
+      { method: "POST", path: BUILDS, status: 202, body: queued },
+      { method: "GET", path: BUILDS, body: { items: [queued, finished] } },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<CodeTab projectId={project.id} revision={2} />);
+
+    expect(await screen.findByText("Build failed")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Build steps" })).toHaveTextContent("typecheck: failed (exit 2)");
+    expect(screen.getByRole("region", { name: "Build log" })).toHaveTextContent("error TS2304");
+    expect(screen.getByText(/Isolation: --network none · --read-only/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Build in isolated runner" }));
+    expect(await screen.findByText("Waiting for a build worker.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Build in progress" })).toBeDisabled();
+    expect(calls.find((c) => c.method === "POST")?.url).toBe(`${BUILDS}?revision=2`);
   });
 });

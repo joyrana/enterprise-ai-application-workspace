@@ -40,8 +40,16 @@ two stages.
    - **Report:** status (`succeeded`, `failed`, `timed_out`, `output_too_large`, `rejected`,
      `runner_error`), per-step exit codes and durations, a log tail, SHA-256 of each built
      file, and the isolation flags actually used.
-3. **Placement.** The runner is invoked by a worker process, never by the API process. CI
-   proves it on every PR (`scripts/ci/sandbox_e2e.py`):
+3. **Placement.** The API only records build requests (`POST /projects/{id}/builds`, one active
+   build per project). A separate worker process, `python -m workspace_api.build_worker`, does
+   the rest:
+   - claims queued builds with `FOR UPDATE SKIP LOCKED`, so several workers are safe;
+   - generates the same deterministic archive users download and runs it through the runner;
+   - stores the report, never the built files.
+
+   A build left `running` past the deadline plus a grace period (for example after a worker
+   crash) becomes `runner_error`. The worker needs the database and Docker, but no model
+   credentials. CI proves the runner on every PR (`scripts/ci/sandbox_e2e.py`):
    - the example app builds;
    - a hostile project with a valid manifest probes the sandbox from `vite.config.ts` and
      finds no network, a read-only toolchain, project mount and root filesystem, no secrets
